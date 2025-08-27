@@ -2,11 +2,22 @@
 
 @theme inline {
   --color-primary-50: #edefff;
+  --color-primary-500: #2d60e0;
   --color-primary-900: #000b50;
+
+  --color-disabled: #d0cde1;
 }
 
 iconify-icon {
   display: inline-block;
   width: 1em;
   height: 1em;
+}
+
+button {
+  cursor: pointer;
+}
+
+input:focus {
+  outline: none;
 }
