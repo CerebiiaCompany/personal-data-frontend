@@ -1,4 +1,6 @@
 import Button from "@/components/base/Button";
+import { FORMS_MOCK_DATA } from "@/mock/formMock";
+import { formatDateToString } from "@/utils/date.utils";
 import { Icon } from "@iconify/react";
 
 export default function Home() {
@@ -40,12 +42,53 @@ export default function Home() {
         </header>
 
         {/* Forms grid */}
-        <div className="w-fill grid grid-cols-[repeat(auto-fit,_minmax(200px,_280px))]">
-          <div className="bg-primary-900 overflow-hidden rounded-lg relative after:absolute after:top-2 after:rounded-lg after:left-0 after:w-full after:h-full after:bg-white border border-disabled aspect-[4.5/5]">
-            <header className="flex flex-col items-center">
-              <h4>Formulario #1</h4>
-            </header>
-          </div>
+        <div className="w-fill grid grid-cols-[repeat(auto-fit,_minmax(200px,_320px))] gap-8">
+          {FORMS_MOCK_DATA.map((data) => (
+            <div
+              key={data.id}
+              className="bg-primary-900 overflow-hidden rounded-lg relative after:absolute after:top-2 after:rounded-lg after:left-0 after:w-full after:h-full after:bg-white border border-disabled aspect-[4.5/5] after:z-0 shadow-[5px_5px_12px] shadow-primary-shadows"
+            >
+              <div className="relative z-1 w-full h-full flex flex-col items-start p-5 gap-4">
+                <header className="w-full flex flex-col gap-1.5">
+                  <h4 className="text-2xl leading-tight text-center text-primary-900 font-semibold">
+                    {data.title}
+                  </h4>
+                  <span className="inline-block w-full h-[1.5px] bg-disabled" />
+                </header>
+
+                {/* Form data */}
+                <div className="flex flex-col items-start text-left gap-3 flex-1 justify-end">
+                  <div className="text-primary-900 text-lg">
+                    <h6 className="text-left font-bold leading-tight">
+                      Ruta de envío:
+                    </h6>
+                    <p className="text-left leading-tight">
+                      {data.marketingChannels.join(", ")}
+                    </p>
+                  </div>
+                  <div className="text-primary-900 text-lg">
+                    <h6 className="text-left font-bold leading-tight">
+                      Fecha de creación:
+                    </h6>
+                    <p className="text-left leading-tight">
+                      {formatDateToString({
+                        date: data.createdAt,
+                        format: "DD/MM/YYYY",
+                      })}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center w-full gap-2">
+                  <Button className="flex-1">Ver detalle</Button>
+                  <Button hierarchy="secondary" className="flex-1">
+                    Copiar link
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

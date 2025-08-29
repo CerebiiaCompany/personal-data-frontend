@@ -5,22 +5,25 @@ interface Props {
   children: React.ReactNode;
   startContent?: JSX.Element;
   endContent?: JSX.Element;
-  hierarchy?: "PRIMARY" | "SECONDARY" | "TERTIARY";
+  hierarchy?: "primary" | "secondary" | "tertiary";
+  className?: string;
 }
 
 const Button = ({
   children,
-  hierarchy = "PRIMARY",
+  hierarchy = "primary",
   startContent,
   endContent,
+  className: customClassName,
 }: Props) => {
   const baseClassName = clsx([
-    "px-3 py-2 rounded-lg flex items-center gap-2 font-sans",
-    { "text-white bg-primary-900": hierarchy === "PRIMARY" }, //? for primary buttons
+    "px-3 py-2 rounded-lg flex items-center text-center justify-center gap-2 font-sans font-semibold",
+    customClassName,
+    { "text-white bg-primary-900": hierarchy === "primary" }, //? for primary buttons
     {
-      "border border-disabled bg-white": hierarchy === "SECONDARY",
+      "border border-disabled bg-white": hierarchy === "secondary",
     }, //? for secondary buttons
-    { "": hierarchy === "TERTIARY" }, //? for tertiary buttons
+    { "": hierarchy === "tertiary" }, //? for tertiary buttons
   ]);
 
   return (

@@ -33,7 +33,7 @@ export default function Home() {
           </label>
 
           <Button
-            hierarchy="SECONDARY"
+            hierarchy="secondary"
             startContent={
               <Icon icon={"tabler:chevron-down"} className="text-xl" />
             }
