@@ -1,7 +1,13 @@
+"use client";
+
 import Button from "@/components/base/Button";
+import Dropdown from "@/components/base/Dropdown";
 import { Icon } from "@iconify/react";
+import { useState } from "react";
 
 export default function Home() {
+  const [month, setMonth] = useState<string>("agosto");
+
   return (
     <div className="flex flex-col gap-4 p-8">
       {/* Welcome card */}
@@ -32,14 +38,20 @@ export default function Home() {
             />
           </label>
 
-          <Button
-            hierarchy="secondary"
-            startContent={
-              <Icon icon={"tabler:chevron-down"} className="text-xl" />
-            }
-          >
-            Agosto
-          </Button>
+          <Dropdown
+            value={month}
+            onChange={(value) => setMonth(value)}
+            options={[
+              {
+                value: "agosto",
+                label: "Agosto",
+              },
+              {
+                value: "diciembre",
+                label: "Diciembre",
+              },
+            ]}
+          />
 
           <Button
             startContent={

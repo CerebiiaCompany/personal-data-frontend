@@ -7,6 +7,8 @@
 
   --color-primary-shadows: #d1d5e9;
   --color-disabled: #d0cde1;
+
+  --animate-appear: appearAnimation 0.1s 1 ease-in-out forwards;
 }
 
 iconify-icon {
@@ -21,4 +23,15 @@ button {
 
 input:focus {
   outline: none;
+}
+
+@keyframes appearAnimation {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

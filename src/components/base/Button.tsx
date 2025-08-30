@@ -7,6 +7,7 @@ interface Props {
   endContent?: JSX.Element;
   hierarchy?: "primary" | "secondary" | "tertiary";
   className?: string;
+  onClick?: () => void;
 }
 
 const Button = ({
@@ -14,6 +15,7 @@ const Button = ({
   hierarchy = "primary",
   startContent,
   endContent,
+  onClick,
   className: customClassName,
 }: Props) => {
   const baseClassName = clsx([
@@ -27,7 +29,7 @@ const Button = ({
   ]);
 
   return (
-    <button className={baseClassName}>
+    <button onClick={onClick} className={baseClassName}>
       {startContent}
       {children}
       {endContent}
