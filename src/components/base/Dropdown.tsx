@@ -32,6 +32,7 @@ const Dropdown = ({ value, options, onChange }: Props) => {
       <Button
         onClick={toggleDialog}
         hierarchy="secondary"
+        className="w-full"
         startContent={
           <Icon
             icon={"tabler:chevron-down"}
@@ -42,7 +43,9 @@ const Dropdown = ({ value, options, onChange }: Props) => {
           />
         }
       >
-        {options.find((e) => e.value === value)?.label}
+        <p className="text-ellipsis whitespace-nowrap overflow-hidden">
+          {options.find((e) => e.value === value)?.label}
+        </p>
       </Button>
 
       {dialogToggle ? (

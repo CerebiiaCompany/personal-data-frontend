@@ -3,6 +3,7 @@
 @theme inline {
   --color-primary-50: #edefff;
   --color-primary-500: #2d60e0;
+  --color-primary-700: #150668;
   --color-primary-900: #000b50;
 
   --color-primary-shadows: #d1d5e9;
@@ -10,6 +11,11 @@
 
   --animate-appear: appearAnimation 0.1s 1 ease-in-out forwards;
 }
+
+/* //! debug only */
+/* *{
+  transition: all 3s;
+} */
 
 iconify-icon {
   display: inline-block;
@@ -34,4 +40,42 @@ input:focus {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+.text-ellipsis {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* Scrollbar normalize */
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-gutter {
+  scrollbar-gutter: stable both-edges;
+}
+
+/* width */
+::-webkit-scrollbar {
+  width: 5px;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+  background: #f7f7f711;
+  border-radius: 5px;
+}
+
+/* Handle */
+::-webkit-scrollbar-thumb {
+  background: #777;
+  border-radius: 5px;
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: #999;
 }
