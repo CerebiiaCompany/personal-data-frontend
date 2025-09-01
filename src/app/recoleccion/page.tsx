@@ -3,7 +3,7 @@ import { FORMS_MOCK_DATA } from "@/mock/formMock";
 import { formatDateToString } from "@/utils/date.utils";
 import { Icon } from "@iconify/react";
 
-export default function Home() {
+export default function CollectPage() {
   return (
     <div className="flex flex-col">
       <header className="w-full flex flex-col gap-2">
@@ -38,7 +38,9 @@ export default function Home() {
           <h4 className="font-medium pl-2">Formularios</h4>
           <div className="w-full justify-between flex items-center">
             <Button>Plantillas Ley 1581</Button>
-            <Button>Crear formulario</Button>
+            <Button href="/recoleccion/crear-formulario">
+              Crear formulario
+            </Button>
           </div>
         </header>
 

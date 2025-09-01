@@ -79,3 +79,50 @@ input:focus {
 ::-webkit-scrollbar-thumb:hover {
   background: #999;
 }
+
+/* ? styles for checkbox */
+
+.custom-checkbox {
+  display: flex;
+  align-items: center;
+}
+
+/* Hide the original checkbox */
+.custom-checkbox input[type="checkbox"] {
+  opacity: 0;
+}
+.custom-checkbox span {
+  font-weight: 400;
+  font-size: 0.9rem;
+  color: #424242;
+}
+
+/* Style the custom visual element */
+.checkbox-visual {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #ccc;
+  border-radius: 4px;
+  display: inline-block;
+  margin-right: 8px;
+  position: relative;
+  transition: all 0.1s ease-in-out;
+}
+
+/* Style the custom visual element when the input inside the label is checked */
+.custom-checkbox:has(input[type="checkbox"]:checked) .checkbox-visual {
+  background-color: var(--color-primary-900);
+  border-color: var(--color-primary-900);
+}
+
+/* Create the checkmark */
+.custom-checkbox:has(input[type="checkbox"]:checked) .checkbox-visual::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  height: 8px;
+  border: solid white;
+  border-width: 0px 0px 3px 3px;
+  transform: rotate(-45deg) scale(0.8) translate(1.5px, -1.5px);
+}
