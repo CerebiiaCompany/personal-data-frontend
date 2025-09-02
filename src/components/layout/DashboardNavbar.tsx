@@ -13,6 +13,9 @@ import clsx from "clsx";
 const DashboardNavbar = () => {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
+  const mainNavbarRoutes = NAVBAR_DATA.filter(
+    (e) => e.path.split("/").length == 2
+  );
 
   useEffect(() => {
     const storedState = localStorage.getItem("navbarIsCollapsed");
@@ -74,7 +77,7 @@ const DashboardNavbar = () => {
         >
           <p className={clsx(["pl-6 font-semibold sticky top-0 mb-4"])}>Menú</p>
           <ul className="flex flex-col items-stretch gap-2 w-full">
-            {NAVBAR_DATA.map((e) => (
+            {mainNavbarRoutes.map((e) => (
               <li key={e.title} className="w-full">
                 <Link
                   href={e.path}
@@ -91,7 +94,7 @@ const DashboardNavbar = () => {
                   ])}
                 >
                   <Icon
-                    icon={e.icon}
+                    icon={e.icon || "tabler:question-mark"}
                     className="text-2xl h-full aspect-square min-w-fit"
                   />
                   <p className="w-full text-ellipsis whitespace-nowrap overflow-hidden">
@@ -110,7 +113,7 @@ const DashboardNavbar = () => {
             { "opacity-0 pointer-events-none": !isCollapsed },
           ])}
         >
-          {NAVBAR_DATA.map((e) => (
+          {mainNavbarRoutes.map((e) => (
             <li key={e.title} className="w-full">
               <Link
                 href={e.path}
@@ -126,7 +129,10 @@ const DashboardNavbar = () => {
                   },
                 ])}
               >
-                <Icon icon={e.icon} className="text-2xl aspect-square" />
+                <Icon
+                  icon={e.icon || "tabler:question-mark"}
+                  className="text-2xl aspect-square"
+                />
                 {/*  <span className="absolute bg-red-500 px-2 py-1 h-fit inline-block rounded-lg group-hover:opacity-1 left-full bottom-0 top-0 my-auto">
                   {e.title}
                 </span> */}

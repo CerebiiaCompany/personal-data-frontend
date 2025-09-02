@@ -8,9 +8,10 @@ interface Props {
   endContent?: JSX.Element;
   hierarchy?: "primary" | "secondary" | "tertiary";
   className?: string;
-  onClick?: () => void;
+  onClick?: (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
   href?: string;
   type?: "button" | "submit";
+  isIconOnly?: boolean;
 }
 
 const Button = ({
@@ -22,6 +23,7 @@ const Button = ({
   className: customClassName,
   href,
   type = "button",
+  isIconOnly,
 }: Props) => {
   const baseClassName = clsx([
     "px-3 py-2 rounded-lg flex items-center text-center justify-center gap-2 font-sans font-semibold",
@@ -31,6 +33,7 @@ const Button = ({
       "border border-disabled bg-white": hierarchy === "secondary",
     }, //? for secondary buttons
     { "": hierarchy === "tertiary" }, //? for tertiary buttons
+    { "w-fit rounded-full! p-2!": isIconOnly },
   ]);
 
   return href ? (

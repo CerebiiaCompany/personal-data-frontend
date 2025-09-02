@@ -1,7 +1,7 @@
 type NavbarData = {
   title: string;
   path: string;
-  icon: string;
+  icon?: string;
 }[];
 
 export const NAVBAR_DATA: NavbarData = [
@@ -14,6 +14,10 @@ export const NAVBAR_DATA: NavbarData = [
     title: "Recolección",
     path: "/recoleccion",
     icon: "tabler:clipboard-list",
+  },
+  {
+    title: "Crear formulario nuevo",
+    path: "/recoleccion/crear-formulario",
   },
   {
     title: "Plantillas",

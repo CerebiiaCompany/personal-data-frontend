@@ -1,12 +1,14 @@
+import clsx from "clsx";
 import React from "react";
 
 interface Props extends React.ComponentProps<"input"> {
   label?: string;
+  variant?: "bordered" | "underline";
 }
 
-const CustomInput = ({ label, ...props }: Props) => {
+const CustomInput = ({ label, variant = "bordered", ...props }: Props) => {
   return (
-    <div className="flex flex-col items-start gap-1 text-left">
+    <div className="flex flex-col items-start gap-1 text-left flex-1">
       {label && (
         <label
           htmlFor={`${props.name}Field`}
@@ -18,7 +20,11 @@ const CustomInput = ({ label, ...props }: Props) => {
       <input
         id={`${props.name}Field`}
         {...props}
-        className="rounded-lg gap-2 w-full text-primary-900 border border-disabled flex-1 relative px-3 py-2"
+        className={clsx([
+          "gap-2 w-full text-primary-900 flex-1 relative px-3 py-2",
+          { "border border-disabled rounded-lg": variant === "bordered" },
+          { "border-b border-disabled": variant === "underline" },
+        ])}
       />
     </div>
   );

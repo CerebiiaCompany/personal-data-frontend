@@ -6,7 +6,7 @@ interface Props extends React.ComponentProps<"textarea"> {
 
 const CustomTextarea = ({ label, ...props }: Props) => {
   return (
-    <div className="flex flex-col items-start gap-1 text-left">
+    <div className="flex flex-col items-start gap-1 text-left flex-1">
       {label && (
         <label
           htmlFor={`${props.name}Field`}
