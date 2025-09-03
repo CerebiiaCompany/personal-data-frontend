@@ -1,6 +1,6 @@
 import { Icon } from "@iconify/react";
 import clsx from "clsx";
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 interface Props {
   label?: string;
@@ -9,14 +9,39 @@ interface Props {
   options: {
     value: string;
     title: string;
+    icon?: string;
   }[];
 }
 
 const CustomSelect = ({ label, options, value, onChange }: Props) => {
   const [dialogToggle, setDialogToggle] = useState<boolean>(false);
+  const [dialogDown, setDialogDown] = useState<boolean>(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  const selectedOption = options.find((e) => e.value === value);
 
   function toggleDialog() {
+    if (!dialogToggle) {
+      calcDialogAnchor();
+    }
     setDialogToggle(!dialogToggle);
+  }
+
+  console.log(dialogDown);
+
+  function calcDialogAnchor() {
+    if (!dialogRef.current) return;
+
+    const appearPoint =
+      window.innerHeight -
+      dialogRef.current.parentElement!.getBoundingClientRect().top; // get appear point
+
+    if (appearPoint < dialogRef.current.clientHeight) {
+      // dialog doesn't fit
+      setDialogDown(false);
+    } else {
+      setDialogDown(true);
+    }
   }
 
   return (
@@ -29,19 +54,28 @@ const CustomSelect = ({ label, options, value, onChange }: Props) => {
       <select className="hidden"></select>
       <button
         onClick={toggleDialog}
-        className="rounded-lg gap-2 w-full text-primary-900 border border-disabled flex-1 relative px-3 py-2 flex items-center justify-between"
+        className="rounded-lg gap-2 w-full text-primary-900 border border-primary-900 flex-1 relative px-3 py-2 flex items-center justify-between bg-primary-50"
       >
-        <p className="">
-          {options.find((e) => e.value === value)?.title ||
-            "Seleccionar opción"}
-        </p>
+        {selectedOption ? (
+          <div className="flex items-center gap-2">
+            {selectedOption.icon && (
+              <Icon icon={selectedOption.icon} className="text-lg w-fit" />
+            )}
+            <p className="">{selectedOption.title}</p>
+          </div>
+        ) : (
+          "Seleccionar opción"
+        )}
         <Icon icon={"tabler:chevron-down"} className="text-lg" />
       </button>
 
       <div
+        ref={dialogRef}
         className={clsx([
-          "absolute w-full bg-white shadow-md h-fit max-h-40 top-[115%] border border-stone-100 rounded-lg z-10 flex flex-col items-center transition-all",
+          "absolute w-full bg-white shadow-md h-fit max-h-40 border border-stone-100 rounded-lg z-10 flex flex-col items-center transition-all",
           { "opacity-0 pointer-events-none -translate-y-5": !dialogToggle },
+          { "top-[115%] origin-top": dialogDown },
+          { "bottom-[115%] origin-bottom": !dialogDown },
         ])}
       >
         <ul className="w-full h-fit p-1 flex flex-col gap-1">

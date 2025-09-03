@@ -11,6 +11,8 @@ import CustomCheckbox from "@/components/forms/CustomCheckbox";
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import CustomSelect from "@/components/forms/CustomSelect";
+import SelectTemplateDialog from "@/components/dialogs/SelectTemplateDialog";
+import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 
 type AnswerType = "text" | "date";
 
@@ -192,8 +194,21 @@ export default function CollectionCreateFormPage() {
             />
           </div>
 
-          <Button className="max-w-xs">Seleccionar plantilla</Button>
+          <Button
+            onClick={() => {
+              document
+                .getElementById(HTML_IDS_DATA.selectTemplateDialog)
+                ?.classList.add("dialog-visible");
+            }}
+            className="max-w-xs"
+          >
+            Seleccionar plantilla
+          </Button>
 
+          {/* Select  */}
+          <SelectTemplateDialog />
+
+          {/* Questions list */}
           {watch("questions").map((question, index) => (
             <div
               className="rounded-xl border border-disabled p-10 flex flex-col items-stretch gap-5"
@@ -213,8 +228,16 @@ export default function CollectionCreateFormPage() {
                       setValue(`questions.${index}.type`, value)
                     }
                     options={[
-                      { value: "text", title: "Repuesta escrita" },
-                      { value: "date", title: "Fecha" },
+                      {
+                        value: "text",
+                        title: "Repuesta escrita",
+                        icon: "material-symbols:short-text-rounded",
+                      },
+                      {
+                        value: "date",
+                        title: "Fecha",
+                        icon: "fluent:calendar-16-regular",
+                      },
                     ]}
                   />
                 </div>
@@ -222,6 +245,7 @@ export default function CollectionCreateFormPage() {
             </div>
           ))}
 
+          {/* Add question button */}
           <div className="flex justify-end">
             <Button
               className="max-w-xs w-full"

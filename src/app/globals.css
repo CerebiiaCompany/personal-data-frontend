@@ -126,3 +126,7 @@ input:focus {
   border-width: 0px 0px 3px 3px;
   transform: rotate(-45deg) scale(0.8) translate(1.5px, -1.5px);
 }
+
+.dialog-wrapper.dialog-visible {
+  display: flex;
+}
