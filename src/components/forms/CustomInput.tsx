@@ -1,18 +1,25 @@
 import clsx from "clsx";
 import React from "react";
+import { FieldError, useFormContext, useFormState } from "react-hook-form";
 
 interface Props extends React.ComponentProps<"input"> {
   label?: string;
   variant?: "bordered" | "underline";
+  error?: FieldError;
 }
 
-const CustomInput = ({ label, variant = "bordered", ...props }: Props) => {
+const CustomInput = ({
+  label,
+  error,
+  variant = "bordered",
+  ...props
+}: Props) => {
   return (
     <div className="flex flex-col items-start gap-1 text-left flex-1">
       {label && (
         <label
           htmlFor={`${props.name}Field`}
-          className="font-normal w-full text-lg text-primary-900 pl-3"
+          className="font-medium w-full pl-2 text-stone-500 text-sm"
         >
           {label}
         </label>
@@ -26,6 +33,12 @@ const CustomInput = ({ label, variant = "bordered", ...props }: Props) => {
           { "border-b border-disabled": variant === "underline" },
         ])}
       />
+
+      {error && (
+        <span className="text-red-400 text-sm font-semibold">
+          {error.message}
+        </span>
+      )}
     </div>
   );
 };

@@ -2,18 +2,25 @@ import { Icon } from "@iconify/react";
 import clsx from "clsx";
 import React, { useEffect, useRef, useState } from "react";
 
-interface Props {
+interface Props<T extends string> {
   label?: string;
   value: string | null;
+  unselectedText?: string;
   onChange: (e: any) => void;
   options: {
-    value: string;
+    value: T;
     title: string;
     icon?: string;
   }[];
 }
 
-const CustomSelect = ({ label, options, value, onChange }: Props) => {
+const CustomSelect = <T extends string>({
+  label,
+  options,
+  value,
+  unselectedText,
+  onChange,
+}: Props<T>) => {
   const [dialogToggle, setDialogToggle] = useState<boolean>(false);
   const [dialogDown, setDialogDown] = useState<boolean>(false);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -26,8 +33,6 @@ const CustomSelect = ({ label, options, value, onChange }: Props) => {
     }
     setDialogToggle(!dialogToggle);
   }
-
-  console.log(dialogDown);
 
   function calcDialogAnchor() {
     if (!dialogRef.current) return;
@@ -47,12 +52,13 @@ const CustomSelect = ({ label, options, value, onChange }: Props) => {
   return (
     <div className="flex flex-col items-start gap-1 text-left flex-1 relative">
       {label && (
-        <label className="font-normal w-full text-lg text-primary-900 pl-3">
+        <label className="font-medium w-full pl-2 text-stone-500 text-sm">
           {label}
         </label>
       )}
       <select className="hidden"></select>
       <button
+        type="button"
         onClick={toggleDialog}
         className="rounded-lg gap-2 w-full text-primary-900 border border-primary-900 flex-1 relative px-3 py-2 flex items-center justify-between bg-primary-50"
       >
@@ -64,7 +70,7 @@ const CustomSelect = ({ label, options, value, onChange }: Props) => {
             <p className="">{selectedOption.title}</p>
           </div>
         ) : (
-          "Seleccionar opción"
+          unselectedText || "Seleccionar opción"
         )}
         <Icon icon={"tabler:chevron-down"} className="text-lg" />
       </button>
@@ -89,6 +95,7 @@ const CustomSelect = ({ label, options, value, onChange }: Props) => {
               key={option.value}
             >
               <button
+                type="button"
                 className="w-full h-full text-left py-1 px-2 flex items-center gap-2"
                 onClick={(_) => {
                   toggleDialog();

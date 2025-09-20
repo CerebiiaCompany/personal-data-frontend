@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useRef, useState } from "react";
 import CustomInput from "../forms/CustomInput";
 import Button from "../base/Button";

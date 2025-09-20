@@ -4,16 +4,17 @@ export function formatDateToString({
   date,
   format = "DD/MM/YYYY",
 }: {
-  date: Date;
+  date: Date | string;
   format?: STRING_TO_DATE_FORMAT;
 }) {
+  const parsedDate = new Date(date);
   switch (format) {
     case "DD/MM/YYYY":
-      return `${date.getDate().toString().padStart(2, "00")}/${(
-        date.getMonth() + 1
+      return `${parsedDate.getDate().toString().padStart(2, "00")}/${(
+        parsedDate.getMonth() + 1
       )
         .toString()
-        .padStart(2, "00")}/${date.getFullYear()}`;
+        .padStart(2, "00")}/${parsedDate.getFullYear()}`;
 
     default:
       return "Formato de fecha inválida";

@@ -1,42 +1,52 @@
+import { UserRole } from "@/types/user.types";
+
 type NavbarData = {
   title: string;
   path: string;
   icon?: string;
+  minRole: UserRole;
 }[];
 
 export const NAVBAR_DATA: NavbarData = [
   {
     title: "Inicio",
-    path: "/",
+    path: "/admin",
     icon: "heroicons:home",
+    minRole: "COMPANY_ADMIN",
   },
   {
     title: "Recolección",
-    path: "/recoleccion",
+    path: "/admin/recoleccion",
     icon: "tabler:clipboard-list",
+    minRole: "COMPANY_ADMIN",
   },
   {
     title: "Crear formulario nuevo",
-    path: "/recoleccion/crear-formulario",
+    path: "/admin/recoleccion/crear-formulario",
+    minRole: "COMPANY_ADMIN",
   },
   {
     title: "Plantillas",
-    path: "/plantillas",
+    path: "/admin/plantillas",
     icon: "radix-icons:file-text",
+    minRole: "COMPANY_ADMIN",
   },
   {
     title: "Clasificación",
-    path: "/clasificación",
+    path: "/admin/clasificacion",
     icon: "material-symbols:view-column-outline",
+    minRole: "COMPANY_ADMIN",
   },
   {
     title: "Campañas",
-    path: "/campañas",
+    path: "/admin/campanas",
     icon: "flowbite:grid-plus-outline",
+    minRole: "COMPANY_ADMIN",
   },
   {
     title: "Administración",
-    path: "/administracion",
+    path: "/admin/administracion",
     icon: "heroicons-outline:user-group",
+    minRole: "COMPANY_ADMIN",
   },
 ];

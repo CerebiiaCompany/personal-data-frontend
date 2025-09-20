@@ -2,6 +2,7 @@
 
 @theme inline {
   --color-primary-50: #edefff;
+  --color-primary-300: #0d99ff;
   --color-primary-500: #2d60e0;
   --color-primary-700: #150668;
   --color-primary-900: #000b50;
@@ -94,7 +95,6 @@ input:focus {
 .custom-checkbox span {
   font-weight: 400;
   font-size: 0.9rem;
-  color: #424242;
 }
 
 /* Style the custom visual element */

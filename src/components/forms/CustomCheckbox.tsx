@@ -1,15 +1,17 @@
+import clsx from "clsx";
 import React from "react";
 
 interface Props extends React.ComponentProps<"input"> {
+  className?: string;
   label?: string;
 }
 
-const CustomCheckbox = ({ label, ...props }: Props) => {
+const CustomCheckbox = ({ label, className, ...props }: Props) => {
   return (
-    <label className="custom-checkbox">
-      <input {...props} type="checkbox" />
+    <label className={clsx(["custom-checkbox", className])}>
+      <input {...props} className="hidden" type="checkbox" />
       <div className="checkbox-visual"></div>
-      <span className="">{label}</span>
+      <span className="text-inherit">{label}</span>
     </label>
   );
 };

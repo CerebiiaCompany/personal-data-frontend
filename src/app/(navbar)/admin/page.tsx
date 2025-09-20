@@ -2,18 +2,25 @@
 
 import Button from "@/components/base/Button";
 import Dropdown from "@/components/base/Dropdown";
+import { useSessionStore } from "@/store/useSessionStore";
 import { Icon } from "@iconify/react";
 import { useState } from "react";
 
 export default function Home() {
   const [month, setMonth] = useState<string>("agosto");
+  const { user } = useSessionStore();
 
   return (
     <div className="flex flex-col gap-4 p-8">
       {/* Welcome card */}
       <div className="rounded-lg bg-primary-50 py-3 px-5 text-left">
-        <h6 className="font-semibold">Hola, Luis Sandoval</h6>
-        <p className="text-sm">Bienvenido/a</p>
+        <h6 className="font-medium">
+          Hola,{" "}
+          <span className="text-primary-500 font-bold">
+            {user?.name} {user?.lastName}
+          </span>
+        </h6>
+        <p className="text-sm text-stone-600">Bienvenido/a</p>
       </div>
 
       {/* Dashboard header */}

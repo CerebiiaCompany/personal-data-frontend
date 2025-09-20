@@ -7,15 +7,18 @@ import LogoCerebiiaCollapsed from "@public/logo-collapsed.svg";
 import Link from "next/link";
 import { Icon } from "@iconify/react";
 import { NAVBAR_DATA } from "@/constants/navbarData";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import clsx from "clsx";
+import { toast } from "sonner";
+import { useSessionStore } from "@/store/useSessionStore";
+import { logoutUser } from "@/lib/auth.api";
 
 const DashboardNavbar = () => {
+  const session = useSessionStore();
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
-  const mainNavbarRoutes = NAVBAR_DATA.filter(
-    (e) => e.path.split("/").length == 2
-  );
+  const mainNavbarRoutes = NAVBAR_DATA.filter((e) => e.icon);
+  const router = useRouter();
 
   useEffect(() => {
     const storedState = localStorage.getItem("navbarIsCollapsed");
@@ -31,6 +34,16 @@ const DashboardNavbar = () => {
 
   function toggleMenuIsCollapsed() {
     setIsCollapsed(!isCollapsed);
+  }
+
+  async function logout() {
+    let name = session.user?.name;
+    await logoutUser();
+    toast.success(`Adiós, ${name}`);
+
+    session.logout();
+
+    router.push("/login");
   }
 
   return (
@@ -50,8 +63,9 @@ const DashboardNavbar = () => {
           src={LogoCerebiia}
           width={200}
           alt="Logo de Plataforma de Datos de Cerebiia"
+          priority
           className={clsx([
-            "h-full absolute m-auto inset-0 transition-opacity",
+            "h-full w-auto absolute m-auto inset-0 transition-opacity",
             { "opacity-0": isCollapsed },
           ])}
         />
@@ -59,9 +73,10 @@ const DashboardNavbar = () => {
         <Image
           src={LogoCerebiiaCollapsed}
           width={200}
+          priority
           alt="Logo de Plataforma de Datos de Cerebiia"
           className={clsx([
-            "h-full absolute m-auto inset-0 transition-opacity",
+            "h-full w-auto absolute m-auto inset-0 transition-opacity",
             { "opacity-0": !isCollapsed },
           ])}
         />
@@ -156,7 +171,8 @@ const DashboardNavbar = () => {
               "bg-primary-900 max-w-12 min-w-10 w-full aspect-square grid place-content-center text-white font-bold rounded-md",
             ])}
           >
-            LS
+            {session.user?.name[0]}
+            {session.user?.lastName[0]}
           </div>
           <div
             className={clsx([
@@ -164,8 +180,12 @@ const DashboardNavbar = () => {
               { hidden: isCollapsed },
             ])}
           >
-            <h6 className="w-full text-ellipsis">Luis Sandoval</h6>
-            <p className="w-full text-ellipsis">luissandoval@gmail.com</p>
+            <h6 className="w-full text-ellipsis leading-tight font-medium">
+              {session.user?.username}
+            </h6>
+            <p className="w-full text-ellipsis text-stone-500">
+              {session.user?.companyUserData?.personalEmail.toLowerCase()}
+            </p>
           </div>
         </div>
 
@@ -178,7 +198,7 @@ const DashboardNavbar = () => {
             "flex items-center justify-center gap-1 p-3 hover:bg-stone-200 transition-colors",
             { "": isCollapsed },
           ])}
-          onClick={(e) => console.log("Logging out")}
+          onClick={logout}
         >
           <Icon
             icon={"tabler:logout-2"}

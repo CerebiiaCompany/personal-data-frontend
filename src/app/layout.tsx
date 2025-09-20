@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import DashboardNavbar from "@/components/layout/DashboardNavbar";
-import DashboardContent from "@/components/layout/DashboardContent";
 import GridWrapper from "@/components/layout/GridWrapper";
+import { Toaster } from "sonner";
+import CheckActiveSession from "@/components/checkers/CheckActiveSession";
 
 const interFont = Inter({
   variable: "--font-sans",
@@ -25,9 +25,10 @@ export default function RootLayout({
       <body
         className={`${interFont.variable} antialiased font-sans bg-white h-dvh`}
       >
+        <Toaster />
         <GridWrapper>
-          <DashboardNavbar />
-          <DashboardContent>{children}</DashboardContent>
+          <CheckActiveSession />
+          {children}
         </GridWrapper>
       </body>
     </html>
