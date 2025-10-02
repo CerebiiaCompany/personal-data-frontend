@@ -11,7 +11,7 @@ import CustomCheckbox from "@/components/forms/CustomCheckbox";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import { useEffect, useState } from "react";
 import { useSessionStore } from "@/store/useSessionStore";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { getSession, loginUser } from "@/lib/auth.api";
 import { parseApiError } from "@/utils/parseApiError";
@@ -20,11 +20,14 @@ const schema = z.object({
   username: z.string().min(1, "Ingresa tu usuario"),
   password: z.string().min(1, "Ingresa tu clave"),
   tyc: z.boolean().refine((val) => val === true, {
-    message: "Debes aceptar los términos y condiciones",
+    error: "Debes aceptar los términos y condiciones",
   }),
 });
 
 export default function LoginPage() {
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callback_url");
+
   const router = useRouter();
   const { user, loading, error, setUser, setError, setLoading } =
     useSessionStore();
@@ -44,7 +47,7 @@ export default function LoginPage() {
     },
   });
 
-  async function onSubmit(data: z.infer<typeof schema>) {
+  async function onSubmit(data: any) {
     setLoading(true);
 
     const loginRes = await loginUser(data.username, data.password);
@@ -60,12 +63,12 @@ export default function LoginPage() {
     setUser(session.data);
     toast.success(`Bienvenid@ ${session.data?.name}`);
 
-    router.push("/admin");
+    router.push(callbackUrl || "/admin");
   }
 
   useEffect(() => {
     if (user && !loading && !error) {
-      router.push("/admin");
+      router.push(callbackUrl || "/admin");
     }
   }, [user]);
 

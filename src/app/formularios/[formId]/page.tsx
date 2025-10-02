@@ -20,7 +20,7 @@ import LoadingCover from "@/components/layout/LoadingCover";
 import DashboardContent from "@/components/layout/DashboardContent";
 import LogoCerebiia from "@public/logo.svg";
 import clsx from "clsx";
-import RenderQuestion from "@/components/forms/RenderQuestion";
+import RenderQuestionInput from "@/components/forms/RenderQuestionInput";
 import PublicCollectForm from "@/components/customers/PublicCollectForm";
 
 export default function CollectFormPage() {
@@ -42,7 +42,7 @@ export default function CollectFormPage() {
           className={"h-full w-auto"}
         />
       </header>
-      <div className="flex justify-center">
+      <div className="flex justify-center pb-6">
         {error && <p>Error: {error}</p>}
 
         {data && <PublicCollectForm data={data} />}

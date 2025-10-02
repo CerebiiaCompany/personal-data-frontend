@@ -1,16 +1,34 @@
 import { AnswerType, CollectForm } from "@/types/collectForm.types";
 import { zodResolver } from "@hookform/resolvers/zod";
-import React from "react";
-import { useForm } from "react-hook-form";
+import React, { useEffect, useState } from "react";
+import { FieldError, useForm } from "react-hook-form";
 import * as z from "zod";
 import Button from "../base/Button";
-import RenderQuestion from "../forms/RenderQuestion";
+import RenderQuestionInput from "../forms/RenderQuestionInput";
+import CustomCheckbox from "../forms/CustomCheckbox";
+import { toast } from "sonner";
+import { parseApiError } from "@/utils/parseApiError";
+import {
+  CollectFormResponseUser,
+  CreateCollectFormResponse,
+  UserGender,
+  userGendersOptions,
+} from "@/types/collectFormResponse.types";
+import { DocType, docTypesOptions } from "@/types/user.types";
+import CustomInput from "../forms/CustomInput";
+import CustomSelect from "../forms/CustomSelect";
+import { registerCollectFormResponse } from "@/lib/collectFormResponse.api";
+import CollectFormResponseSavedModal from "./CollectFormResponseSavedModal";
+import { showDialog } from "@/utils/dialogs.utils";
+import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 
 interface Props {
   data: CollectForm;
+  initialValues?: { [key: string]: any };
 }
 
-const PublicCollectForm = ({ data }: Props) => {
+const PublicCollectForm = ({ data, initialValues }: Props) => {
+  const [fullName, setFullName] = useState<string>("");
   const fields: {
     [key: string]: {
       type: AnswerType;
@@ -49,10 +67,31 @@ const PublicCollectForm = ({ data }: Props) => {
           shape[key] = z.boolean();
           break; */
         case "DATE":
-          shape[key] = z.preprocess(
-            (v) => (v instanceof Date ? v : v ? new Date(v as any) : undefined),
-            z.date({ error: "Fecha inválida" })
-          );
+          shape[key] = z.preprocess((v) => {
+            if (typeof v === "string") {
+              const parts = v.split("-").map(Number);
+
+              if (
+                parts.length === 3 &&
+                !isNaN(parts[0]) &&
+                !isNaN(parts[1]) &&
+                !isNaN(parts[2])
+              ) {
+                const date = new Date(
+                  Date.UTC(parts[0], parts[1] - 1, parts[2])
+                );
+                if (
+                  date.getUTCFullYear() === parts[0] &&
+                  date.getUTCMonth() === parts[1] - 1 &&
+                  date.getUTCDate() === parts[2]
+                ) {
+                  return date;
+                }
+              }
+
+              return null; // Return null to trigger an invalid_type_error
+            }
+          }, z.date({ error: "Fecha inválida" }));
           break;
         default:
           shape[key] = z.any();
@@ -66,29 +105,70 @@ const PublicCollectForm = ({ data }: Props) => {
   // Memoize schema and default values from `fields`
   const schema = React.useMemo(() => buildSchemaFromFields(fields), [data]);
 
+  const validationSchema = z.object({
+    data: schema,
+    user: z.object({
+      docType: z.string<DocType>(),
+      docNumber: z.preprocess(
+        (v) => (v === "" ? undefined : v),
+        z.coerce.number("Número de documento inválido")
+      ),
+      name: z.string().min(1, "Este campo es obligatorio"),
+      lastName: z.string().min(1, "Este campo es obligatorio"),
+      age: z.preprocess(
+        (v) => (v === "" ? undefined : v),
+        z.coerce.number("Este campo es obligatorio").int("Edad inválida")
+      ),
+      gender: z.string<UserGender>(),
+      email: z.email("Correo inválido").min(1, "Este campo es obligatorio"),
+      phone: z.string().min(1, "Este campo es obligatorio"),
+    }),
+    dataProcessing: z.boolean().refine((val) => val === true, {
+      error: "Debes aceptar el tratamiento de datos",
+    }),
+    otpCode: initialValues
+      ? z.string()
+      : z.string().min(1, "Este campo es obligatorio"),
+  });
+
   const dynamicDefaultValues = React.useMemo(() => {
     return Object.fromEntries(
       Object.entries(fields).map(([k, v]) => [k, v.default])
     );
   }, [data]);
 
-  // Helper types derived from the dynamic schema
-  type DynamicSchema = ReturnType<typeof buildSchemaFromFields>;
-  type FormValues = z.infer<DynamicSchema>;
-
   const {
     register,
     handleSubmit,
     formState: { errors },
+    reset,
     setValue,
     watch,
-  } = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: dynamicDefaultValues as any,
+  } = useForm({
+    resolver: zodResolver(validationSchema),
+    defaultValues: {
+      data:
+        (initialValues?.data as typeof dynamicDefaultValues) ||
+        dynamicDefaultValues,
+      dataProcessing: initialValues ? true : false,
+      user: (initialValues?.user as CollectFormResponseUser) || {
+        docType: "CC",
+      },
+      otpCode: "",
+    },
   });
 
-  async function onSubmit(data: FormValues) {
-    console.log("Hello world!", data);
+  async function onSubmit(formData: CreateCollectFormResponse) {
+    const res = await registerCollectFormResponse(data._id, formData);
+
+    if (res.error) {
+      return toast.error(parseApiError(res.error));
+    }
+
+    toast.success("Respuesta registrada");
+    setFullName(`${formData.user.name} ${formData.user.lastName}`);
+    showDialog(HTML_IDS_DATA.collectFormResponseSavedModal);
+    reset();
   }
 
   return (
@@ -96,16 +176,96 @@ const PublicCollectForm = ({ data }: Props) => {
       onSubmit={handleSubmit(onSubmit)}
       className="flex flex-col gap-3 max-w-2xl items-stretch w-full"
     >
+      <CollectFormResponseSavedModal fullName={fullName} />
       <h1 className="font-bold text-2xl text-primary-900">{data.name}</h1>
 
-      {data.questions.map((question) => (
-        <RenderQuestion
-          key={question._id}
-          {...register(question.title)}
-          question={question}
-          error={errors[question.title]}
+      <div className="rounded-xl border border-disabled p-10 flex flex-col items-stretch gap-5">
+        <div className="flex gap-5">
+          <CustomInput
+            label="Nombres"
+            {...register("user.name")}
+            placeholder="Ej. Jhon"
+            error={errors.user?.name}
+          />
+          <CustomInput
+            label="Apellidos"
+            {...register("user.lastName")}
+            placeholder="Ej. Doe"
+            error={errors.user?.lastName}
+          />
+        </div>
+        <div className="flex gap-5">
+          <div>
+            <CustomSelect
+              label="Tipo de documento"
+              options={docTypesOptions}
+              value={watch("user.docType")}
+              onChange={(value) => setValue("user.docType", value)}
+            />
+          </div>
+          <CustomInput
+            label="Número de documento"
+            {...register("user.docNumber")}
+            error={errors.user?.docNumber as FieldError}
+          />
+        </div>
+
+        <div className="flex gap-5">
+          <CustomSelect
+            label="Género"
+            options={userGendersOptions}
+            value={watch("user.gender")}
+            onChange={(value) => setValue("user.gender", value)}
+          />
+          <CustomInput
+            type="number"
+            label="Edad"
+            {...register("user.age")}
+            error={errors.user?.age as FieldError}
+          />
+        </div>
+        <div className="flex gap-5">
+          <CustomInput
+            label="Correo"
+            type="email"
+            {...register("user.email")}
+            error={errors.user?.email}
+          />
+          <CustomInput
+            label="Teléfono"
+            {...register("user.phone")}
+            error={errors.user?.phone}
+          />
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-disabled p-10 flex flex-col items-stretch gap-5">
+        {data.questions.map((question) => (
+          <RenderQuestionInput
+            key={question._id}
+            {...register(`data.${question.title}`)}
+            question={question}
+            defaultValue={watch(`data.${question.title}`) as any}
+            error={errors.data && (errors.data[question.title] as FieldError)}
+          />
+        ))}
+      </div>
+
+      <div className="rounded-xl border border-disabled p-10 flex flex-col items-stretch gap-5">
+        {!initialValues && (
+          <CustomInput
+            label="Código OTP"
+            {...register("otpCode")}
+            error={errors.otpCode}
+            placeholder="XXX-XXX"
+          />
+        )}
+        <CustomCheckbox
+          {...register("dataProcessing")}
+          label="Acepto el tratamiento de datos"
+          error={errors.dataProcessing as FieldError}
         />
-      ))}
+      </div>
 
       <div className="flex gap-4 mt-8 justify-center">
         <Button className="w-full max-w-lg" type="submit">

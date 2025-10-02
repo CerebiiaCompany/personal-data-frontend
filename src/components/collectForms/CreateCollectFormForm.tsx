@@ -16,12 +16,12 @@ import CustomInput from "../forms/CustomInput";
 import CustomSelect from "../forms/CustomSelect";
 import CustomTextarea from "../forms/CustomTextarea";
 import { useSessionStore } from "@/store/useSessionStore";
-import * as z from "zod";
 import { createCollectForm, updateCollectForm } from "@/lib/collectForm.api";
 import { parseApiError } from "@/utils/parseApiError";
 import { toast } from "sonner";
 import { useParams, useRouter } from "next/navigation";
 import { createCollectFormValidationSchema } from "@/validations/main.validations";
+import { showDialog } from "@/utils/dialogs.utils";
 
 interface Props {
   initialValues?: CreateCollectForm;
@@ -37,7 +37,7 @@ const CreateCollectFormForm = ({ initialValues }: Props) => {
     formState: { errors },
     setValue,
     watch,
-  } = useForm<typeof createCollectFormValidationSchema>({
+  } = useForm({
     resolver: zodResolver(createCollectFormValidationSchema),
     defaultValues: initialValues || {
       name: "Formulario Creado de Prueba",
@@ -77,38 +77,31 @@ const CreateCollectFormForm = ({ initialValues }: Props) => {
     });
   }, []);
 
-  async function onSubmit(
-    data: z.infer<typeof createCollectFormValidationSchema>
-  ) {
-    console.log(data);
-    return;
+  async function onSubmit(data: CreateCollectForm) {
     if (!user?.companyUserData?.companyId) return;
 
     setLoading(true);
 
     let res;
 
-    const normalizedData = {
+    /*     const normalizedData = {
       ...data,
       questions: data.questions.map((question, i) => ({
         ...question,
         order: i + 1,
       })),
-    };
+    }; */
 
     if (initialValues) {
       //? handle updating
       res = await updateCollectForm(
         user?.companyUserData?.companyId,
         params.formId as string,
-        normalizedData
+        data
       );
     } else {
       //? handle creating
-      res = await createCollectForm(
-        user?.companyUserData?.companyId,
-        normalizedData
-      );
+      res = await createCollectForm(user?.companyUserData?.companyId, data);
     }
     setLoading(false);
 
@@ -134,7 +127,7 @@ const CreateCollectFormForm = ({ initialValues }: Props) => {
   return (
     <form
       ref={formRef}
-      onSubmit={handleSubmit(onSubmit)}
+      onSubmit={handleSubmit((data) => onSubmit(data))}
       className="flex flex-col gap-3 max-w-3xl items-stretch w-full"
     >
       {/* Floating action navbar */}
@@ -202,7 +195,7 @@ const CreateCollectFormForm = ({ initialValues }: Props) => {
           {...register("description")}
           rows={5}
           label="Descripción del formulario"
-          placeholder="Escoger el Tipo de Cargo"
+          placeholder="Ej. Recolección de datos de usuarios segmentados"
           className="resize-y"
           error={errors.description}
         />
@@ -222,11 +215,7 @@ const CreateCollectFormForm = ({ initialValues }: Props) => {
       </div>
 
       <Button
-        onClick={() => {
-          document
-            .getElementById(HTML_IDS_DATA.selectTemplateDialog)
-            ?.classList.add("dialog-visible");
-        }}
+        onClick={() => showDialog(HTML_IDS_DATA.selectTemplateDialog)}
         className="max-w-xs"
       >
         Seleccionar plantilla
@@ -315,9 +304,15 @@ const CreateCollectFormForm = ({ initialValues }: Props) => {
           className="max-w-xs w-full"
           startContent={<Icon icon={"tabler:plus"} className="text-lg" />}
           onClick={() => {
+            const questions = watch("questions");
             setValue("questions", [
-              ...watch("questions"),
-              { title: "", answerType: "TEXT", dataType: "PERSONAL" },
+              ...questions,
+              {
+                title: "",
+                answerType: "TEXT",
+                dataType: "PERSONAL",
+                order: questions.length + 1,
+              },
             ]);
           }}
         >

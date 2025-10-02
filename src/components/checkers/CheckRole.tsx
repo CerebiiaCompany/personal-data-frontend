@@ -15,8 +15,9 @@ const CheckRole = () => {
   useEffect(() => {
     console.log("Checking role...");
     if (pathname == "/login") return;
+
     if (!user && !loading && error) {
-      return router.push("/login");
+      return router.push(`/login?callback_url=${pathname}`);
     }
 
     if (!loading && user) {
@@ -26,7 +27,7 @@ const CheckRole = () => {
         pathname.includes("/admin") &&
         !["COMPANY_ADMIN", "SUEPERADMIN"].includes(user.role)
       ) {
-        return router.push("/login");
+        return router.push(`/login?callback_url=${pathname}`);
       }
     }
   }, [pathname, user, loading]);

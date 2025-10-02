@@ -1,5 +1,7 @@
+import { useSessionStore } from "@/store/useSessionStore";
 import { APIResponse } from "@/types/api.types";
 import { API_BASE_URL } from "@/utils/env.utils";
+import { toast } from "sonner";
 
 export async function customFetch<T>(
   endpoint: string,
@@ -21,7 +23,13 @@ export async function customFetch<T>(
       ...options,
     });
 
-    const res = await req.json();
+    const res = (await req.json()) as APIResponse;
+
+    if (res.error?.code === "auth/unauthenticated") {
+      // notify user session has ended
+      useSessionStore.getState().logout();
+      useSessionStore.getState().setError("Sesión expirada");
+    }
 
     return res;
   } catch (error) {

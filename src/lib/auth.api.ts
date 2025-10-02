@@ -27,3 +27,13 @@ export async function logoutUser(): Promise<APIResponse> {
 
   return res;
 }
+
+export async function updatePassword(
+  newPassword: string
+): Promise<APIResponse> {
+  const res = await customFetch("/auth/update-password", {
+    method: "PATCH",
+    body: JSON.stringify({ password: newPassword }),
+  });
+  return res;
+}

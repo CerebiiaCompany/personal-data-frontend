@@ -1,6 +1,6 @@
 import { APIError } from "@/types/api.types";
 
-const ERROR_DICTIONARY: { [key: string]: string } = {
+export const ERROR_DICTIONARY = {
   "http/bad-request": "Error en la petición",
   "db/duplicate-key": "Este registro ya existe",
   "http/unknown-error": "Error desconocido",

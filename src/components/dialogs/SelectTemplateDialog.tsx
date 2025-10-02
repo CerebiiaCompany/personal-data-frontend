@@ -6,17 +6,14 @@ import Button from "../base/Button";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import CustomCheckbox from "../forms/CustomCheckbox";
 import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
+import { hideDialog } from "@/utils/dialogs.utils";
 
 const SelectTemplateDialog = () => {
-  const wrapperRef = useRef<HTMLDivElement>(null);
-
-  function hideDialog() {
-    wrapperRef.current?.classList.remove("dialog-visible");
-  }
+  const id = HTML_IDS_DATA.selectTemplateDialog;
 
   function handleClick(e: React.MouseEvent<HTMLDivElement, MouseEvent>) {
-    if ((e.target as HTMLElement).id === HTML_IDS_DATA.selectTemplateDialog) {
-      hideDialog();
+    if ((e.target as HTMLElement).id === id) {
+      hideDialog(id);
     }
   }
 
@@ -24,8 +21,7 @@ const SelectTemplateDialog = () => {
     /* Wrapper */
     <div
       onClick={handleClick}
-      id={HTML_IDS_DATA.selectTemplateDialog}
-      ref={wrapperRef}
+      id={id}
       className="dialog-wrapper fixed hidden w-full top-0 left-0 h-full z-20 justify-center items-center bg-stone-900/50"
     >
       {/* Modal */}
@@ -35,7 +31,7 @@ const SelectTemplateDialog = () => {
           <h3 className="font-bold text-xl">Seleccionar plantilla</h3>
 
           <button
-            onClick={hideDialog}
+            onClick={() => hideDialog(id)}
             className="w-fit p-1 rounded-lg hover:bg-stone-100 transition-colors"
           >
             <Icon icon={"tabler:x"} className="text-2xl" />

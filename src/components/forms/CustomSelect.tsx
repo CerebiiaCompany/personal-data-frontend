@@ -1,17 +1,15 @@
+import { CustomSelectOption } from "@/types/forms.types";
 import { Icon } from "@iconify/react";
 import clsx from "clsx";
 import React, { useEffect, useRef, useState } from "react";
 
 interface Props<T extends string> {
   label?: string;
-  value: string | null;
+  value?: T;
   unselectedText?: string;
-  onChange: (e: any) => void;
-  options: {
-    value: T;
-    title: string;
-    icon?: string;
-  }[];
+  onChange: (e: T) => void;
+  options: CustomSelectOption<T>[];
+  className?: string;
 }
 
 const CustomSelect = <T extends string>({
@@ -19,6 +17,7 @@ const CustomSelect = <T extends string>({
   options,
   value,
   unselectedText,
+  className,
   onChange,
 }: Props<T>) => {
   const [dialogToggle, setDialogToggle] = useState<boolean>(false);
@@ -50,9 +49,14 @@ const CustomSelect = <T extends string>({
   }
 
   return (
-    <div className="flex flex-col items-start gap-1 text-left flex-1 relative">
+    <div
+      className={clsx([
+        "flex flex-col items-start gap-1 text-left flex-1 relative h-fit",
+        className,
+      ])}
+    >
       {label && (
-        <label className="font-medium w-full pl-2 text-stone-500 text-sm">
+        <label className="font-medium w-full text-ellipsis pl-2 text-stone-500 text-sm">
           {label}
         </label>
       )}
@@ -60,7 +64,7 @@ const CustomSelect = <T extends string>({
       <button
         type="button"
         onClick={toggleDialog}
-        className="rounded-lg gap-2 w-full text-primary-900 border border-primary-900 flex-1 relative px-3 py-2 flex items-center justify-between bg-primary-50"
+        className="rounded-lg gap-2 w-full text-primary-900 border border-primary-900 flex-1 relative px-3 py-2 flex items-center justify-between bg-primary-50 text-ellipsis"
       >
         {selectedOption ? (
           <div className="flex items-center gap-2">

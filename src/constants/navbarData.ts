@@ -8,6 +8,8 @@ type NavbarData = {
 }[];
 
 export const NAVBAR_DATA: NavbarData = [
+  { title: "Perfil", path: "/perfil", minRole: "USER" },
+  { title: "Editar Perfil", path: "/perfil/editar", minRole: "USER" },
   {
     title: "Inicio",
     path: "/admin",
@@ -44,9 +46,39 @@ export const NAVBAR_DATA: NavbarData = [
     minRole: "COMPANY_ADMIN",
   },
   {
+    title: "Crear Campaña",
+    path: "/admin/campanas/crear",
+    minRole: "COMPANY_ADMIN",
+  },
+  {
     title: "Administración",
     path: "/admin/administracion",
     icon: "heroicons-outline:user-group",
+    minRole: "COMPANY_ADMIN",
+  },
+  {
+    title: "Usuarios",
+    path: "/admin/administracion/usuarios",
+    minRole: "COMPANY_ADMIN",
+  },
+  {
+    title: "Crear Usuario",
+    path: "/admin/administracion/usuarios/crear",
+    minRole: "COMPANY_ADMIN",
+  },
+  {
+    title: "Áreas",
+    path: "/admin/administracion/areas",
+    minRole: "COMPANY_ADMIN",
+  },
+  {
+    title: "Crear Área",
+    path: "/admin/administracion/areas/crear",
+    minRole: "COMPANY_ADMIN",
+  },
+  {
+    title: "Roles",
+    path: "/admin/administracion/roles",
     minRole: "COMPANY_ADMIN",
   },
 ];

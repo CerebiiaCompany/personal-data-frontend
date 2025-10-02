@@ -14,6 +14,14 @@ const SectionHeader = ({ dynamicEndpoint }: Props) => {
   const pathname = usePathname();
   const paths = pathname.split("/");
   paths.shift();
+  const pathsLength = paths.length;
+
+  const formattedPaths = [];
+
+  for (let i = 0; i < pathsLength; i++) {
+    formattedPaths.push(paths.join("/"));
+    paths.pop();
+  }
 
   return (
     <header className="w-full flex flex-col gap-2">
@@ -36,12 +44,12 @@ const SectionHeader = ({ dynamicEndpoint }: Props) => {
           {NAVBAR_DATA.find((e) => e.path === pathname)?.title}
         </h4> */}
         <div className="px-5 flex items-center gap-1">
-          {paths.map((path, index) => {
-            const pathData = NAVBAR_DATA.find((e) => e.path.includes(path));
+          {formattedPaths.reverse().map((path, index) => {
+            const pathData = NAVBAR_DATA.find((e) => e.path === `/${path}`);
 
             return (
               <React.Fragment key={path}>
-                {(index != 0 && index < paths.length) || !pathData ? (
+                {(index != 0 && index < pathsLength) || !pathData ? (
                   <Icon
                     key={1}
                     icon={"tabler:chevron-right"}

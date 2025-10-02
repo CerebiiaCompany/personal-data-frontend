@@ -12,6 +12,7 @@ export default function CollectPage() {
     data: collectForms,
     loading,
     error,
+    refresh,
   } = useCollectForms({
     companyId: user?.companyUserData?.companyId,
   });
@@ -24,7 +25,9 @@ export default function CollectPage() {
       <div className="px-8 py-6 flex flex-col gap-6 flex-1">
         <header className="w-full flex flex-col gap-2 items-start">
           <div className="w-full justify-between flex items-center">
-            <Button>Plantillas Ley 1581</Button>
+            <Button hierarchy="secondary" href="/admin/plantillas">
+              Plantillas Legales
+            </Button>
             <Button href="/admin/recoleccion/crear-formulario">
               Crear formulario
             </Button>
@@ -33,6 +36,7 @@ export default function CollectPage() {
 
         {/* Forms grid */}
         <CollectFormsList
+          refresh={refresh}
           items={collectForms}
           loading={loading}
           error={error}

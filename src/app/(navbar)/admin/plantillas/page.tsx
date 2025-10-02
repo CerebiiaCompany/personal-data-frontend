@@ -8,6 +8,7 @@ import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import { FORMS_MOCK_DATA } from "@/mock/formMock";
 import { TEMPLATES_MOCK_DATA } from "@/mock/templatesMock";
 import { formatDateToString } from "@/utils/date.utils";
+import { showDialog } from "@/utils/dialogs.utils";
 import { Icon } from "@iconify/react";
 
 export default function TemplatesPage() {
@@ -17,22 +18,12 @@ export default function TemplatesPage() {
 
       {/* Content */}
       <div className="px-8 py-6 flex flex-col gap-6">
-        <header className="w-full flex flex-col gap-2 items-start">
-          <div className="w-full justify-between flex items-center">
-            <Button>Plantillas Ley 1581</Button>
-          </div>
-        </header>
-
         <UploadTemplateDialog />
 
         {/* Grid view */}
         <div className="w-fill grid grid-cols-[repeat(auto-fit,_minmax(350px,_1fr))] gap-8 justify-center">
           <button
-            onClick={() => {
-              document
-                .getElementById(HTML_IDS_DATA.uploadTemplateDialog)
-                ?.classList.add("dialog-visible");
-            }}
+            onClick={() => showDialog(HTML_IDS_DATA.uploadTemplateDialog)}
             className="w-full rounded-lg bg-primary-50 relative flex flex-col items-center gap-2 justify-center hover:brightness-90 transition-[filter_.3s]"
           >
             <div className="w-full rounded-lg z-0 h-full pointer-events-none border-l-4 border-primary-500 absolute left-0 top-0" />

@@ -159,9 +159,10 @@ const DashboardNavbar = () => {
 
       {/* End Content */}
       <div className="border border-disabled bg-white h-fit flex flex-col rounded-lg w-full">
-        <div
+        <Link
+          href={"/perfil"}
           className={clsx([
-            "flex items-center gap-2 w-full justify-start",
+            "flex items-center gap-2 w-full justify-start hover:bg-stone-200 transition-colors",
             { "p-3": !isCollapsed },
             { "p-1.5": isCollapsed },
           ])}
@@ -187,7 +188,7 @@ const DashboardNavbar = () => {
               {session.user?.companyUserData?.personalEmail.toLowerCase()}
             </p>
           </div>
-        </div>
+        </Link>
 
         {/* Box separator */}
         <span className="inline-block w-full h-[1px] bg-disabled"></span>

@@ -31,7 +31,11 @@ export default function EditCollectPage() {
           Actualizar formulario
         </h4>
 
-        {collectForm.loading && <LoadingCover />}
+        {collectForm.loading && (
+          <div className="w-full h-20 relative">
+            <LoadingCover />
+          </div>
+        )}
         {collectForm.error && <p>{collectForm.error}</p>}
         {collectForm.data && (
           <CreateCollectFormForm initialValues={collectForm.data} />

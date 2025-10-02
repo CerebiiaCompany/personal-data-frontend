@@ -1,3 +1,10 @@
+import {
+  CollectFormResponse,
+  CollectFormResponseUser,
+} from "./collectFormResponse.types";
+import { CustomSelectOption } from "./forms.types";
+import { DocType } from "./user.types";
+
 type MarketingChannel = "SMS" | "WHATSAPP" | "EMAIL";
 type MarketingChannels = Record<MarketingChannel, boolean>;
 
@@ -19,10 +26,32 @@ export interface CreateCollectForm {
   questions: Omit<CollectFormQuestion, "_id">[];
 }
 
+export interface CreateCollectFormFromTemplate
+  extends Omit<CreateCollectForm, "questions" | "description"> {
+  responses: CollectFormResponseUser[];
+}
+
 export interface CollectForm extends CreateCollectForm {
   companyId: string;
   _id: string;
   createdAt: Date;
+  isImported: boolean;
   updated: Date;
   questions: CollectFormQuestion[];
+}
+
+export interface CollectFormClasification {
+  _id: string;
+  name: string;
+  companyId: string;
+  createdAt: Date;
+  updated: Date;
+  verifiedResponses: number;
+  totalResponses: number;
+}
+
+export interface CollectFormWithResponses {
+  _id: string;
+  name: string;
+  responses: CollectFormResponse[];
 }

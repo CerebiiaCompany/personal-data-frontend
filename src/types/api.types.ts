@@ -1,5 +1,7 @@
+import { ERROR_DICTIONARY } from "@/utils/parseApiError";
+
 export interface APIError {
-  code: string;
+  code: keyof typeof ERROR_DICTIONARY;
   message?: string;
 }
 
@@ -19,4 +21,7 @@ export interface QueryParams {
   page?: number;
   pageSize?: number;
   id?: string;
+  areaId?: string;
+  roleId?: string;
+  responseId?: string;
 }

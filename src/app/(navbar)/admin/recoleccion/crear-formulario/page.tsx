@@ -69,31 +69,6 @@ export default function CollectionCreateFormPage() {
     useState<boolean>(false);
   const user = useSessionStore((store) => store.user);
 
-  async function onSubmit(data: z.infer<typeof schema>) {
-    if (!user?.companyUserData?.companyId) return;
-
-    setLoading(true);
-
-    const res = await createCollectForm(user?.companyUserData?.companyId, {
-      ...data,
-      questions: data.questions.map((question, i) => ({
-        ...question,
-        order: i + 1,
-      })),
-    });
-
-    console.log(data.name);
-
-    if (res.error) {
-      setLoading(false);
-      return toast.error(parseApiError(res.error));
-    }
-
-    toast.success("Formulario creado");
-    setLoading(false);
-    router.push("/admin/recoleccion");
-  }
-
   useEffect(() => {
     const scrollContainer = document.getElementById("scrollContainer");
     if (!scrollContainer || !formRef.current) return;

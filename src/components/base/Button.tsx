@@ -14,6 +14,7 @@ interface Props {
   type?: "button" | "submit";
   isIconOnly?: boolean;
   loading?: boolean;
+  disabled?: boolean;
 }
 
 const Button = ({
@@ -27,15 +28,20 @@ const Button = ({
   type = "button",
   isIconOnly,
   loading = false,
+  disabled = false,
 }: Props) => {
   const baseClassName = clsx([
-    "px-3 py-2 rounded-lg flex items-center text-center justify-center gap-2 font-sans font-semibold transition-[filter_.3s] hover:brightness-90",
-    { "text-white bg-primary-900": hierarchy === "primary" }, //? for primary buttons
+    "px-3 py-2 rounded-lg flex items-center text-center justify-center gap-2 font-sans font-semibold transition-all hover:brightness-90",
+    {
+      "text-white bg-primary-900 border border-primary-900":
+        hierarchy === "primary",
+    }, //? for primary buttons
     {
       "border border-disabled bg-transparent": hierarchy === "secondary",
     }, //? for secondary buttons
     { "": hierarchy === "tertiary" }, //? for tertiary buttons
     { "w-fit rounded-full! p-2!": isIconOnly },
+    { "pointer-events-none opacity-40": disabled },
     customClassName,
   ]);
 
@@ -46,9 +52,14 @@ const Button = ({
       {endContent}
     </Link>
   ) : (
-    <button type={type} onClick={onClick} className={baseClassName}>
+    <button
+      disabled={disabled}
+      type={type}
+      onClick={onClick}
+      className={baseClassName}
+    >
       {startContent}
-      <div className="flex-1 h-full relative">
+      <div className="flex-1 h-fit relative">
         {loading && <LoadingCover size="sm" />}
         <div
           className={clsx([

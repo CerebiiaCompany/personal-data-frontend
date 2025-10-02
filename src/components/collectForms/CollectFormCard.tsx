@@ -3,12 +3,14 @@ import { formatDateToString } from "@/utils/date.utils";
 import React from "react";
 import Button from "../base/Button";
 import { copyToClipboard } from "@/utils/clipboard.utils";
+import { Icon } from "@iconify/react/dist/iconify.js";
 
 interface Props {
   data: CollectForm;
+  deleteHandler: (id: string) => void;
 }
 
-const CollectFormCard = ({ data }: Props) => {
+const CollectFormCard = ({ data, deleteHandler }: Props) => {
   let formUrl = `${window.location.origin}/formularios/${data._id}`;
 
   return (
@@ -49,19 +51,30 @@ const CollectFormCard = ({ data }: Props) => {
               })}
             </p>
           </div>
+          <div className="text-primary-700">
+            <h6 className="text-left font-bold leading-tight">Origen:</h6>
+            <p className="text-left leading-tight">
+              {data.isImported ? "Importado" : "Creado en la plataforma"}
+            </p>
+          </div>
         </div>
 
         {/* Actions */}
-        <div className="flex items-center w-full gap-2">
-          <Button className="flex-1" href={`/admin/recoleccion/${data._id}`}>
-            Ver detalle
-          </Button>
+        <div className="flex items-center justify-end w-full gap-2">
           <Button
             hierarchy="secondary"
-            className="flex-1"
             onClick={() => copyToClipboard(formUrl)}
           >
-            Copiar link
+            <Icon icon={"tabler:link"} className="text-xl" />
+          </Button>
+          <Button hierarchy="secondary" href={`/admin/recoleccion/${data._id}`}>
+            <Icon icon={"material-symbols:edit-outline"} className="text-xl" />
+          </Button>
+          <Button
+            className="bg-red-400/20 border-red-400"
+            onClick={(_) => deleteHandler(data._id)}
+          >
+            <Icon icon={"bx:trash"} className="text-xl text-red-400" />
           </Button>
         </div>
       </div>

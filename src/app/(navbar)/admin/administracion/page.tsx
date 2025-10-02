@@ -1,26 +1,36 @@
+"use client";
+
+import AdministrationPageSelector from "@/components/administration/AdministrationPageSelector";
+import CompanyUsersTable from "@/components/administration/CompanyUsersTable";
 import Button from "@/components/base/Button";
 import SectionHeader from "@/components/base/SectionHeader";
-import { FORMS_MOCK_DATA } from "@/mock/formMock";
-import { formatDateToString } from "@/utils/date.utils";
+import { useCompanyUsers } from "@/hooks/useCompanyUsers";
+import { useOwnCompany } from "@/hooks/useOwnCompany";
+import { useSessionStore } from "@/store/useSessionStore";
 import { Icon } from "@iconify/react";
 
 export default function AdministrationPage() {
-  return (
-    <div className="flex flex-col">
-      <SectionHeader />
+  const user = useSessionStore((store) => store.user);
+  const { data, loading, error } = useOwnCompany();
 
-      {/* Content */}
-      <div className="px-8 py-6 flex flex-col gap-6">
-        <header className="w-full flex flex-col gap-2 items-start">
-          <div className="w-full justify-between flex items-center">
-            <Button>Plantillas Ley 1581</Button>
-            <Button href="/recoleccion/crear-formulario">
-              Crear formulario
-            </Button>
-          </div>
-        </header>
-        Administración
-      </div>
+  return (
+    <div className="w-full p-4 rounded-md border border-disabled">
+      <header className="w-full flex gap-2 justify-between items-center">
+        <h4 className="font-semibold text-xl text-primary-900">{data?.name}</h4>
+        <div className="flex gap-2">
+          <Button
+            href="/administracion/editar"
+            endContent={
+              <Icon
+                icon={"material-symbols:edit-outline"}
+                className="text-xl"
+              />
+            }
+          >
+            Editar datos
+          </Button>
+        </div>
+      </header>
     </div>
   );
 }

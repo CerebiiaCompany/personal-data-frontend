@@ -15,7 +15,12 @@ const CustomInput = ({
   ...props
 }: Props) => {
   return (
-    <div className="flex flex-col items-start gap-1 text-left flex-1">
+    <div
+      className={clsx([
+        "flex flex-col items-start gap-1 text-left flex-1",
+        props.className,
+      ])}
+    >
       {label && (
         <label
           htmlFor={`${props.name}Field`}

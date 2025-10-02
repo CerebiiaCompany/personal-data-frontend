@@ -13,29 +13,32 @@ export function useCollectForms<T = CollectForm[]>({
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  async function fetch() {
+    setLoading(true);
+    const fetchedData = await fetchCollectForms({ companyId, id });
+
+    if (fetchedData.error) {
+      let parsedError = parseApiError(fetchedData.error);
+      setError(parsedError);
+      setLoading(false);
+      toast.error(parsedError);
+      return;
+    }
+
+    setLoading(false);
+    setData(fetchedData.data);
+  }
+
   useEffect(() => {
     if (!companyId) return;
 
-    (async () => {
-      setLoading(true);
-      const fetchedData = await fetchCollectForms({ companyId, id });
-
-      if (fetchedData.error) {
-        let parsedError = parseApiError(fetchedData.error);
-        setError(parsedError);
-        setLoading(false);
-        toast.error(parsedError);
-        return;
-      }
-
-      setLoading(false);
-      setData(fetchedData.data);
-    })();
+    fetch();
   }, [companyId]);
 
   return {
     data,
     loading,
     error,
+    refresh: fetch,
   };
 }
