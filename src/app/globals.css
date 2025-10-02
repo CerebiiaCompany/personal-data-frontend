@@ -2,11 +2,21 @@
 
 @theme inline {
   --color-primary-50: #edefff;
+  --color-primary-300: #0d99ff;
   --color-primary-500: #2d60e0;
+  --color-primary-700: #150668;
   --color-primary-900: #000b50;
 
+  --color-primary-shadows: #d1d5e9;
   --color-disabled: #d0cde1;
+
+  --animate-appear: appearAnimation 0.1s 1 ease-in-out forwards;
 }
+
+/* //! debug only */
+/* *{
+  transition: all 3s;
+} */
 
 iconify-icon {
   display: inline-block;
@@ -20,4 +30,103 @@ button {
 
 input:focus {
   outline: none;
+}
+
+@keyframes appearAnimation {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.text-ellipsis {
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* Scrollbar normalize */
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-gutter {
+  scrollbar-gutter: stable both-edges;
+}
+
+/* width */
+::-webkit-scrollbar {
+  width: 5px;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+  background: #f7f7f711;
+  border-radius: 5px;
+}
+
+/* Handle */
+::-webkit-scrollbar-thumb {
+  background: #777;
+  border-radius: 5px;
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}
+
+/* ? styles for checkbox */
+
+.custom-checkbox {
+  display: flex;
+  align-items: center;
+}
+
+/* Hide the original checkbox */
+.custom-checkbox input[type="checkbox"] {
+  opacity: 0;
+}
+.custom-checkbox span {
+  font-weight: 400;
+  font-size: 0.9rem;
+}
+
+/* Style the custom visual element */
+.checkbox-visual {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #ccc;
+  border-radius: 4px;
+  display: inline-block;
+  margin-right: 8px;
+  position: relative;
+  transition: all 0.1s ease-in-out;
+}
+
+/* Style the custom visual element when the input inside the label is checked */
+.custom-checkbox:has(input[type="checkbox"]:checked) .checkbox-visual {
+  background-color: var(--color-primary-900);
+  border-color: var(--color-primary-900);
+}
+
+/* Create the checkmark */
+.custom-checkbox:has(input[type="checkbox"]:checked) .checkbox-visual::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  height: 8px;
+  border: solid white;
+  border-width: 0px 0px 3px 3px;
+  transform: rotate(-45deg) scale(0.8) translate(1.5px, -1.5px);
+}
+
+.dialog-wrapper.dialog-visible {
+  display: flex;
 }
