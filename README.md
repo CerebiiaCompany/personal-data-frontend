@@ -1,37 +1,113 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Guía de despliegue local — personal-data-frontend
 
-## Getting Started
+## Pila tecnológica (Tech Stack)
 
-First, run the development server:
+- Next.js 15 (App Router)
+- React 19
+- TypeScript
+- Tailwind CSS
+- ESLint + Prettier
+- npm
+
+---
+
+## Requisitos previos
+
+- Node.js LTS (≥ 18.x recomendado)
+- npm (o pnpm / yarn) instalado
+- Acceso a la API que consumirá este frontend (URL base y credenciales públicas si aplican)
+
+---
+
+### 2) Duplicar para entorno local
+
+Copia el archivo y crea tu `.env`
+
+```bash
+cp .env.example .env
+```
+
+Edita los valores con tus endpoints reales. Puedes revisar el archivo .env.example de referencia.
+
+> Regla (Next.js): toda variable que inicie con `NEXT_PUBLIC_` puede quedar expuesta en el bundle del cliente. Nunca coloques secretos en estas variables.
+
+---
+
+## Instalación
+
+Clona el repo y entra a la carpeta:
+
+```bash
+git clone https://github.com/CerebiiaCompany/personal-data-frontend
+cd personal-data-frontend
+```
+
+Instala dependencias (elige tu gestor):
+
+```bash
+# con npm
+npm install
+```
+
+---
+
+## Ejecución en desarrollo
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Por defecto, la app estará en `http://localhost:3000`.
+Asegúrate de que la API esté accesible en `NEXT_PUBLIC_API_BASE_URL`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Build de producción y arranque
 
-## Learn More
+Genera el build:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run build
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Levanta el servidor de producción:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm start
+```
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Scripts útiles (ejemplo)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# personal-data-frontend
+Ajusta según tu `package.json` si difiere.
+
+```jsonc
+{
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build --turbopack",
+    "start": "next start",
+    "lint": "eslint"
+  }
+}
+```
+
+---
+
+## Comprobación rápida
+
+1. Ejecuta `npm run dev` y verifica que no haya errores.
+2. Abre `http://localhost:3000` y navega por la app.
+3. En el panel Network del navegador verifica que las llamadas van a `NEXT_PUBLIC_API_BASE_URL`.
+4. Si usas Tailwind, cambia una clase y confirma que se aplica correctamente.
+
+---
+
+## Solución de problemas
+
+- Errores 404/500 al llamar la API: valida `NEXT_PUBLIC_API_BASE_URL` y que el backend esté activo.
+- CORS bloqueado: configura CORS en el backend para permitir `http://localhost:3000`.
+- Variables no cargan: confirma que `.env` exista y reinicia `npm run dev`.
+- Errores de TypeScript: ejecuta `npm run type-check`.
+- Tailwind no aplica: revisa `tailwind.config.ts` y que `content` apunte a las rutas correctas.
