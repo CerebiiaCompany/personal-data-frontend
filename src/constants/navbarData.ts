@@ -10,6 +10,9 @@ type NavbarData = {
 export const NAVBAR_DATA: NavbarData = [
   { title: "Perfil", path: "/perfil", minRole: "USER" },
   { title: "Editar Perfil", path: "/perfil/editar", minRole: "USER" },
+  { title: "Cambiar clave", path: "/perfil/cambiar-clave", minRole: "USER" },
+  { title: "Historial de pagos", path: "/perfil/pagos", minRole: "USER" },
+  { title: "Planes", path: "/perfil/planes", minRole: "USER" },
   {
     title: "Inicio",
     path: "/admin",

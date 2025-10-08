@@ -5,14 +5,14 @@ import { parseApiError } from "@/utils/parseApiError";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-export function useCampaigns<T = Campaign[]>({ companyId, id }: QueryParams) {
+export function useCampaigns<T = Campaign[]>(params: QueryParams) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   async function fetch() {
     setLoading(true);
-    const fetchedData = await fetchCampaigns({ companyId, id });
+    const fetchedData = await fetchCampaigns(params);
 
     if (fetchedData.error) {
       let parsedError = parseApiError(fetchedData.error);
@@ -27,10 +27,10 @@ export function useCampaigns<T = Campaign[]>({ companyId, id }: QueryParams) {
   }
 
   useEffect(() => {
-    if (!companyId) return;
+    if (!params.companyId) return;
 
     fetch();
-  }, [companyId]);
+  }, [params.companyId]);
 
   return {
     data,

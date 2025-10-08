@@ -22,6 +22,8 @@ import { toast } from "sonner";
 import { useParams, useRouter } from "next/navigation";
 import { createCollectFormValidationSchema } from "@/validations/main.validations";
 import { showDialog } from "@/utils/dialogs.utils";
+import { usePolicyTemplates } from "@/hooks/usePolicyTemplates";
+import LoadingCover from "../layout/LoadingCover";
 
 interface Props {
   initialValues?: CreateCollectForm;
@@ -40,22 +42,27 @@ const CreateCollectFormForm = ({ initialValues }: Props) => {
   } = useForm({
     resolver: zodResolver(createCollectFormValidationSchema),
     defaultValues: initialValues || {
-      name: "Formulario Creado de Prueba",
-      description: "Creado desde el cliente frontend",
+      name: "",
+      description: "",
+      policyTemplateId: "",
       marketingChannels: {
-        SMS: true,
-        EMAIL: true,
-        WHATSAPP: true,
+        SMS: false,
+        EMAIL: false,
+        WHATSAPP: false,
       },
       questions: [],
     },
   });
+
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const floatingActionNavbarRef = useRef<HTMLElement>(null);
   const [floatingNavbarToggle, setFloatingNavbarToggle] =
     useState<boolean>(false);
   const user = useSessionStore((store) => store.user);
+  const policyTemplates = usePolicyTemplates({
+    companyId: user?.companyUserData?.companyId,
+  });
 
   useEffect(() => {
     const scrollContainer = document.getElementById("scrollContainer");
@@ -104,6 +111,8 @@ const CreateCollectFormForm = ({ initialValues }: Props) => {
       res = await createCollectForm(user?.companyUserData?.companyId, data);
     }
     setLoading(false);
+
+    console.log(data);
 
     if (res.error) {
       return toast.error(parseApiError(res.error));
@@ -214,93 +223,71 @@ const CreateCollectFormForm = ({ initialValues }: Props) => {
         />
       </div>
 
-      <Button
-        onClick={() => showDialog(HTML_IDS_DATA.selectTemplateDialog)}
-        className="max-w-xs"
-      >
-        Seleccionar plantilla
-      </Button>
-
-      {/* Select  */}
-      <SelectTemplateDialog />
-
-      {/* Questions list */}
-      {watch("questions").map((_, index) => (
-        <div
-          className="rounded-xl border border-disabled p-10 flex flex-col items-stretch gap-5 relative group"
-          key={index}
-        >
-          <div className="absolute top-2 right-2 group-hover:opacity-100 opacity-0 -translate-y-5 group-hover:translate-0 transition-all">
+      <div className="flex items-center gap-4 relative">
+        {policyTemplates.loading && (
+          <div className="relative h-16 w-full">
+            <LoadingCover size="sm" />
+          </div>
+        )}
+        {policyTemplates.data && (
+          <>
             <Button
-              onClick={() => deleteQuestion(index)}
-              isIconOnly
-              hierarchy="tertiary"
-              className="bg-red-400/10! text-red-400"
+              onClick={() => showDialog(HTML_IDS_DATA.selectTemplateDialog)}
+              className="max-w-xs"
+              hierarchy="secondary"
             >
-              <Icon icon={"tabler:trash"} className="text-2xl" />
+              Seleccionar plantilla
             </Button>
-          </div>
-          <div className="flex flex-col gap-4">
-            <CustomInput
-              variant="underline"
-              placeholder="Título de la pregunta"
-              {...register(`questions.${index}.title`)}
-              error={errors.questions && errors.questions[index]?.title}
-            />
-            <div className="flex justify-between gap-3">
-              <CustomSelect<AnswerType>
-                value={watch("questions")[index].answerType}
-                unselectedText="Tipo de respuesta"
-                onChange={(value) =>
-                  setValue(`questions.${index}.answerType`, value)
-                }
-                options={[
-                  {
-                    value: "TEXT",
-                    title: "Repuesta escrita",
-                    icon: "material-symbols:short-text-rounded",
-                  },
-                  {
-                    value: "DATE",
-                    title: "Fecha",
-                    icon: "fluent:calendar-16-regular",
-                  },
-                ]}
-              />
 
-              <CustomSelect<DataType>
-                value={watch("questions")[index].dataType}
-                onChange={(value) =>
-                  setValue(`questions.${index}.dataType`, value)
-                }
-                unselectedText="Tipo de dato"
-                options={[
-                  {
-                    value: "PERSONAL",
-                    title: "Personal",
-                    icon: "tabler:user",
-                  },
-                  {
-                    value: "MEDICAL",
-                    title: "Médico",
-                    icon: "tabler:first-aid-kit",
-                  },
-                ]}
-              />
+            <div className="flex items-center gap-2">
+              <p className="font-medium text-stone-500">
+                Seleccionada:{" "}
+                <b>
+                  {policyTemplates.data.find(
+                    (policy) => policy._id === watch("policyTemplateId")
+                  )?.name || "Sin seleccionar"}
+                </b>
+              </p>
+              {watch("policyTemplateId") && (
+                <button
+                  onClick={(_) => setValue("policyTemplateId", "")}
+                  className="p-1 rounded-md transition-colors text-stone-500 hover:bg-stone-100"
+                >
+                  <Icon icon={"tabler:x"} className="text-lg" />
+                </button>
+              )}
             </div>
-          </div>
-        </div>
-      ))}
-
-      {errors.questions && (
+          </>
+        )}
+      </div>
+      {errors.policyTemplateId && (
         <span className="text-red-400 text-sm font-semibold">
-          {errors.questions.message}
+          {errors.policyTemplateId.message}
         </span>
       )}
 
+      {/* Select  */}
+      {policyTemplates.data && (
+        <SelectTemplateDialog
+          items={policyTemplates.data}
+          value={watch("policyTemplateId")}
+          onSelect={(id) =>
+            setValue("policyTemplateId", id, {
+              shouldValidate: true,
+              shouldDirty: true,
+              shouldTouch: true,
+            })
+          }
+        />
+      )}
+
       {/* Add question button */}
-      <div className="flex justify-end">
+      <div className="flex justify-between mt-6">
+        <h6 className="font-semibold text-primary-900 text-xl">
+          Preguntas personalizadas
+        </h6>
         <Button
+          hierarchy="secondary"
           className="max-w-xs w-full"
           startContent={<Icon icon={"tabler:plus"} className="text-lg" />}
           onClick={() => {
@@ -319,6 +306,84 @@ const CreateCollectFormForm = ({ initialValues }: Props) => {
           Añadir pregunta
         </Button>
       </div>
+
+      {/* Questions list */}
+      {watch("questions").length ? (
+        watch("questions").map((_, index) => (
+          <div
+            className="rounded-xl border border-disabled p-10 flex flex-col items-stretch gap-5 relative group"
+            key={index}
+          >
+            <div className="absolute top-2 right-2 group-hover:opacity-100 opacity-0 -translate-y-5 group-hover:translate-0 transition-all">
+              <Button
+                onClick={() => deleteQuestion(index)}
+                isIconOnly
+                hierarchy="tertiary"
+                className="bg-red-400/10! text-red-400"
+              >
+                <Icon icon={"tabler:trash"} className="text-2xl" />
+              </Button>
+            </div>
+            <div className="flex flex-col gap-4">
+              <CustomInput
+                variant="underline"
+                placeholder="Título de la pregunta"
+                {...register(`questions.${index}.title`)}
+                error={errors.questions && errors.questions[index]?.title}
+              />
+              <div className="flex justify-between gap-3">
+                <CustomSelect<AnswerType>
+                  value={watch("questions")[index].answerType}
+                  unselectedText="Tipo de respuesta"
+                  onChange={(value) =>
+                    setValue(`questions.${index}.answerType`, value)
+                  }
+                  options={[
+                    {
+                      value: "TEXT",
+                      title: "Repuesta escrita",
+                      icon: "material-symbols:short-text-rounded",
+                    },
+                    {
+                      value: "DATE",
+                      title: "Fecha",
+                      icon: "fluent:calendar-16-regular",
+                    },
+                  ]}
+                />
+
+                <CustomSelect<DataType>
+                  value={watch("questions")[index].dataType}
+                  onChange={(value) =>
+                    setValue(`questions.${index}.dataType`, value)
+                  }
+                  unselectedText="Tipo de dato"
+                  options={[
+                    {
+                      value: "PERSONAL",
+                      title: "Personal",
+                      icon: "tabler:user",
+                    },
+                    {
+                      value: "MEDICAL",
+                      title: "Médico",
+                      icon: "tabler:first-aid-kit",
+                    },
+                  ]}
+                />
+              </div>
+            </div>
+          </div>
+        ))
+      ) : (
+        <p className="text-stone-500">No has añadido ninguna pregunta</p>
+      )}
+
+      {errors.questions && (
+        <span className="text-red-400 text-sm font-semibold">
+          {errors.questions.message}
+        </span>
+      )}
     </form>
   );
 };

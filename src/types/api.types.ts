@@ -1,4 +1,5 @@
 import { ERROR_DICTIONARY } from "@/utils/parseApiError";
+import { CampaignAudienceGender } from "./campaign.types";
 
 export interface APIError {
   code: keyof typeof ERROR_DICTIONARY;
@@ -24,4 +25,16 @@ export interface QueryParams {
   areaId?: string;
   roleId?: string;
   responseId?: string;
+  active?: boolean;
+  campaignId?: string;
+
+  //for date range filtering
+  startDate?: string;
+  endDate?: string;
+
+  //for calc audience
+  sourceForms?: string;
+  minAge?: number;
+  maxAge?: number;
+  gender?: CampaignAudienceGender;
 }

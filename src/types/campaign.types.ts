@@ -5,13 +5,13 @@ export type CampaignGoal =
   | "PROMOTION"
   | "OTHER";
 
-export type CampaignAudienceGender = "MALE" | "FEMALE" | "ALL";
+export type CampaignAudienceGender = "MALE" | "FEMALE" | "OTHER" | "ALL";
 
 export type CampaignDeliveryChannel = "SMS" | "EMAIL";
 
 export interface CreateCampaign {
   name: string;
-  active?: boolean;
+  active: boolean;
   goal: CampaignGoal;
   scheduling: {
     startDate: Date;
@@ -24,6 +24,7 @@ export interface CreateCampaign {
     minAge: number;
     maxAge: number;
     gender: CampaignAudienceGender;
+    count: number;
   };
   content: {
     name: string;
@@ -37,6 +38,9 @@ export interface Campaign extends CreateCampaign {
   _id: string;
   active: boolean;
   companyId: string;
+  audience: CreateCampaign["audience"] & {
+    deliveredCount: number;
+  };
   createdAt: Date;
   updatedAt: Date;
 }

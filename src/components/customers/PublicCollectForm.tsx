@@ -21,6 +21,8 @@ import { registerCollectFormResponse } from "@/lib/collectFormResponse.api";
 import CollectFormResponseSavedModal from "./CollectFormResponseSavedModal";
 import { showDialog } from "@/utils/dialogs.utils";
 import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
+import { Icon } from "@iconify/react/dist/iconify.js";
+import { generateOtpCode, validateOtpCode } from "@/lib/oneTimeCode.api";
 
 interface Props {
   data: CollectForm;
@@ -28,6 +30,7 @@ interface Props {
 }
 
 const PublicCollectForm = ({ data, initialValues }: Props) => {
+  const [pendingOtpId, setPendingOtpId] = useState<string | null>(null);
   const [fullName, setFullName] = useState<string>("");
   const fields: {
     [key: string]: {
@@ -43,6 +46,8 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
         default: question.answerType === "TEXT" ? "" : new Date(),
       })
   );
+
+  console.log(data.policyTemplateFile);
 
   // Build a dynamic Zod schema based on the inferred `fields`
 
@@ -126,9 +131,8 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
     dataProcessing: z.boolean().refine((val) => val === true, {
       error: "Debes aceptar el tratamiento de datos",
     }),
-    otpCode: initialValues
-      ? z.string()
-      : z.string().min(1, "Este campo es obligatorio"),
+    otpCode: z.string(),
+    otpCodeId: z.string(),
   });
 
   const dynamicDefaultValues = React.useMemo(() => {
@@ -155,11 +159,26 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
         docType: "CC",
       },
       otpCode: "",
+      otpCodeId: "",
     },
   });
 
   async function onSubmit(formData: CreateCollectFormResponse) {
-    const res = await registerCollectFormResponse(data._id, formData);
+    if (!pendingOtpId) return toast.warning("No has generado un código OTP");
+    const otpValidation = await validateOtpCode(pendingOtpId, formData.otpCode);
+
+    if (otpValidation.error) {
+      console.log(otpValidation.error);
+      return toast.error(parseApiError(otpValidation.error));
+    }
+
+    toast.success("Código OTP validado");
+
+    //? register user response
+    const res = await registerCollectFormResponse(data._id, {
+      ...formData,
+      otpCodeId: otpValidation.data.id,
+    });
 
     if (res.error) {
       return toast.error(parseApiError(res.error));
@@ -169,6 +188,30 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
     setFullName(`${formData.user.name} ${formData.user.lastName}`);
     showDialog(HTML_IDS_DATA.collectFormResponseSavedModal);
     reset();
+  }
+
+  async function createOtpCode() {
+    const res = await generateOtpCode({
+      collectFormId: data._id,
+      recipientData: {
+        address: "573106953847",
+        channel: "SMS",
+      },
+    });
+
+    console.log(res);
+
+    if (res.error) {
+      if (res.error.code === "otp/pending-code") {
+        //? server returns otp id in the data
+        setPendingOtpId(res.data.id);
+      }
+      return toast.error(parseApiError(res.error));
+    }
+
+    setPendingOtpId(res.data.id);
+
+    toast.success("Código enviado");
   }
 
   return (
@@ -239,30 +282,40 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
         </div>
       </div>
 
-      <div className="rounded-xl border border-disabled p-10 flex flex-col items-stretch gap-5">
-        {data.questions.map((question) => (
-          <RenderQuestionInput
-            key={question._id}
-            {...register(`data.${question.title}`)}
-            question={question}
-            defaultValue={watch(`data.${question.title}`) as any}
-            error={errors.data && (errors.data[question.title] as FieldError)}
-          />
-        ))}
-      </div>
+      {data.questions.length ? (
+        <div className="rounded-xl border border-disabled p-10 flex flex-col items-stretch gap-5">
+          {data.questions.map((question) => (
+            <RenderQuestionInput
+              key={question._id}
+              {...register(`data.${question.title}`)}
+              question={question}
+              defaultValue={watch(`data.${question.title}`) as any}
+              error={errors.data && (errors.data[question.title] as FieldError)}
+            />
+          ))}
+        </div>
+      ) : null}
 
       <div className="rounded-xl border border-disabled p-10 flex flex-col items-stretch gap-5">
-        {!initialValues && (
+        <div className="flex items-end gap-2">
           <CustomInput
             label="Código OTP"
             {...register("otpCode")}
             error={errors.otpCode}
             placeholder="XXX-XXX"
           />
-        )}
+          <Button
+            type="button"
+            onClick={createOtpCode}
+            className="h-fit"
+            hierarchy="secondary"
+          >
+            <Icon icon={"tabler:send"} className="text-2xl" />
+          </Button>
+        </div>
         <CustomCheckbox
           {...register("dataProcessing")}
-          label="Acepto el tratamiento de datos"
+          label={<p>Acepto el tratamiento de datos personales</p>}
           error={errors.dataProcessing as FieldError}
         />
       </div>

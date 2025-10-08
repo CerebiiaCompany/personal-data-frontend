@@ -6,11 +6,8 @@ import ClasificationTable from "@/components/clasification/ClasificationTable";
 import UploadExcelTemplateDialog from "@/components/dialogs/UploadExcelTemplateFile";
 import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import { useCollectFormClasifications } from "@/hooks/useCollectFormClasifications";
-import { FORMS_MOCK_DATA } from "@/mock/formMock";
 import { useSessionStore } from "@/store/useSessionStore";
-import { formatDateToString } from "@/utils/date.utils";
 import { showDialog } from "@/utils/dialogs.utils";
-import { Icon } from "@iconify/react";
 
 export default function ClassificationPage() {
   const user = useSessionStore((store) => store.user);
@@ -33,7 +30,7 @@ export default function ClassificationPage() {
             Cargar plantilla de excel
           </Button>
           <h4 className="font-semibold text-xl text-primary-900">
-            Crear formulario nuevo
+            Clasificación de los formulario
           </h4>
           <span />
         </header>

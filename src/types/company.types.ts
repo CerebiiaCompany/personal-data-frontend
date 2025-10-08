@@ -1,3 +1,5 @@
+import { Plan } from "./plan.types";
+
 export type CompanyManagerDocType = "CC";
 export type PlanStatus = "ACTIVE" | "INACTIVE";
 
@@ -12,10 +14,7 @@ export interface Company {
   };
   email: string;
   phone: string;
-  planData: {
-    planId: string;
-    status: PlanStatus;
-  };
+  plan: Pick<Plan, "_id" | "name" | "description" | "monthlyCredits">;
   createdAt: Date;
   updatedAt: Date;
 }

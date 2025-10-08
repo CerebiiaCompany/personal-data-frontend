@@ -17,6 +17,9 @@ export const userGendersOptions: CustomSelectOption<UserGender>[] = [
   },
 ];
 
+export const parseUserGenderToString = (role: UserGender): string =>
+  userGendersOptions.find((e) => e.value === role)?.title || "Género inválido";
+
 export interface CollectFormResponseUser {
   docType: DocType;
   docNumber: number;
@@ -33,6 +36,7 @@ export interface CreateCollectFormResponse {
   data: { [key: string]: any };
   dataProcessing: boolean;
   otpCode: string;
+  otpCodeId: string;
 }
 
 export interface CollectFormResponse extends CreateCollectFormResponse {

@@ -1,8 +1,8 @@
 import { toast } from "sonner";
 
-export function copyToClipboard(text: string) {
+export function copyToClipboard(text: string, message?: string) {
   navigator.clipboard
     .writeText(text)
-    .then(() => toast.success("Copiado al portapapeles"))
+    .then(() => toast.success(message || "Copiado al portapapeles"))
     .catch((e) => toast.error("Error al copiar al portapapeles"));
 }

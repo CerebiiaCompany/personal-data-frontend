@@ -4,7 +4,7 @@ import { FieldError } from "react-hook-form";
 
 interface Props extends React.ComponentProps<"input"> {
   className?: string;
-  label?: string;
+  label?: string | React.ReactNode;
   error?: FieldError;
 }
 

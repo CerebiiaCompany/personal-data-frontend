@@ -7,17 +7,14 @@ import { parseApiError } from "@/utils/parseApiError";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-export function useCompanyUsers<T = SessionUser[]>({
-  companyId,
-  id,
-}: QueryParams) {
+export function useCompanyUsers<T = SessionUser[]>(params: QueryParams) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   async function fetch() {
     setLoading(true);
-    const fetchedData = await fetchCompanyUsers({ companyId, id });
+    const fetchedData = await fetchCompanyUsers(params);
 
     if (fetchedData.error) {
       let parsedError = parseApiError(fetchedData.error);
@@ -32,10 +29,10 @@ export function useCompanyUsers<T = SessionUser[]>({
   }
 
   useEffect(() => {
-    if (!companyId) return;
+    if (!params.companyId) return;
 
     fetch();
-  }, [companyId]);
+  }, [params.companyId]);
 
   return {
     data,

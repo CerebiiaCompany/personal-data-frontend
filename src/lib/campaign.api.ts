@@ -2,15 +2,24 @@ import { APIResponse, QueryParams } from "@/types/api.types";
 import { CreateCampaign } from "@/types/campaign.types";
 import { customFetch } from "@/utils/customFetch";
 
-export async function fetchCampaigns({
-  companyId,
-  id,
-}: QueryParams): Promise<APIResponse> {
-  let endpoint = `/companies/${companyId}/campaigns`;
+export async function fetchCampaigns(
+  params: QueryParams
+): Promise<APIResponse> {
+  let endpoint = `/companies/${params.companyId}/campaigns`;
 
-  if (id) endpoint += `/${id}`;
+  if (params.id) endpoint += `/${params.id}`;
 
-  const res = await customFetch(endpoint);
+  const res = await customFetch(endpoint, {}, params);
+
+  return res;
+}
+
+export async function fetchCalcCampaignAudience(
+  params: QueryParams
+): Promise<APIResponse> {
+  let endpoint = `/companies/${params.companyId}/campaigns/calc-audience`;
+
+  const res = await customFetch(endpoint, {}, params);
 
   return res;
 }

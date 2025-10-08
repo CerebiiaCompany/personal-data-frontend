@@ -6,7 +6,6 @@ import CampaignsTable from "@/components/campaigns/CampaignsTable";
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { deleteCampaign } from "@/lib/campaign.api";
 import { useSessionStore } from "@/store/useSessionStore";
-import { APIResponse } from "@/types/api.types";
 import { parseApiError } from "@/utils/parseApiError";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import { useState } from "react";

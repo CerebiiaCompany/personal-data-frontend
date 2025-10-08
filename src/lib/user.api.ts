@@ -2,14 +2,13 @@ import { APIResponse, QueryParams } from "@/types/api.types";
 import { CreateUser, UpdateUser } from "@/types/user.types";
 import { customFetch } from "@/utils/customFetch";
 
-export async function fetchCompanyUsers({
-  companyId,
-  id,
-}: QueryParams): Promise<APIResponse> {
-  let endpoint = `/companies/${companyId}/users`;
+export async function fetchCompanyUsers(
+  params: QueryParams
+): Promise<APIResponse> {
+  let endpoint = `/companies/${params.companyId}/users`;
 
-  if (id) endpoint += `/${id}`;
-  const res = await customFetch(endpoint);
+  if (params.id) endpoint += `/${params.id}`;
+  const res = await customFetch(endpoint, {}, params);
 
   return res;
 }

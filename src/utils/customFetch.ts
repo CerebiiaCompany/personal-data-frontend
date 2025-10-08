@@ -1,11 +1,39 @@
 import { useSessionStore } from "@/store/useSessionStore";
-import { APIResponse } from "@/types/api.types";
+import { APIResponse, QueryParams } from "@/types/api.types";
 import { API_BASE_URL } from "@/utils/env.utils";
-import { toast } from "sonner";
+
+// Build a query string from an object, skipping null/undefined/empty and the `id` key
+function buildQueryString(params?: QueryParams): string {
+  if (!params) return "";
+  const parts: string[] = [];
+  for (const [key, value] of Object.entries(params)) {
+    if (
+      key.toLowerCase().includes("id") ||
+      value === undefined ||
+      value === null ||
+      value === ""
+    )
+      continue;
+    if (Array.isArray(value)) {
+      for (const v of value) {
+        if (v === undefined || v === null || v === "") continue;
+        parts.push(
+          `${encodeURIComponent(key)}=${encodeURIComponent(String(v))}`
+        );
+      }
+    } else {
+      parts.push(
+        `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`
+      );
+    }
+  }
+  return parts.join("&");
+}
 
 export async function customFetch<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  query?: QueryParams
 ): Promise<APIResponse<T>> {
   const headers: HeadersInit = {};
 
@@ -13,8 +41,15 @@ export async function customFetch<T>(
     headers["Content-Type"] = "application/json";
   }
 
+  let localEndpoint = endpoint;
+  const queries = buildQueryString(query);
+
+  if (queries) {
+    localEndpoint += `?${queries}`;
+  }
+
   try {
-    const req = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const req = await fetch(`${API_BASE_URL}${localEndpoint}`, {
       credentials: "include",
       headers: {
         ...headers,

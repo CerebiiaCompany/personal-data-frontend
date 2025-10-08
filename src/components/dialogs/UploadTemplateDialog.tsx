@@ -1,19 +1,154 @@
 "use client";
 
-import React, { useRef, useState } from "react";
-import CustomInput from "../forms/CustomInput";
 import Button from "../base/Button";
 import { Icon } from "@iconify/react/dist/iconify.js";
-import CustomCheckbox from "../forms/CustomCheckbox";
 import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import { hideDialog } from "@/utils/dialogs.utils";
+import * as z from "zod";
+import {
+  CustomFileDropZone,
+  generateFileSchema,
+} from "../forms/CustomFileDropZone";
+import { FieldError, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useSessionStore } from "@/store/useSessionStore";
+import { toast } from "sonner";
+import CustomInput from "../forms/CustomInput";
+import { useState } from "react";
+import {
+  createUploadIntent,
+  finalizeUpload,
+  uploadWithPresignedUrl,
+} from "@/lib/uploadToS3";
+import { createCompanyFile } from "@/lib/file.api";
+import { parseApiError } from "@/utils/parseApiError";
+import { createCompanyPolicyTemplate } from "@/lib/policyTemplate.api";
+import LoadingCover from "../layout/LoadingCover";
 
-const UploadTemplateDialog = () => {
+const acceptedFiletypes = ["application/pdf"];
+
+const maxSizeMB = 5;
+const maxFiles = 1;
+
+const formSchema = z.object({
+  name: z.string().min(1, "Este campo es obligatorio"),
+  attachments: z
+    .array(generateFileSchema(acceptedFiletypes, maxSizeMB))
+    .min(1, "Sube la plantilla en PDF")
+    .max(maxFiles, `Máximo ${maxFiles} archivos`)
+    .default([]),
+});
+
+interface Props {
+  refresh: () => void;
+}
+
+const UploadTemplateDialog = ({ refresh }: Props) => {
+  const user = useSessionStore((store) => store.user);
+  const [loading, setLoading] = useState<boolean>(false);
+  const {
+    formState: { errors },
+    register,
+    watch,
+    handleSubmit,
+    reset,
+    control,
+  } = useForm<any>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: "",
+      attachments: [],
+    },
+  });
   const id = HTML_IDS_DATA.uploadTemplateDialog;
 
   function handleClick(e: React.MouseEvent<HTMLDivElement, MouseEvent>) {
+    if (loading) return;
     if ((e.target as HTMLElement).id === id) {
       hideDialog(id);
+    }
+  }
+
+  async function onSubmit(data: any) {
+    const companyId = user?.companyUserData?.companyId;
+    if (!companyId) return;
+
+    const file: File | undefined = data.attachments?.[0];
+    if (!file) {
+      toast.error("Debes cargar un archivo de Excel");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const filePromise = new Promise<{ key: string }>((res, rej) => {
+        createUploadIntent({
+          mimeType: file.type || "application/octet-stream",
+          size: file.size,
+          purpose: "company-templates",
+        })
+          .then((intent) => {
+            uploadWithPresignedUrl(intent.url, file)
+              .then((_) => {
+                finalizeUpload({
+                  key: intent.key,
+                  expectedMime: file.type.split("/")[0],
+                }).then((e) => res({ key: intent.key }));
+              })
+              .catch((error) => {
+                setLoading(false);
+                rej(error);
+              });
+          })
+          .catch((error) => {
+            setLoading(false);
+            rej(error);
+          });
+      });
+
+      toast.promise(filePromise, {
+        loading: "Subiendo archivo...",
+        success: "Plantilla subida",
+        error: "Error al subir la plantilla",
+      });
+
+      const intent = await filePromise;
+
+      //? send file data to api to create File Model
+      const fileRes = await createCompanyFile(companyId, {
+        key: intent.key,
+        contentType: file.type, //? mimetype
+        size: file.size,
+        originalName: file.name,
+      });
+
+      if (fileRes.error) {
+        setLoading(false);
+        return toast.error(parseApiError(fileRes.error));
+      }
+
+      toast.success("Modelo de archivo creado");
+
+      //? send template data to api to create PolicyTemplate
+      const policyTemplateRes = await createCompanyPolicyTemplate(companyId, {
+        fileId: fileRes.data.id,
+        name: data.name,
+      });
+
+      if (policyTemplateRes.error) {
+        setLoading(false);
+        return toast.error(parseApiError(policyTemplateRes.error));
+      }
+
+      toast.success("Plantilla de política creada");
+      setLoading(false);
+      refresh();
+      reset();
+      hideDialog(id);
+
+      // Now send `intent.key` as part of your real "create" flow, e.g. POST /api/things { fileKey: intent.key, ... }
+    } catch (error: any) {
+      console.error(error);
     }
   }
 
@@ -39,7 +174,7 @@ const UploadTemplateDialog = () => {
           </div>
 
           <button
-            onClick={() => hideDialog(id)}
+            onClick={() => !loading && hideDialog(id)}
             className="w-fit p-1 rounded-lg hover:bg-stone-100 transition-colors"
           >
             <Icon icon={"tabler:x"} className="text-2xl" />
@@ -47,67 +182,36 @@ const UploadTemplateDialog = () => {
         </header>
         <div className="flex-1 px-4 py-3 flex flex-col gap-4 h-full overflow-y-auto">
           {/* Modal body */}
-          <div className="flex-1 overflow-y-auto pr-1 w-full h-full flex flex-col gap-4">
-            {/* Drop zone */}
-            <div className="w-full border border-dashed border-disabled rounded-lg px-4 py-3 bg-primary-50 flex flex-col items-center gap-2">
-              <Icon
-                icon={"basil:cloud-upload-outline"}
-                className="text-6xl text-primary-900"
-              />
-              <h6 className="text-primary-900 font-bold text-lg">
-                Elige un archivo o arrástralo y suéltalo aquí.
-              </h6>
-              <p className="font-medium">Formato: PDF hasta 50 MB.</p>
-              <Button hierarchy="secondary">Buscar archivo</Button>
-            </div>
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="flex flex-col gap-6"
+          >
+            <CustomInput
+              placeholder="Nombre del formulario"
+              {...register("name")}
+              error={errors.name as FieldError}
+            />
 
-            {/* Files to upload resume */}
+            <CustomFileDropZone
+              accept={acceptedFiletypes.join(",")}
+              control={control}
+              minFiles={1}
+              maxFiles={maxFiles}
+              maxSizeMB={maxSizeMB}
+              required
+              {...register("attachments")}
+            />
 
-            <div className="h-full w-full flex-1 overflow-y-auto flex flex-col gap-2 pr-1">
-              {new Array(3).fill(null).map((_, index) => (
-                <div
-                  key={index}
-                  className="rounded-lg border border-disabled px-4 py-2 flex-col gap-1.5 flex"
-                >
-                  <div className="flex items-center gap-4">
-                    <Icon
-                      icon={"fa6-regular:file-pdf"}
-                      className="text-6xl text-primary-500"
-                    />
-
-                    <div className="w-full flex-col items-start gap-3">
-                      <h6 className="font-bold text-lg text-primary-900">
-                        Plantilla #1
-                      </h6>
-                      <div className="flex items-center gap-1">
-                        <p className="text-stone-500 text-sm font-medium">
-                          60 KB DE 120 KB
-                        </p>
-                        <Icon
-                          icon={"line-md:uploading"}
-                          className="text-primary-500"
-                        />
-                        <p className="text-stone-500 text-sm font-medium">
-                          Subiendo{" "}
-                        </p>
-                      </div>
-                    </div>
-
-                    <button className="w-fit p-1 rounded-lg hover:bg-stone-100 transition-colors">
-                      <Icon icon={"tabler:x"} className="text-2xl" />
-                    </button>
-                  </div>
-
-                  <div className="h-1.5 bg-stone-400 w-full rounded-lg flex">
-                    <span className="w-3/4 bg-primary-900 rounded-lg h-full inline-block"></span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* End Actions */}
-          <Button className="w-full">Subir archivo</Button>
+            {/* End Actions */}
+            <Button
+              disabled={loading}
+              loading={loading}
+              type="submit"
+              className="w-full"
+            >
+              Subir archivo
+            </Button>
+          </form>
         </div>
       </div>
     </div>

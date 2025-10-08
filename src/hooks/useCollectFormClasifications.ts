@@ -5,14 +5,14 @@ import { parseApiError } from "@/utils/parseApiError";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-export function useCollectFormClasifications({ companyId }: QueryParams) {
+export function useCollectFormClasifications(params: QueryParams) {
   const [data, setData] = useState<CollectFormClasification[] | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   async function fetch() {
     setLoading(true);
-    const fetchedData = await fetchCollectFormClasifications({ companyId });
+    const fetchedData = await fetchCollectFormClasifications(params);
 
     if (fetchedData.error) {
       let parsedError = parseApiError(fetchedData.error);
@@ -27,10 +27,10 @@ export function useCollectFormClasifications({ companyId }: QueryParams) {
   }
 
   useEffect(() => {
-    if (!companyId) return;
+    if (!params.companyId) return;
 
     fetch();
-  }, [companyId]);
+  }, [params.companyId]);
 
   return {
     data,

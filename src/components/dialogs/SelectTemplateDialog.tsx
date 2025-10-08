@@ -7,14 +7,31 @@ import { Icon } from "@iconify/react/dist/iconify.js";
 import CustomCheckbox from "../forms/CustomCheckbox";
 import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import { hideDialog } from "@/utils/dialogs.utils";
+import { useSessionStore } from "@/store/useSessionStore";
+import { usePolicyTemplates } from "@/hooks/usePolicyTemplates";
+import clsx from "clsx";
+import { PolicyTemplate } from "@/types/policyTemplate.types";
 
-const SelectTemplateDialog = () => {
+interface Props {
+  items: PolicyTemplate[];
+  value: string;
+  onSelect: (id: string) => void;
+}
+
+const SelectTemplateDialog = ({ value, onSelect, items }: Props) => {
+  const user = useSessionStore((store) => store.user);
+
   const id = HTML_IDS_DATA.selectTemplateDialog;
 
   function handleClick(e: React.MouseEvent<HTMLDivElement, MouseEvent>) {
     if ((e.target as HTMLElement).id === id) {
       hideDialog(id);
     }
+  }
+
+  function handleSelect(templateId: string) {
+    onSelect(templateId);
+    hideDialog(id);
   }
 
   return (
@@ -44,32 +61,43 @@ const SelectTemplateDialog = () => {
 
           {/* Modal body */}
           <div className="flex-1 overflow-y-auto pr-1 w-full h-full">
-            <ul className="w-full flex flex-col items-center gap-2 h-full">
-              {new Array(10).fill(null).map((_, index) => (
-                <li className="w-full" key={index}>
-                  {/* Template card */}
-                  <div className="w-full p-1.5 flex gap-3 items-center">
-                    {/* Checkbox */}
-                    <div className="">
-                      <CustomCheckbox />
-                    </div>
-                    <div className="flex-1 flex items-center gap-4 border border-disabled px-3 py-1 rounded-lg">
+            {items.length ? (
+              <ul className="w-full flex flex-col items-center gap-2 h-full">
+                {items.map((template) => (
+                  <li className="w-full" key={template._id}>
+                    {/* Template card */}
+                    <button
+                      type="button"
+                      onClick={() => handleSelect(template._id)}
+                      className={clsx([
+                        "text-left w-full flex items-center gap-4 border transition-colors px-3 py-1 rounded-lg",
+                        value === template._id
+                          ? "bg-primary-500/20 border-primary-500/40"
+                          : "hover:bg-stone-200 border-disabled",
+                      ])}
+                    >
                       <Icon
                         icon={"fa6-regular:file-pdf"}
                         className="text-6xl text-primary-500"
                       />
                       <h6 className="w-full relative before:w-full before:absolute before:top-full before:left-0 before:h-[1px] before:bg-disabled font-bold text-lg">
-                        Plantilla #1
+                        {template.name}
                       </h6>
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
 
-          {/* End Actions */}
-          <Button className="w-full">Subir archivo</Button>
+                      {value === template._id && (
+                        <Icon
+                          icon={"tabler:check"}
+                          className="text-3xl text-primary-500"
+                        />
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>No hay plantillas para mostrar</p>
+            )}
+          </div>
         </div>
       </div>
     </div>

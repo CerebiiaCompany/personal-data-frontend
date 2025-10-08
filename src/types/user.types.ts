@@ -37,6 +37,10 @@ export const docTypesOptions: CustomSelectOption<DocType>[] = [
   },
 ];
 
+export const parseDocTypeToString = (type: DocType): string =>
+  docTypesOptions.find((e) => e.value === type)?.title ||
+  "Tipo de documento inválido";
+
 export interface CreateUser {
   name: string;
   lastName: string;
