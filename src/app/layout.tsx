@@ -4,6 +4,7 @@ import "./globals.css";
 import GridWrapper from "@/components/layout/GridWrapper";
 import { Toaster } from "sonner";
 import CheckActiveSession from "@/components/checkers/CheckActiveSession";
+import { ConfirmProvider } from "@/components/dialogs/ConfirmProvider";
 
 const interFont = Inter({
   variable: "--font-sans",
@@ -28,7 +29,7 @@ export default function RootLayout({
         <Toaster />
         <GridWrapper>
           <CheckActiveSession />
-          {children}
+          <ConfirmProvider>{children}</ConfirmProvider>
         </GridWrapper>
       </body>
     </html>

@@ -5,14 +5,17 @@ import * as z from "zod";
 export const MAX_FILES = 5; // max files allowed
 export const MAX_SIZE_MB = 5; // max size per file
 
-export function generateFileSchema(acceptedTypes: string[]) {
+export function generateFileSchema(
+  acceptedTypes: string[],
+  maxSizeMB: number = MAX_SIZE_MB
+) {
   return z
     .instanceof(File)
     .refine((f) => acceptedTypes.includes(f.type), {
       message: `Tipo no permitido. Usa: ${acceptedTypes.join(", ")}`,
     })
-    .refine((f) => f.size <= MAX_SIZE_MB * 1024 * 1024, {
-      message: `Archivo demasiado grande. Máximo ${MAX_SIZE_MB}MB por archivo`,
+    .refine((f) => f.size <= maxSizeMB * 1024 * 1024, {
+      message: `Archivo demasiado grande. Máximo ${maxSizeMB}MB por archivo`,
     });
 }
 
@@ -51,6 +54,7 @@ export function CustomFileDropZone<T>({
       },
     },
   });
+
   const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const dndId = useId();
@@ -64,13 +68,13 @@ export function CustomFileDropZone<T>({
       const toAdd = incoming.slice(0, spaceLeft);
 
       // Filter by type/size here for instant UX; Zod will also validate on submit
-      const filtered = toAdd.filter(
+      /* const filtered = toAdd.filter(
         (f) =>
           accept?.split(",").includes(f.type) &&
           f.size <= maxSizeMB * 1024 * 1024
-      );
+      ); */
 
-      field.onChange([...(current || []), ...filtered]);
+      field.onChange([...(current || []), ...toAdd]);
     },
     [field, accept, maxFiles, maxSizeMB]
   );
@@ -167,7 +171,8 @@ export function CustomFileDropZone<T>({
           </p>
           <p className="mt-2 text-xs text-gray-400">
             Arrastra y suelta; o haz clic para seleccionar.
-            {accept && `Tipos permitidos ${accept}`}
+            {accept && `Tipos permitidos: ${accept}`}
+            Tamaño máximo: {prettySize(maxSizeMB * 1024 * 1024)}
           </p>
         </div>
       </div>
@@ -195,27 +200,36 @@ export function CustomFileDropZone<T>({
           {field.value.map((file: File, i: number) => (
             <li
               key={`${file.name}-${i}`}
-              className="flex items-center justify-between gap-3 p-3"
+              className="flex flex-col items-start p-3 gap-2"
             >
-              <div className="min-w-0">
-                <p
-                  className="truncate text-sm font-medium text-gray-800"
-                  title={file.name}
+              <div className="flex items-center justify-between gap-3 w-full">
+                <div className="min-w-0">
+                  <p
+                    className="truncate text-sm font-medium text-gray-800"
+                    title={file.name}
+                  >
+                    {file.name}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {file.type || "(sin tipo)"} · {prettySize(file.size)}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeAt(i)}
+                  className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium text-gray-700 ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                  aria-label={`Eliminar ${file.name}`}
                 >
-                  {file.name}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {file.type || "(sin tipo)"} · {prettySize(file.size)}
-                </p>
+                  Quitar
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => removeAt(i)}
-                className="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium text-gray-700 ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-                aria-label={`Eliminar ${file.name}`}
-              >
-                Quitar
-              </button>
+              {fieldState.error &&
+                Array.isArray(fieldState.error) &&
+                (fieldState.error as any)[i] && (
+                  <p className="mt-0 text-xs text-red-600">
+                    {(fieldState.error as any)[i].message}
+                  </p>
+                )}
             </li>
           ))}
         </ul>

@@ -5,16 +5,16 @@ import { parseApiError } from "@/utils/parseApiError";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-export function usePublicCollectForm({ id }: QueryParams) {
+export function usePublicCollectForm(params: QueryParams) {
   const [data, setData] = useState<CollectForm | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!id) return;
+    if (!params.id) return;
     (async () => {
       setLoading(true);
-      const fetchedData = await fetchPublicCollectForm({ id });
+      const fetchedData = await fetchPublicCollectForm(params);
 
       if (fetchedData.error) {
         let parsedError = parseApiError(fetchedData.error);
@@ -27,7 +27,7 @@ export function usePublicCollectForm({ id }: QueryParams) {
       setLoading(false);
       setData(fetchedData.data);
     })();
-  }, [id]);
+  }, [params.id]);
 
   return {
     data,

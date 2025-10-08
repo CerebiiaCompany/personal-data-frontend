@@ -14,36 +14,27 @@ export async function registerCollectFormResponse(
   return res;
 }
 
-export async function fetchCollectFormResponses({
-  companyId,
-  id,
-  responseId,
-  pageSize,
-}: QueryParams): Promise<APIResponse> {
-  let endpoint = `/companies/${companyId}/collectForms/${id}/responses`;
+export async function fetchCollectFormResponses(
+  params: QueryParams
+): Promise<APIResponse> {
+  let endpoint = `/companies/${params.companyId}/collectForms/${params.id}/responses`;
 
-  if (responseId) {
-    endpoint += `/${responseId}`;
+  if (params.responseId) {
+    endpoint += `/${params.responseId}`;
   }
 
-  if (pageSize != undefined) {
-    
-    endpoint += `?pageSize=${pageSize}`;
-  }
-
-  console.log(endpoint)
-
-  const res = await customFetch(endpoint);
+  const res = await customFetch(endpoint, {}, params);
 
   return res;
 }
 
-export async function fetchAllCollectFormResponses({
-  companyId,
-  id,
-}: QueryParams): Promise<APIResponse> {
+export async function fetchAllCollectFormResponses(
+  params: QueryParams
+): Promise<APIResponse> {
   const res = await customFetch(
-    `/companies/${companyId}/collectForms/${id}/responses/all`
+    `/companies/${params.companyId}/collectForms/${params.id}/responses/all`,
+    {},
+    params
   );
 
   return res;

@@ -2,14 +2,13 @@ import { APIResponse, QueryParams } from "@/types/api.types";
 import { CreateCompanyRole } from "@/types/companyRole.types";
 import { customFetch } from "@/utils/customFetch";
 
-export async function fetchCompanyRoles({
-  companyId,
-  id,
-}: QueryParams): Promise<APIResponse> {
-  let endpoint = `/companies/${companyId}/roles`;
+export async function fetchCompanyRoles(
+  params: QueryParams
+): Promise<APIResponse> {
+  let endpoint = `/companies/${params.companyId}/roles`;
 
-  if (id) endpoint += `/${id}`;
-  const res = await customFetch(endpoint);
+  if (params.id) endpoint += `/${params.id}`;
+  const res = await customFetch(endpoint, {}, params);
 
   return res;
 }

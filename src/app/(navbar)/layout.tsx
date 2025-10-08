@@ -1,4 +1,5 @@
 import CheckRole from "@/components/checkers/CheckRole";
+import LoadCloudAppSettings from "@/components/checkers/LoadCloudAppSettings";
 import DashboardContent from "@/components/layout/DashboardContent";
 import DashboardNavbar from "@/components/layout/DashboardNavbar";
 import React from "react";
@@ -11,6 +12,7 @@ export default function NavbarLayout({
   return (
     <>
       <CheckRole />
+      <LoadCloudAppSettings />
       <DashboardNavbar />
       <DashboardContent>{children}</DashboardContent>
     </>

@@ -1,4 +1,3 @@
-import { SessionUser } from "@/types/user.types";
 import React from "react";
 import LoadingCover from "../layout/LoadingCover";
 import { Icon } from "@iconify/react/dist/iconify.js";

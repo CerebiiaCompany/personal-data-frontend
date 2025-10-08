@@ -53,7 +53,8 @@ const DashboardNavbar = () => {
         { "max-w-72 p-5": !isCollapsed },
       ])}
     >
-      <div
+      <Link
+        href={"/admin"}
         className={clsx([
           "w-full flex justify-center relative h-full max-h-12",
           { "": isCollapsed },
@@ -80,7 +81,7 @@ const DashboardNavbar = () => {
             { "opacity-0": !isCollapsed },
           ])}
         />
-      </div>
+      </Link>
 
       <div className="no-scrollbar flex-1 relative overflow-hidden">
         {/* Navbar links expanded */}

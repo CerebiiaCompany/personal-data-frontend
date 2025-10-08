@@ -30,8 +30,9 @@ import { createCampaign, updateCampaign } from "@/lib/campaign.api";
 import CustomDateInput from "../forms/CustomDateInput";
 import { CustomRadioGroup } from "../forms/CustomRadioGroup";
 import { useCollectForms } from "@/hooks/useCollectForms";
-import { UserGender } from "@/types/collectFormResponse.types";
 import { formatDateToString } from "@/utils/date.utils";
+import { useCampaignAudience } from "@/hooks/useCampaignAudience";
+import { useAppSetting } from "@/hooks/useAppSetting";
 
 interface Props {
   initialValues?: CreateCampaign;
@@ -39,9 +40,8 @@ interface Props {
 
 const CreateCampaignForm = ({ initialValues }: Props) => {
   const user = useSessionStore((store) => store.user);
-  const areas = useCompanyAreas({
-    companyId: user?.companyUserData?.companyId,
-  });
+  const pricePerSMS = useAppSetting("SMS_PRICE_PER_MESSAGE");
+
   const [loading, setLoading] = useState<boolean>(false);
   const params = useParams();
 
@@ -56,6 +56,7 @@ const CreateCampaignForm = ({ initialValues }: Props) => {
   } = useForm({
     resolver: zodResolver(createCampaignValidationSchema),
     defaultValues: initialValues || {
+      active: false,
       sourceFormIds: [],
       audience: {
         gender: "ALL",
@@ -67,9 +68,15 @@ const CreateCampaignForm = ({ initialValues }: Props) => {
     },
   });
 
-  console.log(watch("scheduling.startDate"));
-
   const router = useRouter();
+  const campaignAudience = useCampaignAudience({
+    companyId: user?.companyUserData?.companyId,
+    sourceForms: watch("sourceFormIds").join(","),
+    gender: watch("audience.gender"),
+    minAge: Number(watch("audience.minAge")),
+    maxAge: Number(watch("audience.maxAge")),
+  });
+
   const formRef = useRef<HTMLFormElement>(null);
   const floatingActionNavbarRef = useRef<HTMLElement>(null);
   const [floatingNavbarToggle, setFloatingNavbarToggle] =
@@ -136,10 +143,18 @@ const CreateCampaignForm = ({ initialValues }: Props) => {
     setValue("sourceFormIds", newSourceFormIds);
   }
 
+  useEffect(() => {
+    if (campaignAudience.data) {
+      setValue("audience.count", campaignAudience.data.count);
+    } else {
+      setValue("audience.count", 0);
+    }
+  }, [campaignAudience.data]);
+
   return (
     <form
       ref={formRef}
-      onSubmit={handleSubmit(onSubmit)}
+      onSubmit={handleSubmit((data) => onSubmit(data))}
       className="flex flex-col gap-3 items-stretch w-full"
     >
       {/* Floating action navbar */}
@@ -243,213 +258,234 @@ const CreateCampaignForm = ({ initialValues }: Props) => {
       </div>
 
       {/* Scheduling */}
-      <div className="rounded-xl border border-disabled p-10 py-6 flex flex-col items-stretch gap-6">
-        <h6 className="text-primary-900 font-normal text-lg">Programación</h6>
+      {!initialValues && (
+        <div className="rounded-xl border border-disabled p-10 py-6 flex flex-col items-stretch gap-6">
+          <h6 className="text-primary-900 font-normal text-lg">Programación</h6>
 
-        <CustomDateInput
-          label="Fecha de inicio"
-          {...register("scheduling.startDate")}
-          value={formatDateToString({
-            date: watch("scheduling.startDate") as Date,
-            format: "YYYY-MM-DD",
-          })}
-          error={errors.scheduling?.startDate as FieldError}
-        />
-        <CustomDateInput
-          label="Fecha de finalización"
-          {...register("scheduling.endDate")}
-          value={formatDateToString({
-            date: watch("scheduling.endDate") as Date,
-            format: "YYYY-MM-DD",
-          })}
-          error={errors.scheduling?.endDate as FieldError}
-        />
-
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-3">
-            <CustomSelect
-              className="flex-none w-24"
-              options={[
-                {
-                  title: "5",
-                  value: "5",
-                },
-                {
-                  title: "10",
-                  value: "10",
-                },
-                {
-                  title: "15",
-                  value: "15",
-                },
-              ]}
-              value={String(watch("scheduling.ocurrences"))}
-              onChange={(value) =>
-                setValue("scheduling.ocurrences", Number(value))
-              }
-            />
-            <span className="flex items-start flex-col">
-              <p className="text-lg text-primary-900">
-                Número de envíos programado
-              </p>
-              <p className="text-sm text-stone-500">
-                Definir cantidad de envíos en la programación registrada
-              </p>
+          <CustomDateInput
+            label="Fecha de inicio"
+            {...register("scheduling.startDate")}
+            value={formatDateToString({
+              date: watch("scheduling.startDate") as Date,
+              format: "YYYY-MM-DD",
+            })}
+            error={errors.scheduling?.startDate as FieldError}
+          />
+          <CustomDateInput
+            label="Fecha de finalización"
+            {...register("scheduling.endDate")}
+            value={formatDateToString({
+              date: watch("scheduling.endDate") as Date,
+              format: "YYYY-MM-DD",
+            })}
+            error={errors.scheduling?.endDate as FieldError}
+          />
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-3">
+              <CustomSelect
+                className="flex-none w-24"
+                options={[
+                  {
+                    title: "5",
+                    value: "5",
+                  },
+                  {
+                    title: "10",
+                    value: "10",
+                  },
+                  {
+                    title: "15",
+                    value: "15",
+                  },
+                ]}
+                value={String(watch("scheduling.ocurrences"))}
+                onChange={(value) =>
+                  setValue("scheduling.ocurrences", Number(value))
+                }
+              />
+              <span className="flex items-start flex-col">
+                <p className="text-lg text-primary-900">
+                  Número de envíos programado
+                </p>
+                <p className="text-sm text-stone-500">
+                  Definir cantidad de envíos en la programación registrada
+                </p>
+              </span>
+            </div>
+            <span className="text-sm w-fit flex gap-1 items-center py-1 px-2 bg-primary-500/10 rounded-lg text-primary-500">
+              <Icon icon={"tabler:info-circle"} className="text-lg" />
+              El número de envíos se verá reflejado en los créditos activos.
             </span>
           </div>
-          <span className="text-sm w-fit flex gap-1 items-center py-1 px-2 bg-primary-500/10 rounded-lg text-primary-500">
-            <Icon icon={"tabler:info-circle"} className="text-lg" />
-            El número de envíos se verá reflejado en los créditos activos.
-          </span>
         </div>
-      </div>
+      )}
 
       {/* DeliveryChannel */}
-      <div className="rounded-xl border border-disabled p-10 py-6 flex flex-col items-stretch gap-6">
-        <h6 className="text-primary-900 font-normal text-lg">Ruta de envío</h6>
+      {!initialValues && ( //Can't modify the campaign delivery channel
+        <div className="rounded-xl border border-disabled p-10 py-6 flex flex-col items-stretch gap-6">
+          <h6 className="text-primary-900 font-normal text-lg">
+            Ruta de envío
+          </h6>
 
-        <Controller
-          name="deliveryChannel"
-          control={formControl}
-          render={({ field }) => (
-            <CustomRadioGroup<CampaignDeliveryChannel>
-              options={[
-                {
-                  value: "EMAIL",
-                  title: "Correo",
-                  icon: "tabler:mail",
-                },
-                {
-                  value: "SMS",
-                  title: "SMS",
-                  icon: "tabler:device-mobile-message",
-                },
-              ]}
-              value={field.value as any}
-              onChange={field.onChange}
-              name={field.name}
-              error={errors.deliveryChannel}
-            />
-          )}
-        />
-      </div>
+          <Controller
+            name="deliveryChannel"
+            control={formControl}
+            render={({ field }) => (
+              <CustomRadioGroup<CampaignDeliveryChannel>
+                options={[
+                  {
+                    value: "EMAIL",
+                    title: "Correo",
+                    icon: "tabler:mail",
+                  },
+                  {
+                    value: "SMS",
+                    title: "SMS",
+                    icon: "tabler:device-mobile-message",
+                  },
+                ]}
+                value={field.value as any}
+                onChange={field.onChange}
+                name={field.name}
+                error={errors.deliveryChannel}
+              />
+            )}
+          />
+        </div>
+      )}
 
       {/* Source Form Ids */}
-      <div className="rounded-xl border border-disabled p-10 py-6 flex flex-col items-stretch gap-6">
-        <h6 className="text-primary-900 font-normal text-lg">
-          Selección de datos
-        </h6>
+      {!initialValues && (
+        <div className="rounded-xl border border-disabled p-10 py-6 flex flex-col items-stretch gap-6">
+          <h6 className="text-primary-900 font-normal text-lg">
+            Selección de datos
+          </h6>
 
-        {collectForms.data && (
-          <>
-            <CustomSelect
-              unselectedText="Seleccione los formularios para enviar la campaña"
-              options={collectForms.data
-                .filter((form) => !watch("sourceFormIds").includes(form._id))
-                .map((form) => ({
-                  title: form.name,
-                  value: form._id,
-                }))}
-              onChange={(value) => {
-                setValue("sourceFormIds", [...watch("sourceFormIds"), value]);
-                setError("sourceFormIds", { message: "" });
-              }}
-            />
-            <div className="w-fill grid grid-cols-[repeat(auto-fit,_minmax(120px,_30%))] gap-x-6 gap-y-4 justify-start">
-              {watch("sourceFormIds").map((formId) => {
-                const formData = collectForms.data?.find(
-                  (form) => form._id === formId
-                );
+          {collectForms.data && (
+            <>
+              <CustomSelect
+                unselectedText="Seleccione los formularios para enviar la campaña"
+                options={collectForms.data
+                  .filter((form) => !watch("sourceFormIds").includes(form._id))
+                  .map((form) => ({
+                    title: form.name,
+                    value: form._id,
+                  }))}
+                onChange={(value) => {
+                  setValue("sourceFormIds", [...watch("sourceFormIds"), value]);
+                  setError("sourceFormIds", { message: "" });
+                }}
+              />
+              <div className="w-fill grid grid-cols-[repeat(auto-fit,_minmax(120px,_30%))] gap-x-6 gap-y-4 justify-start">
+                {watch("sourceFormIds").map((formId) => {
+                  const formData = collectForms.data?.find(
+                    (form) => form._id === formId
+                  );
 
-                return (
-                  formData && (
-                    <div
-                      key={formId}
-                      className="flex flex-1 p-1.5 rounded-md gap-2 items-center justify-start text-primary-900 bg-primary-50"
-                    >
-                      <button
-                        onClick={(_) => deleteSourceFormId(formId)}
-                        className="p-1 hover:bg-primary-900/10 rounded-md transition-colors"
+                  return (
+                    formData && (
+                      <div
+                        key={formId}
+                        className="flex flex-1 p-1.5 rounded-md gap-2 items-center justify-start text-primary-900 bg-primary-50"
                       >
-                        <Icon icon={"tabler:x"} className="text-lg" />
-                      </button>
-                      <p className="font-normal text-ellipsis">
-                        {formData.name}
-                      </p>
-                    </div>
-                  )
-                );
-              })}
-            </div>
-          </>
-        )}
+                        <button
+                          onClick={(_) => deleteSourceFormId(formId)}
+                          className="p-1 hover:bg-primary-900/10 rounded-md transition-colors"
+                        >
+                          <Icon icon={"tabler:x"} className="text-lg" />
+                        </button>
+                        <p className="font-normal text-ellipsis">
+                          {formData.name}
+                        </p>
+                      </div>
+                    )
+                  );
+                })}
+              </div>
+            </>
+          )}
 
-        {errors.sourceFormIds && (
-          <span className="text-red-400 text-sm font-semibold">
-            {errors.sourceFormIds.message}
+          {errors.sourceFormIds && (
+            <span className="text-red-400 text-sm font-semibold">
+              {errors.sourceFormIds.message}
+            </span>
+          )}
+
+          <span className="text-sm w-fit flex gap-1 items-center py-1 px-2 bg-primary-500/10 rounded-lg text-primary-500">
+            <Icon icon={"tabler:info-circle"} className="text-lg" />
+            La selección de cada formulario tiene un costo de 20 créditos.
           </span>
-        )}
-
-        <span className="text-sm w-fit flex gap-1 items-center py-1 px-2 bg-primary-500/10 rounded-lg text-primary-500">
-          <Icon icon={"tabler:info-circle"} className="text-lg" />
-          La selección de cada formulario tiene un costo de 20 créditos.
-        </span>
-      </div>
+        </div>
+      )}
 
       {/* Audience */}
-      <div className="rounded-xl border border-disabled p-10 py-6 flex flex-col items-stretch gap-6">
-        <h6 className="text-primary-900 font-normal text-lg">Audiencia</h6>
+      {!initialValues && (
+        <div className="rounded-xl border border-disabled p-10 py-6 flex flex-col items-stretch gap-6">
+          <h6 className="text-primary-900 font-normal text-lg">Audiencia</h6>
 
-        <Controller
-          name="audience.gender"
-          control={formControl}
-          render={({ field }) => (
-            <CustomRadioGroup<CampaignAudienceGender>
-              label="Género"
-              {...field}
-              options={[
-                {
-                  title: "Todos",
-                  value: "ALL",
-                  icon: "tabler:users-group",
-                },
-                {
-                  title: "Hombres",
-                  value: "MALE",
-                  icon: "tabler:gender-male",
-                },
-                {
-                  title: "Mujeres",
-                  value: "FEMALE",
-                  icon: "tabler:gender-female",
-                },
-              ]}
-              error={errors.audience?.gender}
-            />
-          )}
-        />
+          <Controller
+            name="audience.gender"
+            control={formControl}
+            render={({ field }) => (
+              <CustomRadioGroup<CampaignAudienceGender>
+                label="Género"
+                {...field}
+                options={[
+                  {
+                    title: "Todos",
+                    value: "ALL",
+                    icon: "tabler:users-group",
+                  },
+                  {
+                    title: "Hombres",
+                    value: "MALE",
+                    icon: "tabler:gender-male",
+                  },
+                  {
+                    title: "Mujeres",
+                    value: "FEMALE",
+                    icon: "tabler:gender-female",
+                  },
+                ]}
+                error={errors.audience?.gender}
+              />
+            )}
+          />
 
-        <div className="flex flex-col gap-1">
-          <p className="font-medium w-full pl-2 text-stone-500 text-sm">Edad</p>
-          <div className="flex gap-3 items-center">
-            <CustomInput
-              type="number"
-              className="flex-none"
-              {...register("audience.minAge")}
-              error={errors.audience?.minAge as FieldError}
-            />
-            <p className="font-normal text-stone-500">Hasta</p>
-            <CustomInput
-              type="number"
-              className="flex-none"
-              {...register("audience.maxAge")}
-              error={errors.audience?.maxAge as FieldError}
-            />
-            <p className="font-normal text-stone-500">Personas en este rango</p>
-            <p className="bg-primary-50 px-5 py-2 rounded-lg">100</p>
+          <div className="flex flex-col gap-1">
+            <p className="font-medium w-full pl-2 text-stone-500 text-sm">
+              Edad
+            </p>
+            <div className="flex gap-3 items-center">
+              <CustomInput
+                type="number"
+                className="flex-none"
+                {...register("audience.minAge")}
+                error={errors.audience?.minAge as FieldError}
+              />
+              <p className="font-normal text-stone-500">Hasta</p>
+              <CustomInput
+                type="number"
+                className="flex-none"
+                {...register("audience.maxAge")}
+                error={errors.audience?.maxAge as FieldError}
+              />
+              <p className="font-normal text-stone-500">
+                Personas en este rango
+              </p>
+              <p className="bg-primary-50 px-5 py-2 rounded-lg">
+                {watch("audience.count") ?? "--"}
+              </p>
+            </div>
           </div>
+
+          {errors.audience?.count && (
+            <span className="text-red-400 text-sm font-semibold">
+              {errors.audience.count.message}
+            </span>
+          )}
         </div>
-      </div>
+      )}
 
       {/* Credits */}
       <div className="rounded-xl border border-disabled p-10 py-6 flex flex-col items-stretch">
@@ -460,37 +496,51 @@ const CreateCampaignForm = ({ initialValues }: Props) => {
           Creditos estimados en campaña en base a los formularios seleccionados
           y segmentación realizada.
         </p>
-        <p className="font-bold text-xl text-primary-900 mt-3">350 Créditos</p>
+        <p className="font-bold text-xl text-primary-900 mt-3">
+          {pricePerSMS.data && watch("audience.count")
+            ? `${
+                (pricePerSMS.data.value as number) * watch("audience.count")
+              } Créditos`
+            : "..."}
+        </p>
+        <span className="text-sm w-fit flex gap-1 items-start py-1 px-2 bg-primary-500/10 rounded-lg text-primary-500 mt-3 -ml-1">
+          <Icon icon={"tabler:info-circle"} className="text-lg mt-0.5" />
+          Este número puede diferir de la cantidad de créditos final de la
+          campaña ya que solo consumes créditos si la campaña llega al
+          destinatario.
+        </span>
       </div>
 
       {/* Content */}
-      <div className="rounded-xl border border-disabled p-10 py-6 flex flex-col items-stretch gap-6">
-        <h6 className="text-primary-900 font-normal text-lg">
-          Contenido del anuncio
-        </h6>
+      {!initialValues && (
+        <div className="rounded-xl border border-disabled p-10 py-6 flex flex-col items-stretch gap-6">
+          <h6 className="text-primary-900 font-normal text-lg">
+            Contenido del anuncio
+          </h6>
 
-        <CustomInput
-          {...register("content.name")}
-          placeholder="Nombre del anuncio"
-          label="Nombre"
-          error={errors.content?.name}
-        />
-        <CustomTextarea
-          {...register("content.bodyText")}
-          rows={4}
-          label="Texto principal"
-          placeholder="Texto principal de la campaña"
-          className="resize-y"
-          error={errors.content?.bodyText}
-        />
+          <CustomInput
+            {...register("content.name")}
+            placeholder="Nombre del anuncio"
+            label="Nombre"
+            error={errors.content?.name}
+          />
+          <CustomTextarea
+            {...register("content.bodyText")}
+            rows={4}
+            label="Texto principal"
+            placeholder="Texto principal de la campaña"
+            className="resize-y"
+            error={errors.content?.bodyText}
+          />
 
-        <CustomInput
-          {...register("content.link")}
-          placeholder="https://sitio.com"
-          label="Añade link"
-          error={errors.content?.link}
-        />
-      </div>
+          <CustomInput
+            {...register("content.link")}
+            placeholder="https://sitio.com"
+            label="Añade link"
+            error={errors.content?.link}
+          />
+        </div>
+      )}
 
       <div className="p-4">
         <Button type="submit" className="w-full" loading={loading}>

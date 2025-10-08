@@ -2,25 +2,25 @@ import { APIResponse, QueryParams } from "@/types/api.types";
 import { CreateCompanyArea } from "@/types/companyArea.types";
 import { customFetch } from "@/utils/customFetch";
 
-export async function fetchCompanyAreas({
-  companyId,
-  id,
-}: QueryParams): Promise<APIResponse> {
-  let endpoint = `/companies/${companyId}/areas`;
+export async function fetchCompanyAreas(
+  params: QueryParams
+): Promise<APIResponse> {
+  let endpoint = `/companies/${params.companyId}/areas`;
 
-  if (id) endpoint += `/${id}`;
+  if (params.id) endpoint += `/${params.id}`;
 
-  const res = await customFetch(endpoint);
+  const res = await customFetch(endpoint, {}, params);
 
   return res;
 }
 
-export async function fetchCompanyAreaUsers({
-  companyId,
-  areaId,
-}: QueryParams): Promise<APIResponse> {
+export async function fetchCompanyAreaUsers(
+  params: QueryParams
+): Promise<APIResponse> {
   const res = await customFetch(
-    `/companies/${companyId}/areas/${areaId}/users`
+    `/companies/${params.companyId}/areas/${params.areaId}/users`,
+    {},
+    params
   );
 
   return res;

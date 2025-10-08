@@ -3,35 +3,35 @@ import {
   CreateCollectForm,
   CreateCollectFormFromTemplate,
 } from "@/types/collectForm.types";
-import { CreateCollectFormResponse } from "@/types/collectFormResponse.types";
 import { customFetch } from "@/utils/customFetch";
 
-export async function fetchPublicCollectForm({
-  id,
-}: QueryParams): Promise<APIResponse> {
-  let res = await customFetch(`/public/collectForms/${id}`);
+export async function fetchPublicCollectForm(
+  params: QueryParams
+): Promise<APIResponse> {
+  let res = await customFetch(`/public/collectForms/${params.id}`, {}, params);
   return res;
 }
 
-export async function fetchCollectFormClasifications({
-  companyId,
-}: QueryParams): Promise<APIResponse> {
+export async function fetchCollectFormClasifications(
+  params: QueryParams
+): Promise<APIResponse> {
   const res = await customFetch(
-    `/companies/${companyId}/collectForms/clasification`
+    `/companies/${params.companyId}/collectForms/clasification`,
+    {},
+    params
   );
 
   return res;
 }
 
-export async function fetchCollectForms({
-  companyId,
-  id,
-}: QueryParams): Promise<APIResponse> {
-  let endpoint = `/companies/${companyId}/collectForms`;
+export async function fetchCollectForms(
+  params: QueryParams
+): Promise<APIResponse> {
+  let endpoint = `/companies/${params.companyId}/collectForms`;
 
-  if (id) endpoint += `/${id}`;
+  if (params.id) endpoint += `/${params.id}`;
 
-  const res = await customFetch(endpoint);
+  const res = await customFetch(endpoint, {}, params);
 
   return res;
 }

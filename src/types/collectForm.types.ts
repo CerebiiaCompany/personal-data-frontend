@@ -2,6 +2,7 @@ import {
   CollectFormResponse,
   CollectFormResponseUser,
 } from "./collectFormResponse.types";
+import { CustomFile } from "./file.types";
 import { CustomSelectOption } from "./forms.types";
 import { DocType } from "./user.types";
 
@@ -22,6 +23,7 @@ export interface CollectFormQuestion {
 export interface CreateCollectForm {
   name: string;
   description: string;
+  policyTemplateId: string;
   marketingChannels: MarketingChannels;
   questions: Omit<CollectFormQuestion, "_id">[];
 }
@@ -38,6 +40,10 @@ export interface CollectForm extends CreateCollectForm {
   isImported: boolean;
   updated: Date;
   questions: CollectFormQuestion[];
+  policyTemplateFile: Pick<
+    CustomFile,
+    "_id" | "originalName" | "key" | "contentType"
+  >;
 }
 
 export interface CollectFormClasification {

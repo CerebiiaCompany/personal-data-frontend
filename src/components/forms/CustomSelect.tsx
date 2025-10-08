@@ -1,7 +1,7 @@
 import { CustomSelectOption } from "@/types/forms.types";
 import { Icon } from "@iconify/react";
 import clsx from "clsx";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 
 interface Props<T extends string> {
   label?: string;
@@ -82,7 +82,7 @@ const CustomSelect = <T extends string>({
       <div
         ref={dialogRef}
         className={clsx([
-          "absolute w-full bg-white shadow-md h-fit max-h-40 border border-stone-100 rounded-lg z-10 flex flex-col items-center transition-all",
+          "absolute w-full bg-white shadow-md h-fit max-h-40 border border-stone-100 rounded-lg z-10 flex flex-col items-center transition-all overflow-y-auto",
           { "opacity-0 pointer-events-none -translate-y-5": !dialogToggle },
           { "top-[115%] origin-top": dialogDown },
           { "bottom-[115%] origin-bottom": !dialogDown },

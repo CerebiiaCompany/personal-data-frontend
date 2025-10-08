@@ -9,8 +9,9 @@ import {
 import { CountryIsoCode } from "@/types/companyArea.types";
 
 export const createCollectFormValidationSchema = z.object({
-  name: z.string().min(1, "Este campo es obligatorio"),
-  description: z.string(),
+  name: z.string().min(1, "Dale un nombre a tu formulario"),
+  description: z.string().min(1, "Añade una descripción"),
+  policyTemplateId: z.string().min(1, "Selecciona una plantilla"),
   marketingChannels: z.object({
     SMS: z.boolean(),
     EMAIL: z.boolean(),
@@ -104,19 +105,43 @@ export const createCompanyRoleValidationSchema = z.object({
   }),
 });
 
+export const customDateValidation = z.preprocess((v) => {
+  if (typeof v === "string") {
+    const parts = v.split("-").map(Number);
+
+    if (
+      parts.length === 3 &&
+      !isNaN(parts[0]) &&
+      !isNaN(parts[1]) &&
+      !isNaN(parts[2])
+    ) {
+      const date = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+      if (
+        date.getUTCFullYear() === parts[0] &&
+        date.getUTCMonth() === parts[1] - 1 &&
+        date.getUTCDate() === parts[2]
+      ) {
+        return date;
+      }
+    }
+
+    return null; // Return null to trigger an invalid_type_error
+  }
+}, z.date({ error: "Fecha inválida" }));
+
 export const createCampaignValidationSchema = z.object({
   name: z
     .string()
     .min(1, "Este campo es obligatorio")
     .max(80, "Máximo 80 caracteres"),
   goal: z.string<CampaignGoal>("Selecciona un objetivo"),
-  active: z.boolean().optional(),
+  active: z.boolean(),
   scheduling: z
     .object({
-      startDate: z.coerce.date({
+      startDate: z.coerce.date<Date>({
         error: "Fecha de inicio inválida",
       }),
-      endDate: z.coerce.date({
+      endDate: z.coerce.date<Date>({
         error: "Fecha de fin inválida",
       }),
       ocurrences: z
@@ -138,18 +163,30 @@ export const createCampaignValidationSchema = z.object({
   audience: z
     .object({
       minAge: z.coerce
-        .number({ error: "Edad mínima obligatoria" })
-        .int("Debe ser entero")
-        .min(13, "Mínimo 13"),
+        .number<number>({ error: "Edad mínima obligatoria" })
+        .int("Debe ser entero"),
       maxAge: z.coerce
-        .number({ error: "Edad máxima obligatoria" })
-        .int("Debe ser entero")
-        .max(120, "Máximo 120"),
+        .number<number>({ error: "Edad máxima obligatoria" })
+        .int("Debe ser entero"),
       gender: z.string<CampaignAudienceGender>("Selecciona una opción"),
+      count: z.coerce
+        .number<number>("Cantidad de usuarios objetivo obligatoria")
+        .int("El número de audiencia debe ser un entero")
+        .min(1, "No puedes crear una campaña para 0 usuarios"),
     })
-    .refine(({ minAge, maxAge }) => maxAge >= minAge, {
-      message: "La edad máxima debe ser ≥ a la mínima",
-      path: ["maxAge"],
+    .superRefine(({ minAge, maxAge }, ctx) => {
+      if (minAge > maxAge) {
+        ctx.addIssue({
+          code: "custom",
+          message: "La edad máxima debe ser ≥ a la mínima",
+          path: ["minAge"],
+        });
+        ctx.addIssue({
+          code: "custom",
+          message: "La edad máxima debe ser ≥ a la mínima",
+          path: ["maxAge"],
+        });
+      }
     }),
   content: z.object({
     name: z

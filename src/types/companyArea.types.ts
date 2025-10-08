@@ -18,6 +18,11 @@ export const countriesOptions: CustomSelectOption<CountryIsoCode>[] = [
   },
 ];
 
+export const parseCompanyAreaCountryToString = (
+  country: CountryIsoCode
+): string =>
+  countriesOptions.find((e) => e.value === country)?.title || "País inválido";
+
 export interface CreateCompanyArea {
   name: string;
   country: CountryIsoCode;

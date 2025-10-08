@@ -9,18 +9,18 @@ import { parseApiError } from "@/utils/parseApiError";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-export function useCompanyAreaUsers({ companyId, areaId }: QueryParams) {
+export function useCompanyAreaUsers(params: QueryParams) {
   const [data, setData] = useState<CompanyAreaUser[] | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!companyId) return;
-    if (!areaId) return;
+    if (!params.companyId) return;
+    if (!params.areaId) return;
 
     (async () => {
       setLoading(true);
-      const fetchedData = await fetchCompanyAreaUsers({ companyId, areaId });
+      const fetchedData = await fetchCompanyAreaUsers(params);
 
       if (fetchedData.error) {
         let parsedError = parseApiError(fetchedData.error);
@@ -33,7 +33,7 @@ export function useCompanyAreaUsers({ companyId, areaId }: QueryParams) {
       setLoading(false);
       setData(fetchedData.data);
     })();
-  }, [companyId, areaId]);
+  }, [params.companyId, params.areaId]);
 
   return {
     data,

@@ -62,8 +62,15 @@ const CollectFormCard = ({ data, deleteHandler }: Props) => {
         {/* Actions */}
         <div className="flex items-center justify-end w-full gap-2">
           <Button
+            href={`/admin/clasificacion/${data._id}`}
+            className="flex-1 w-full text-sm!"
+          >
+            Ver reporte
+          </Button>
+
+          <Button
             hierarchy="secondary"
-            onClick={() => copyToClipboard(formUrl)}
+            onClick={() => copyToClipboard(formUrl, "Enlace copiado")}
           >
             <Icon icon={"tabler:link"} className="text-xl" />
           </Button>

@@ -157,15 +157,22 @@ const ClasificationTable = ({ items, loading, error }: Props) => {
                 </td>
                 <td className="py-3 px-4 bg-primary-50 font-medium">
                   <div className="w-full flex justify-center">
-                    {item.verifiedResponses === item.totalResponses ? (
-                      <Icon
-                        icon={"tabler:check"}
-                        className="text-green-400 text-3xl"
-                      />
+                    {item.totalResponses > 0 ? (
+                      item.verifiedResponses === item.totalResponses ? (
+                        <Icon
+                          icon={"tabler:check"}
+                          className="text-green-400 text-3xl"
+                        />
+                      ) : (
+                        <Icon
+                          icon={"tabler:x"}
+                          className="text-red-400 text-3xl"
+                        />
+                      )
                     ) : (
                       <Icon
-                        icon={"tabler:x"}
-                        className="text-red-400 text-3xl"
+                        icon={"tabler:user-x"}
+                        className="text-yellow-400 text-3xl"
                       />
                     )}
                   </div>

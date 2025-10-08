@@ -8,10 +8,10 @@ export const ERROR_DICTIONARY = {
   "auth/invalid-credentials": "Credenciales inválidas",
   "auth/unauthorized": "No estás autorizado para esta acción",
   "auth/unauthenticated": "Error en la autenticación",
+  "otp/pending-code": "Ya hay un código pendiente para este usuario",
 };
 
 export function parseApiError(error: APIError): string {
-  console.log(error);
   const message = ERROR_DICTIONARY[error.code] || "Error desconocido";
 
   return message;
