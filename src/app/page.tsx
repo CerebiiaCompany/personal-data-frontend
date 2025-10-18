@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSessionStore } from "@/store/useSessionStore";
-import LoadingCover from "@/components/layout/LoadingCover";
 
 export default function HomePage() {
   const router = useRouter();
@@ -40,13 +39,38 @@ export default function HomePage() {
   // Mostrar pantalla de carga mientras se decide la redirección
   return (
     <div className="w-full h-screen flex items-center justify-center bg-gradient-to-br from-primary-900 to-primary-700">
-      <div className="flex flex-col items-center gap-4">
-        <div className="relative">
-          <LoadingCover />
+      <div className="flex flex-col items-center gap-8">
+        {/* Spinner mejorado con múltiples anillos */}
+        <div className="relative w-24 h-24">
+          {/* Anillo exterior */}
+          <div className="absolute inset-0 border-4 border-white/20 rounded-full"></div>
+          
+          {/* Anillo animado 1 */}
+          <div className="absolute inset-0 border-4 border-transparent border-t-white rounded-full animate-spin"></div>
+          
+          {/* Anillo animado 2 (más lento y en sentido contrario) */}
+          <div 
+            className="absolute inset-2 border-4 border-transparent border-b-white/70 rounded-full animate-spin"
+            style={{ animationDuration: '1.5s', animationDirection: 'reverse' }}
+          ></div>
+          
+          {/* Punto central */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
+          </div>
         </div>
-        <p className="text-white text-lg font-medium">
-          Cargando sesión...
-        </p>
+
+        {/* Texto de carga */}
+        <div className="flex flex-col items-center gap-2">
+          <p className="text-white text-xl font-semibold">
+            Verificando sesión
+          </p>
+          <div className="flex gap-1">
+            <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0s' }}></span>
+            <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
+            <span className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
+          </div>
+        </div>
       </div>
     </div>
   );
