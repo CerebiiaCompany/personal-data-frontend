@@ -9,11 +9,42 @@ import crypto from "node:crypto";
 
 export const runtime = "nodejs"; // ensure Node runtime (not edge)
 
-const s3 = new S3Client({ region: process.env.AWS_REGION });
+// Validar que las variables de entorno estén configuradas
+if (!process.env.AWS_REGION) {
+  console.error("❌ AWS_REGION no está definida");
+  console.error("Variables disponibles:", {
+    AWS_REGION: process.env.AWS_REGION,
+    S3_BUCKET: process.env.S3_BUCKET,
+    AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID ? "***definida***" : "undefined",
+    AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY ? "***definida***" : "undefined",
+  });
+}
+
+const s3 = new S3Client({
+  region: process.env.AWS_REGION || "us-east-1",
+  credentials: process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+    ? {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      }
+    : undefined,
+});
 
 export async function POST(req: NextRequest) {
   try {
     const { mimeType, size, purpose = "generic" } = await req.json();
+    
+    // Log para debugging
+    console.log("📤 Upload intent request:", { mimeType, size, purpose });
+
+    // Validar que S3_BUCKET esté configurado
+    if (!process.env.S3_BUCKET) {
+      console.error("❌ S3_BUCKET no está definida");
+      return NextResponse.json(
+        { error: "S3_BUCKET not configured" },
+        { status: 500 }
+      );
+    }
 
     // 1) Basic validation — tune per your needs
     const MAX_SIZE = 10 * 1024 * 1024; // 10MB
@@ -36,14 +67,18 @@ export async function POST(req: NextRequest) {
 
     // 3) Presign PUT
     const command = new PutObjectCommand({
-      Bucket: process.env.S3_BUCKET!,
+      Bucket: process.env.S3_BUCKET,
       Key: key,
       ContentType: mimeType,
       // Server-side encryption (optional, recommended)
       // ServerSideEncryption: "AES256",
     });
+    
+    console.log("🔑 Generating signed URL for bucket:", process.env.S3_BUCKET);
 
     const url = await getSignedUrl(s3, command, { expiresIn: 60 * 5 }); // 5 minutes
+    
+    console.log("✅ Signed URL generated successfully");
 
     return NextResponse.json({
       key,
@@ -55,9 +90,14 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (err: any) {
-    console.error(err);
+    console.error("❌ Error in upload intent:", err);
+    console.error("Error details:", {
+      message: err.message,
+      code: err.code,
+      name: err.name,
+    });
     return NextResponse.json(
-      { error: "Failed to create upload intent" },
+      { error: `Failed to create upload intent: ${err.message}` },
       { status: 500 }
     );
   }

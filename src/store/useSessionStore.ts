@@ -6,7 +6,7 @@ interface AuthState {
   loading: boolean;
   error?: string;
   setUser: (user: AuthState["user"]) => void;
-  setError: (error: string) => void;
+  setError: (error: AuthState["error"]) => void;
   setLoading: (value: boolean) => void;
   logout: () => void;
 }

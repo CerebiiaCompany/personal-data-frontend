@@ -25,8 +25,10 @@ const CheckActiveSession = () => {
       const session = await getSession();
 
       if (session.error) {
-        let parsedError = parseApiError(session.error);
+        const parsedError = parseApiError(session.error);
         setError(parsedError);
+        setUser(undefined); // Limpiar usuario si hay error
+        setLoading(false);
         return;
       }
 
@@ -46,8 +48,11 @@ const CheckActiveSession = () => {
       }
 
       setUser(session.data);
+      setLoading(false);
     } catch (error) {
       console.log(error);
+      setUser(undefined); // Limpiar usuario si hay excepción
+      setLoading(false);
       return setError((error as Error).message || "Unknown error");
     }
   }

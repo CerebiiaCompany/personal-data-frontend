@@ -13,10 +13,12 @@ const CheckRole = () => {
   const router = useRouter();
 
   useEffect(() => {
-    console.log("Checking role...");
-    if (pathname == "/login") return;
+    console.log("Checking role...", { user, loading, error, pathname });
+    if (pathname === "/login") return;
 
-    if (!user && !loading && error) {
+    // Solo redirigir a login si NO está cargando Y no hay usuario
+    if (!loading && !user) {
+      console.log("Redirecting to login - no user");
       return router.push(`/login?callback_url=${pathname}`);
     }
 
@@ -25,12 +27,13 @@ const CheckRole = () => {
 
       if (
         pathname.includes("/admin") &&
-        !["COMPANY_ADMIN", "SUEPERADMIN"].includes(user.role)
+        !["COMPANY_ADMIN", "SUPERADMIN"].includes(user.role)
       ) {
+        console.log("Redirecting to login - insufficient role");
         return router.push(`/login?callback_url=${pathname}`);
       }
     }
-  }, [pathname, user, loading]);
+  }, [pathname, user, loading, error]);
 
   if (!user || loading) {
     return <LoadingCover wholePage={true} />;

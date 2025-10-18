@@ -9,7 +9,7 @@ import * as z from "zod";
 import Button from "@/components/base/Button";
 import CustomCheckbox from "@/components/forms/CustomCheckbox";
 import { Icon } from "@iconify/react/dist/iconify.js";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSessionStore } from "@/store/useSessionStore";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -24,7 +24,7 @@ const schema = z.object({
   }),
 });
 
-export default function LoginPage() {
+function LoginForm() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callback_url");
 
@@ -32,6 +32,12 @@ export default function LoginPage() {
   const { user, loading, error, setUser, setError, setLoading } =
     useSessionStore();
   const [shownPassword, setShownPassword] = useState<boolean>(false);
+
+  // Limpiar errores cuando se monta el componente de login
+  useEffect(() => {
+    setError(undefined);
+  }, [setError]);
+
   const {
     register,
     handleSubmit,
@@ -49,28 +55,26 @@ export default function LoginPage() {
 
   async function onSubmit(data: any) {
     setLoading(true);
+    setError(undefined); // Limpiar errores previos
 
     const loginRes = await loginUser(data.username, data.password);
 
     if (loginRes.error) {
       const parsedError = parseApiError(loginRes.error);
       setError(parsedError);
+      setLoading(false);
       return toast.error(parsedError);
     }
 
     const session = await getSession();
 
     setUser(session.data);
+    setLoading(false); // ✅ Importante: desactivar loading después del login exitoso
     toast.success(`Bienvenid@ ${session.data?.name}`);
 
+    // Redirigir solo después de login exitoso
     router.push(callbackUrl || "/admin");
   }
-
-  useEffect(() => {
-    if (user && !loading && !error) {
-      router.push(callbackUrl || "/admin");
-    }
-  }, [user]);
 
   return (
     <div className="flex flex-col p-8 bg-[linear-gradient(180deg,#301AAC_0.96%,#150668_48.56%,#030014_100%)] w-full flex-1 justify-center items-center">
@@ -161,5 +165,22 @@ export default function LoginPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col p-8 bg-[linear-gradient(180deg,#301AAC_0.96%,#150668_48.56%,#030014_100%)] w-full flex-1 justify-center items-center">
+        <div className="w-full max-w-md bg-white/20 px-12 py-20 rounded-xl flex flex-col gap-10">
+          <div className="flex flex-col items-center gap-3">
+            <div className="animate-pulse bg-white/30 rounded-lg h-20 w-20"></div>
+            <div className="animate-pulse bg-white/30 rounded h-6 w-32"></div>
+          </div>
+        </div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }

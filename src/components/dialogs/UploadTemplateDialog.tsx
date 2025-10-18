@@ -70,12 +70,17 @@ const UploadTemplateDialog = ({ refresh }: Props) => {
   }
 
   async function onSubmit(data: any) {
+    console.log("📤 onSubmit called", { data, errors });
     const companyId = user?.companyUserData?.companyId;
-    if (!companyId) return;
+    if (!companyId) {
+      console.error("❌ No companyId found");
+      return;
+    }
 
     const file: File | undefined = data.attachments?.[0];
+    console.log("📁 File:", file);
     if (!file) {
-      toast.error("Debes cargar un archivo de Excel");
+      toast.error("Debes cargar un archivo PDF");
       return;
     }
 
@@ -183,7 +188,11 @@ const UploadTemplateDialog = ({ refresh }: Props) => {
         <div className="flex-1 px-4 py-3 flex flex-col gap-4 h-full overflow-y-auto">
           {/* Modal body */}
           <form
-            onSubmit={handleSubmit(onSubmit)}
+            onSubmit={(e) => {
+              console.log("📋 Form submit event triggered");
+              console.log("📋 Errors:", errors);
+              handleSubmit(onSubmit)(e);
+            }}
             className="flex flex-col gap-6"
           >
             <CustomInput
@@ -208,6 +217,7 @@ const UploadTemplateDialog = ({ refresh }: Props) => {
               loading={loading}
               type="submit"
               className="w-full"
+              onClick={() => console.log("🔘 Button clicked")}
             >
               Subir archivo
             </Button>
