@@ -194,7 +194,7 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
     const res = await generateOtpCode({
       collectFormId: data._id,
       recipientData: {
-        address: "573106953847",
+        address: "573169393922",
         channel: "SMS",
       },
     });
