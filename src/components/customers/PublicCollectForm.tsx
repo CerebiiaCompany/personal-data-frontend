@@ -191,10 +191,17 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
   }
 
   async function createOtpCode() {
+    const phone = watch("user.phone");
+    
+    // Validar que el teléfono esté ingresado
+    if (!phone || phone.trim() === "") {
+      return toast.error("Por favor ingresa tu número de teléfono primero");
+    }
+
     const res = await generateOtpCode({
       collectFormId: data._id,
       recipientData: {
-        address: "573169393922",
+        address: phone,
         channel: "SMS",
       },
     });
