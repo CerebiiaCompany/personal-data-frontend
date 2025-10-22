@@ -37,7 +37,7 @@ const CustomDateInput = ({
       )}
       <input
         id={`${props.name}Field`}
-        type="date"
+        type="datetime-local"
         {...props}
         className={clsx([
           "gap-2 w-full text-primary-900 flex-1 relative px-3 py-2",

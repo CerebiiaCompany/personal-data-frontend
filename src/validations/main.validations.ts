@@ -129,24 +129,50 @@ export const customDateValidation = z.preprocess((v) => {
   }
 }, z.date({ error: "Fecha inválida" }));
 
-const dateYYYYMMDD = z
-  .string("Fecha obligatoria")
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Formato inválido (usa YYYY-MM-DD)")
+const dateTimeLocal = z
+  .string("Fecha y hora obligatorias")
+  .regex(
+    /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}$/,
+    "Formato inválido (usa YYYY-MM-DDTHH:mm)"
+  )
   .superRefine((val, ctx) => {
-    const [y, m, d] = val.split("-").map(Number);
-    // Basic range checks
-    if (m < 1 || m > 12 || d < 1 || d > 31) {
-      ctx.addIssue({ code: "custom", message: "Fecha inválida" });
+    const [datePart, timePart] = val.split("T");
+    if (!datePart || !timePart) {
+      ctx.addIssue({ code: "custom", message: "Fecha y hora inválidas" });
       return;
     }
-    // Construct in UTC and verify round-trip integrity
-    const dt = new Date(Date.UTC(y, m - 1, d));
+    const [y, m, d] = datePart.split("-").map(Number);
+    const [hh, mm] = timePart.split(":").map(Number);
+
+    if (
+      !Number.isInteger(y) ||
+      !Number.isInteger(m) ||
+      !Number.isInteger(d) ||
+      !Number.isInteger(hh) ||
+      !Number.isInteger(mm) ||
+      m < 1 ||
+      m > 12 ||
+      d < 1 ||
+      d > 31 ||
+      hh < 0 ||
+      hh > 23 ||
+      mm < 0 ||
+      mm > 59
+    ) {
+      ctx.addIssue({ code: "custom", message: "Fecha y hora inválidas" });
+      return;
+    }
+
+    const dt = new Date(y, m - 1, d, hh, mm);
     const isValid =
-      dt.getUTCFullYear() === y &&
-      dt.getUTCMonth() === m - 1 &&
-      dt.getUTCDate() === d;
+      dt.getFullYear() === y &&
+      dt.getMonth() === m - 1 &&
+      dt.getDate() === d &&
+      dt.getHours() === hh &&
+      dt.getMinutes() === mm;
+
     if (!isValid) {
-      ctx.addIssue({ code: "custom", message: "Fecha inválida" });
+      ctx.addIssue({ code: "custom", message: "Fecha y hora inválidas" });
     }
   });
 
@@ -159,18 +185,21 @@ export const createCampaignValidationSchema = z.object({
   active: z.boolean(),
   scheduling: z
     .object({
-      startDate: dateYYYYMMDD, // "YYYY-MM-DD"
-      endDate: dateYYYYMMDD,
+      startDate: dateTimeLocal, // "YYYY-MM-DDTHH:mm"
+      endDate: dateTimeLocal,
       ocurrences: z
         .number({ error: "Número de ocurrencias obligatorio" })
         .int("Debe ser un entero")
         .min(1, "Mínimo 1")
         .max(365, "Máximo 365"),
     })
-    .refine(({ startDate, endDate }) => endDate > startDate, {
-      message: "La fecha de fin debe ser posterior a la de inicio",
-      path: ["endDate"],
-    }),
+    .refine(
+      ({ startDate, endDate }) => new Date(endDate) > new Date(startDate),
+      {
+        message: "La fecha de fin debe ser posterior a la de inicio",
+        path: ["endDate"],
+      }
+    ),
   sourceFormIds: z
     .array(z.string().min(1, "ID inválido"))
     .nonempty("Selecciona al menos un formulario"),

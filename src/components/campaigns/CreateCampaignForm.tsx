@@ -27,6 +27,7 @@ import { useCollectForms } from "@/hooks/useCollectForms";
 import {
   formatDateToString,
   parseUtcDateAsLocalCalendarDate,
+  toDateTimeLocalString,
   utcToLocalDate,
 } from "@/utils/date.utils";
 import { useCampaignAudience } from "@/hooks/useCampaignAudience";
@@ -42,19 +43,14 @@ const CreateCampaignForm = ({ initialValues }: Props) => {
 
   const [loading, setLoading] = useState<boolean>(false);
   const params = useParams();
+
   const parsedInitialValues: CreateCampaign | undefined = initialValues
     ? {
         ...initialValues,
         scheduling: {
           ...initialValues?.scheduling,
-          startDate: formatDateToString({
-            date: initialValues.scheduling.startDate,
-            format: "YYYY-MM-DD",
-          }),
-          endDate: formatDateToString({
-            date: initialValues.scheduling.endDate,
-            format: "YYYY-MM-DD",
-          }),
+          startDate: toDateTimeLocalString(initialValues.scheduling.startDate),
+          endDate: toDateTimeLocalString(initialValues.scheduling.endDate),
         },
       }
     : undefined;

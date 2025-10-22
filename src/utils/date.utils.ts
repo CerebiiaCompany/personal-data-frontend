@@ -6,6 +6,14 @@ export function utcToLocalDate(utcDateString: string): Date {
   const localTime = utcDate.getTime() - utcDate.getTimezoneOffset() * 60000;
   return new Date(localTime);
 }
+
+export function toDateTimeLocalString(d: string) {
+  const date = new Date(d);
+  const offset = date.getTimezoneOffset();
+  const local = new Date(date.getTime() - offset * 60000);
+  return local.toISOString().slice(0, 16); // "YYYY-MM-DDTHH:mm"
+}
+
 export function parseUtcDateAsLocalCalendarDate(utcDateString: string): Date {
   const utcDate = new Date(utcDateString);
   const localDate = new Date(
