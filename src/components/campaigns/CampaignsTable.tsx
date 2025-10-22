@@ -113,7 +113,7 @@ const CampaignsTable = ({
                   scope="col"
                   className="text-center font-bold text-primary-900 text-xs py-2 px-3"
                 >
-                  Fecha de entrega
+                  Fecha de finalización
                 </th>
                 <th
                   scope="col"

@@ -6,18 +6,21 @@ import ClasificationTable from "@/components/clasification/ClasificationTable";
 import UploadExcelTemplateDialog from "@/components/dialogs/UploadExcelTemplateFile";
 import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import { useCollectFormClasifications } from "@/hooks/useCollectFormClasifications";
+import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import { useSessionStore } from "@/store/useSessionStore";
 import { showDialog } from "@/utils/dialogs.utils";
 
 export default function ClassificationPage() {
   const user = useSessionStore((store) => store.user);
+  const { debouncedValue, search, setSearch } = useDebouncedSearch();
   const { data, loading, error, refresh } = useCollectFormClasifications({
     companyId: user?.companyUserData?.companyId,
+    search: debouncedValue,
   });
 
   return (
     <div className="flex flex-col h-full">
-      <SectionHeader />
+      <SectionHeader search={search} onSearchChange={setSearch} />
 
       <UploadExcelTemplateDialog refresh={refresh} />
 
@@ -30,7 +33,7 @@ export default function ClassificationPage() {
             Cargar plantilla de excel
           </Button>
           <h4 className="font-semibold text-xl text-primary-900">
-            Clasificación de los formulario
+            Clasificación de los formularios
           </h4>
           <span />
         </header>

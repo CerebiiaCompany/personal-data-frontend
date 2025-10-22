@@ -14,8 +14,8 @@ export interface CreateCampaign {
   active: boolean;
   goal: CampaignGoal;
   scheduling: {
-    startDate: Date;
-    endDate: Date;
+    startDate: string;
+    endDate: string;
     ocurrences: number; // Amount of times the campaign will be sent
   };
   sourceFormIds: string[];

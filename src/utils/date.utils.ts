@@ -1,5 +1,21 @@
 type STRING_TO_DATE_FORMAT = "DD/MM/YYYY" | "YYYY-MM-DD";
 
+export function utcToLocalDate(utcDateString: string): Date {
+  const utcDate = new Date(utcDateString);
+  // Create a new Date adjusted to local time by applying the timezone offset
+  const localTime = utcDate.getTime() - utcDate.getTimezoneOffset() * 60000;
+  return new Date(localTime);
+}
+export function parseUtcDateAsLocalCalendarDate(utcDateString: string): Date {
+  const utcDate = new Date(utcDateString);
+  const localDate = new Date(
+    utcDate.getUTCFullYear(),
+    utcDate.getUTCMonth(),
+    utcDate.getUTCDate()
+  );
+  return localDate;
+}
+
 export function formatDateToString({
   date,
   format = "DD/MM/YYYY",
@@ -8,7 +24,11 @@ export function formatDateToString({
   format?: STRING_TO_DATE_FORMAT;
 }): string {
   if (!date) return "";
-  const parsedDate = new Date(date);
+
+  const parsedDate = parseUtcDateAsLocalCalendarDate(
+    typeof date === "string" ? date : new Date(date).toString()
+  );
+
   switch (format) {
     case "DD/MM/YYYY":
       return `${parsedDate.getDate().toString().padStart(2, "00")}/${(

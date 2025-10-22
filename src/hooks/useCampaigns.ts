@@ -30,7 +30,7 @@ export function useCampaigns<T = Campaign[]>(params: QueryParams) {
     if (!params.companyId) return;
 
     fetch();
-  }, [params.companyId]);
+  }, [params.companyId, params.search, params.startDate, params.endDate]);
 
   return {
     data,

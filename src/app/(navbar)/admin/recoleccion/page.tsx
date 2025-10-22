@@ -4,10 +4,13 @@ import Button from "@/components/base/Button";
 import SectionHeader from "@/components/base/SectionHeader";
 import CollectFormsList from "@/components/collectForms/CollectFormsList";
 import { useCollectForms } from "@/hooks/useCollectForms";
+import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import { useSessionStore } from "@/store/useSessionStore";
+import { useEffect, useState } from "react";
 
 export default function CollectPage() {
   const user = useSessionStore((store) => store.user);
+  const { debouncedValue, setSearch, search } = useDebouncedSearch();
   const {
     data: collectForms,
     loading,
@@ -15,11 +18,16 @@ export default function CollectPage() {
     refresh,
   } = useCollectForms({
     companyId: user?.companyUserData?.companyId,
+    search: debouncedValue,
   });
+
+  useEffect(() => {
+    console.log("Search query: ", search);
+  }, [search]);
 
   return (
     <div className="flex flex-col h-full">
-      <SectionHeader />
+      <SectionHeader search={search} onSearchChange={setSearch} />
 
       {/* Content */}
       <div className="px-8 py-6 flex flex-col gap-6 flex-1">

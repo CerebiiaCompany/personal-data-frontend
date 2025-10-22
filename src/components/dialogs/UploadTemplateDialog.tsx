@@ -196,7 +196,7 @@ const UploadTemplateDialog = ({ refresh }: Props) => {
             className="flex flex-col gap-6"
           >
             <CustomInput
-              placeholder="Nombre del formulario"
+              placeholder="Nombre de la plantilla"
               {...register("name")}
               error={errors.name as FieldError}
             />

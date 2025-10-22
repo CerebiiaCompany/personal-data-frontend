@@ -19,7 +19,6 @@ const Dropdown = ({ value, options, onChange }: Props) => {
 
   function toggleDialog() {
     setDialogToggle(!dialogToggle);
-    console.log(dialogToggle);
   }
 
   function selectOption(value: string) {
@@ -49,7 +48,7 @@ const Dropdown = ({ value, options, onChange }: Props) => {
       </Button>
 
       {dialogToggle ? (
-        <div className="bg-white animate-appear rounded-lg shadow-primary-shadows shadow-lg h-fit p-1 max-h-72 w-[150%] absolute top-[130%] left-1/2 -translate-x-1/2">
+        <div className="bg-white animate-appear rounded-lg shadow-primary-shadows shadow-lg h-fit p-1 max-h-72 w-[150%] absolute top-[130%] left-1/2 -translate-x-1/2 z-20">
           <div className="pointer-events-none rotate-180 w-10 h-1 grid place-content-center absolute bottom-full left-1/2 -translate-x-1/2">
             <Icon icon={"nrk:arrow-dropdown"} className="text-6xl text-white" />
           </div>

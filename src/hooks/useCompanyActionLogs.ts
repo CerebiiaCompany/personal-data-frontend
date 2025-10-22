@@ -1,18 +1,20 @@
-import { fetchCollectFormClasifications } from "@/lib/collectForm.api";
+import { fetchCampaigns } from "@/lib/campaign.api";
+import { fetchCompanyUsersActionLogs } from "@/lib/userActionLogs.api";
 import { QueryParams } from "@/types/api.types";
-import { CollectFormClasification } from "@/types/collectForm.types";
+import { Campaign } from "@/types/campaign.types";
+import { UserActionLog } from "@/types/userActionLogs.types";
 import { parseApiError } from "@/utils/parseApiError";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-export function useCollectFormClasifications(params: QueryParams) {
-  const [data, setData] = useState<CollectFormClasification[] | null>(null);
+export function useCompanyActionLogs<T = UserActionLog[]>(params: QueryParams) {
+  const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   async function fetch() {
     setLoading(true);
-    const fetchedData = await fetchCollectFormClasifications(params);
+    const fetchedData = await fetchCompanyUsersActionLogs(params);
 
     if (fetchedData.error) {
       let parsedError = parseApiError(fetchedData.error);

@@ -1,11 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
 import Button from "../base/Button";
-import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
-import {
-  AnswerType,
-  CreateCollectForm,
-  DataType,
-} from "@/types/collectForm.types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import clsx from "clsx";
@@ -30,7 +24,11 @@ import { createCampaign, updateCampaign } from "@/lib/campaign.api";
 import CustomDateInput from "../forms/CustomDateInput";
 import { CustomRadioGroup } from "../forms/CustomRadioGroup";
 import { useCollectForms } from "@/hooks/useCollectForms";
-import { formatDateToString } from "@/utils/date.utils";
+import {
+  formatDateToString,
+  parseUtcDateAsLocalCalendarDate,
+  utcToLocalDate,
+} from "@/utils/date.utils";
 import { useCampaignAudience } from "@/hooks/useCampaignAudience";
 import { useAppSetting } from "@/hooks/useAppSetting";
 
@@ -44,6 +42,22 @@ const CreateCampaignForm = ({ initialValues }: Props) => {
 
   const [loading, setLoading] = useState<boolean>(false);
   const params = useParams();
+  const parsedInitialValues: CreateCampaign | undefined = initialValues
+    ? {
+        ...initialValues,
+        scheduling: {
+          ...initialValues?.scheduling,
+          startDate: formatDateToString({
+            date: initialValues.scheduling.startDate,
+            format: "YYYY-MM-DD",
+          }),
+          endDate: formatDateToString({
+            date: initialValues.scheduling.endDate,
+            format: "YYYY-MM-DD",
+          }),
+        },
+      }
+    : undefined;
 
   const {
     register,
@@ -55,7 +69,7 @@ const CreateCampaignForm = ({ initialValues }: Props) => {
     control: formControl,
   } = useForm({
     resolver: zodResolver(createCampaignValidationSchema),
-    defaultValues: initialValues || {
+    defaultValues: parsedInitialValues || {
       active: false,
       sourceFormIds: [],
       audience: {
@@ -63,7 +77,9 @@ const CreateCampaignForm = ({ initialValues }: Props) => {
       },
       scheduling: {
         ocurrences: 5,
-        startDate: new Date(),
+        startDate: utcToLocalDate(new Date().toUTCString())
+          .toISOString()
+          .split("T")[0],
       },
     },
   });
@@ -117,11 +133,26 @@ const CreateCampaignForm = ({ initialValues }: Props) => {
       res = await updateCampaign(
         user?.companyUserData?.companyId,
         params.campaignId as string,
-        data
+        {
+          ...data,
+          active: undefined,
+          scheduling: {
+            ...data.scheduling,
+            startDate: new Date(data.scheduling.startDate).toISOString(),
+            endDate: new Date(data.scheduling.endDate).toISOString(),
+          },
+        }
       );
     } else {
       //? handle creating
-      res = await createCampaign(user?.companyUserData?.companyId, data);
+      res = await createCampaign(user?.companyUserData?.companyId, {
+        ...data,
+        scheduling: {
+          ...data.scheduling,
+          startDate: new Date(data.scheduling.startDate).toISOString(),
+          endDate: new Date(data.scheduling.endDate).toISOString(),
+        },
+      });
     }
     setLoading(false);
 
@@ -129,7 +160,7 @@ const CreateCampaignForm = ({ initialValues }: Props) => {
       return toast.error(parseApiError(res.error));
     }
 
-    toast.success(initialValues ? "Campaña actualizado" : "Campaña creado");
+    toast.success(initialValues ? "Campaña actualizada" : "Campaña creada");
 
     router.push("/admin/campanas");
   }
@@ -258,26 +289,18 @@ const CreateCampaignForm = ({ initialValues }: Props) => {
       </div>
 
       {/* Scheduling */}
-      {!initialValues && (
+      {!initialValues?.active && (
         <div className="rounded-xl border border-disabled p-10 py-6 flex flex-col items-stretch gap-6">
           <h6 className="text-primary-900 font-normal text-lg">Programación</h6>
 
           <CustomDateInput
             label="Fecha de inicio"
             {...register("scheduling.startDate")}
-            value={formatDateToString({
-              date: watch("scheduling.startDate") as Date,
-              format: "YYYY-MM-DD",
-            })}
             error={errors.scheduling?.startDate as FieldError}
           />
           <CustomDateInput
             label="Fecha de finalización"
             {...register("scheduling.endDate")}
-            value={formatDateToString({
-              date: watch("scheduling.endDate") as Date,
-              format: "YYYY-MM-DD",
-            })}
             error={errors.scheduling?.endDate as FieldError}
           />
           <div className="flex flex-col gap-2">

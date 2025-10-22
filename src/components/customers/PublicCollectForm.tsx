@@ -23,6 +23,8 @@ import { showDialog } from "@/utils/dialogs.utils";
 import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import { generateOtpCode, validateOtpCode } from "@/lib/oneTimeCode.api";
+import { getPresignedUrl } from "@/lib/server/getPresignedUrl";
+import LoadingCover from "../layout/LoadingCover";
 
 interface Props {
   data: CollectForm;
@@ -32,6 +34,7 @@ interface Props {
 const PublicCollectForm = ({ data, initialValues }: Props) => {
   const [pendingOtpId, setPendingOtpId] = useState<string | null>(null);
   const [fullName, setFullName] = useState<string>("");
+  const [policyUrl, setPolicyUrl] = useState<string | null>(null);
   const fields: {
     [key: string]: {
       type: AnswerType;
@@ -46,8 +49,6 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
         default: question.answerType === "TEXT" ? "" : new Date(),
       })
   );
-
-  console.log(data.policyTemplateFile);
 
   // Build a dynamic Zod schema based on the inferred `fields`
 
@@ -126,7 +127,13 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
       ),
       gender: z.string<UserGender>(),
       email: z.email("Correo inválido").min(1, "Este campo es obligatorio"),
-      phone: z.string().min(1, "Este campo es obligatorio"),
+      phone: z.preprocess(
+        (v: string) =>
+          typeof v === "string" ? v.replace(/[^\d]/g, "") : (v as string),
+        z
+          .string()
+          .regex(/^57\d{10}$/, "Usa el formato 57XXXXXXXXXX (solo números)")
+      ),
     }),
     dataProcessing: z.boolean().refine((val) => val === true, {
       error: "Debes aceptar el tratamiento de datos",
@@ -221,6 +228,15 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
     toast.success("Código enviado");
   }
 
+  useEffect(() => {
+    if (data.policyTemplateFile) {
+      (async () => {
+        const presignedUrl = await getPresignedUrl(data.policyTemplateFile.key);
+        setPolicyUrl(presignedUrl);
+      })();
+    }
+  }, []);
+
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
@@ -278,13 +294,15 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
           <CustomInput
             label="Correo"
             type="email"
+            placeholder="Ej. alguien@ejemplo.com"
             {...register("user.email")}
             error={errors.user?.email}
           />
           <CustomInput
             label="Teléfono"
             {...register("user.phone")}
-            error={errors.user?.phone}
+            placeholder="Ej. 57XXXXXXXXXX"
+            error={errors.user?.phone as FieldError}
           />
         </div>
       </div>
@@ -320,11 +338,24 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
             <Icon icon={"tabler:send"} className="text-2xl" />
           </Button>
         </div>
-        <CustomCheckbox
-          {...register("dataProcessing")}
-          label={<p>Acepto el tratamiento de datos personales</p>}
-          error={errors.dataProcessing as FieldError}
-        />
+        {policyUrl ? (
+          <CustomCheckbox
+            {...register("dataProcessing")}
+            label={
+              <p>
+                Acepto la{" "}
+                <a target="_blank" href={policyUrl} className="underline">
+                  política de tratamiento de datos personales.
+                </a>
+              </p>
+            }
+            error={errors.dataProcessing as FieldError}
+          />
+        ) : (
+          <div className="w-10 h-10 relative">
+            <LoadingCover size="sm" />
+          </div>
+        )}
       </div>
 
       <div className="flex gap-4 mt-8 justify-center">

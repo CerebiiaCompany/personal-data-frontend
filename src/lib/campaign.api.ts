@@ -49,6 +49,8 @@ export async function updateCampaign(
     }
   );
 
+  console.log(res);
+
   return res;
 }
 

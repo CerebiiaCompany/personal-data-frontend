@@ -32,7 +32,7 @@ export function useCompanyUsers<T = SessionUser[]>(params: QueryParams) {
     if (!params.companyId) return;
 
     fetch();
-  }, [params.companyId]);
+  }, [params.companyId, params.search]);
 
   return {
     data,

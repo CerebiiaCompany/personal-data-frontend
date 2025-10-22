@@ -60,6 +60,12 @@ const CustomSelect = <T extends string>({
           {label}
         </label>
       )}
+      {dialogToggle && (
+        <div
+          onClick={toggleDialog}
+          className="z-10 fixed left-0 top-0 w-full h-screen"
+        ></div>
+      )}
       <select className="hidden"></select>
       <button
         type="button"
@@ -82,7 +88,7 @@ const CustomSelect = <T extends string>({
       <div
         ref={dialogRef}
         className={clsx([
-          "absolute w-full bg-white shadow-md h-fit max-h-40 border border-stone-100 rounded-lg z-10 flex flex-col items-center transition-all overflow-y-auto",
+          "absolute w-full bg-white shadow-md h-fit max-h-40 border border-stone-100 rounded-lg z-20 flex flex-col items-center transition-all overflow-y-auto",
           { "opacity-0 pointer-events-none -translate-y-5": !dialogToggle },
           { "top-[115%] origin-top": dialogDown },
           { "bottom-[115%] origin-bottom": !dialogDown },

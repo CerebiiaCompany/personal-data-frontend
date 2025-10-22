@@ -101,114 +101,118 @@ const ClasificationTable = ({ items, loading, error }: Props) => {
     <div className="w-full overflow-x-auto flex-1 relative">
       {loading && <LoadingCover />}
 
-      {items && (
-        <table className="w-full table-auto border-separate border-spacing-y-2">
-          <thead>
-            <tr>
-              <th
-                scope="col"
-                className="text-center font-medium text-stone-600 text-xs py-2 px-3 w-1/6"
-              >
-                Formulario
-              </th>
-              <th
-                scope="col"
-                className="text-center font-medium text-stone-600 text-xs py-2 px-3 w-1/6"
-              >
-                Fecha de envío
-              </th>
-              <th
-                scope="col"
-                className="text-center font-medium text-stone-600 text-xs py-2 px-3 w-1/6"
-              >
-                Datos verificados
-              </th>
-              <th
-                scope="col"
-                className="text-center font-medium text-stone-600 text-xs py-2 px-3 w-1/6"
-              >
-                Verificación
-              </th>
-              <th
-                scope="col"
-                className="text-center font-medium text-stone-600 text-xs py-2 px-3 w-1/6"
-              >
-                Exportar
-              </th>
-              <th
-                scope="col"
-                className="text-center font-medium text-stone-600 text-xs py-2 px-3 w-1/6"
-              >
-                Ver reporte
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item) => (
-              <tr key={item._id} className="align-middle text-center">
-                <td className="py-3 px-4 bg-primary-50 font-medium rounded-l-xl text-ellipsis">
-                  {item.name}
-                </td>
-                <td className="py-3 px-4 bg-primary-50 font-medium">
-                  {formatDateToString({ date: item.createdAt })}
-                </td>
-                <td className="py-3 px-4 bg-primary-50 font-medium">
-                  {item.verifiedResponses}/{item.totalResponses}
-                </td>
-                <td className="py-3 px-4 bg-primary-50 font-medium">
-                  <div className="w-full flex justify-center">
-                    {item.totalResponses > 0 ? (
-                      item.verifiedResponses === item.totalResponses ? (
-                        <Icon
-                          icon={"tabler:check"}
-                          className="text-green-400 text-3xl"
-                        />
+      {items ? (
+        items.length ? (
+          <table className="w-full table-auto border-separate border-spacing-y-2">
+            <thead>
+              <tr>
+                <th
+                  scope="col"
+                  className="text-center font-medium text-stone-600 text-xs py-2 px-3 w-1/6"
+                >
+                  Formulario
+                </th>
+                <th
+                  scope="col"
+                  className="text-center font-medium text-stone-600 text-xs py-2 px-3 w-1/6"
+                >
+                  Fecha de envío
+                </th>
+                <th
+                  scope="col"
+                  className="text-center font-medium text-stone-600 text-xs py-2 px-3 w-1/6"
+                >
+                  Datos verificados
+                </th>
+                <th
+                  scope="col"
+                  className="text-center font-medium text-stone-600 text-xs py-2 px-3 w-1/6"
+                >
+                  Verificación
+                </th>
+                <th
+                  scope="col"
+                  className="text-center font-medium text-stone-600 text-xs py-2 px-3 w-1/6"
+                >
+                  Exportar
+                </th>
+                <th
+                  scope="col"
+                  className="text-center font-medium text-stone-600 text-xs py-2 px-3 w-1/6"
+                >
+                  Ver reporte
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item) => (
+                <tr key={item._id} className="align-middle text-center">
+                  <td className="py-3 px-4 bg-primary-50 font-medium rounded-l-xl text-ellipsis">
+                    {item.name}
+                  </td>
+                  <td className="py-3 px-4 bg-primary-50 font-medium">
+                    {formatDateToString({ date: item.createdAt })}
+                  </td>
+                  <td className="py-3 px-4 bg-primary-50 font-medium">
+                    {item.verifiedResponses}/{item.totalResponses}
+                  </td>
+                  <td className="py-3 px-4 bg-primary-50 font-medium">
+                    <div className="w-full flex justify-center">
+                      {item.totalResponses > 0 ? (
+                        item.verifiedResponses === item.totalResponses ? (
+                          <Icon
+                            icon={"tabler:check"}
+                            className="text-green-400 text-3xl"
+                          />
+                        ) : (
+                          <Icon
+                            icon={"tabler:x"}
+                            className="text-red-400 text-3xl"
+                          />
+                        )
                       ) : (
                         <Icon
-                          icon={"tabler:x"}
-                          className="text-red-400 text-3xl"
+                          icon={"tabler:user-x"}
+                          className="text-yellow-400 text-3xl"
                         />
-                      )
-                    ) : (
+                      )}
+                    </div>
+                  </td>
+                  <td className="py-3 px-4 bg-primary-50 font-medium">
+                    <button
+                      aria-label="Exportar"
+                      onClick={() => exportClassificationData(item._id)}
+                    >
                       <Icon
-                        icon={"tabler:user-x"}
-                        className="text-yellow-400 text-3xl"
+                        icon={"material-symbols:export-notes-outline"}
+                        className="text-primary-500 text-3xl"
                       />
-                    )}
-                  </div>
-                </td>
-                <td className="py-3 px-4 bg-primary-50 font-medium">
-                  <button
-                    aria-label="Exportar"
-                    onClick={() => exportClassificationData(item._id)}
-                  >
-                    <Icon
-                      icon={"material-symbols:export-notes-outline"}
-                      className="text-primary-500 text-3xl"
-                    />
-                  </button>
-                </td>
-                <td className="py-3 px-4 bg-primary-50 font-medium rounded-r-xl">
-                  <Link
-                    aria-label="Ver reporte"
-                    href={`/admin/clasificacion/${item._id}`}
-                    className="flex justify-center w-full items-center"
-                  >
-                    <Icon
-                      icon={"tabler:report-analytics"}
-                      className="text-primary-500 text-3xl"
-                    />
-                    <Icon
-                      icon={"tabler:chevron-right"}
-                      className="text-primary-500 text-xl"
-                    />
-                  </Link>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+                    </button>
+                  </td>
+                  <td className="py-3 px-4 bg-primary-50 font-medium rounded-r-xl">
+                    <Link
+                      aria-label="Ver reporte"
+                      href={`/admin/clasificacion/${item._id}`}
+                      className="flex justify-center w-full items-center"
+                    >
+                      <Icon
+                        icon={"tabler:report-analytics"}
+                        className="text-primary-500 text-3xl"
+                      />
+                      <Icon
+                        icon={"tabler:chevron-right"}
+                        className="text-primary-500 text-xl"
+                      />
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <p>No hay formularios para clasificar</p>
+        )
+      ) : null}
 
       {error && <p>Error: {error}</p>}
     </div>

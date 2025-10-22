@@ -30,7 +30,7 @@ export function useCollectForms<T = CollectForm[]>(params: QueryParams) {
     if (!params.companyId) return;
 
     fetch();
-  }, [params.companyId]);
+  }, [params.companyId, params.search]);
 
   return {
     data,

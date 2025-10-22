@@ -36,7 +36,7 @@ export function useCollectFormResponses<T = CollectFormWithResponses>(
     if (!params.companyId) return;
 
     fetch();
-  }, [params.companyId]);
+  }, [params.companyId, params.search]);
 
   return {
     data,

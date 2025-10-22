@@ -33,14 +33,19 @@ const CollectFormsList = ({ items, loading, error, refresh }: Props) => {
   return (
     <div className="w-fill grid grid-cols-[repeat(auto-fit,_minmax(150px,_320px))] gap-8 justify-between relative flex-1">
       {loading && <LoadingCover />}
-      {items &&
-        items.map((item) => (
-          <CollectFormCard
-            deleteHandler={deleteForm}
-            key={item._id}
-            data={item}
-          />
-        ))}
+      {items ? (
+        items.length ? (
+          items.map((item) => (
+            <CollectFormCard
+              deleteHandler={deleteForm}
+              key={item._id}
+              data={item}
+            />
+          ))
+        ) : (
+          <p>No hay formularios para mostrar</p>
+        )
+      ) : null}
       {error && <p>Error: {error}</p>}
     </div>
   );

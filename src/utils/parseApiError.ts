@@ -9,6 +9,7 @@ export const ERROR_DICTIONARY = {
   "auth/unauthorized": "No estás autorizado para esta acción",
   "auth/unauthenticated": "Error en la autenticación",
   "otp/pending-code": "Ya hay un código pendiente para este usuario",
+  "masivapp/error": "Error al enviar el mensaje",
 };
 
 export function parseApiError(error: APIError): string {

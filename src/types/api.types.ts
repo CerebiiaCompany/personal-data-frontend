@@ -27,6 +27,7 @@ export interface QueryParams {
   responseId?: string;
   active?: boolean;
   campaignId?: string;
+  search?: string;
 
   //for date range filtering
   startDate?: string;

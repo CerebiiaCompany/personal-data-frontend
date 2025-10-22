@@ -47,7 +47,11 @@ export default function EditCampaignPage() {
           </h4>
         </header>
 
-        {loading && <LoadingCover />}
+        {loading && (
+          <div className="relative min-h-20 w-full">
+            <LoadingCover />
+          </div>
+        )}
         {error && <p>{error}</p>}
         {data && <CreateCampaignForm initialValues={data} />}
       </div>

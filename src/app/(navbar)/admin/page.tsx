@@ -4,28 +4,57 @@ import Button from "@/components/base/Button";
 import Dropdown from "@/components/base/Dropdown";
 import DashboardChartCard from "@/components/dashboard/DashboardChartCard";
 import HorizontalBarChart from "@/components/dashboard/HorizontalBarChart";
+import UserActionLogsTable from "@/components/dashboard/UserActionLogsTable";
+import CustomSelect from "@/components/forms/CustomSelect";
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { useCollectFormClasifications } from "@/hooks/useCollectFormClasifications";
+import { useCompanyActionLogs } from "@/hooks/useCompanyActionLogs";
 import { useSessionStore } from "@/store/useSessionStore";
+import { CustomSelectOption } from "@/types/forms.types";
+import { getMonthRange, MONTH_KEY, monthsOptions } from "@/types/months.types";
+import { formatDateToString } from "@/utils/date.utils";
 import { Icon } from "@iconify/react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export default function Home() {
-  const [month, setMonth] = useState<string>("agosto");
+  const currentMonth = useMemo(() => monthsOptions[new Date().getMonth()], []);
+
+  const [month, setMonth] = useState<MONTH_KEY>(currentMonth.value);
+  const [dateRange, setDateRange] = useState<{
+    startDate: Date;
+    endDate: Date;
+  }>(getMonthRange(month));
   const user = useSessionStore((store) => store.user);
   const collectFormsClasifications = useCollectFormClasifications({
     companyId: user?.companyUserData?.companyId,
     pageSize: 6,
+    startDate: dateRange.startDate.toISOString(),
+    endDate: dateRange.endDate.toISOString(),
   });
   const campaigns = useCampaigns({
     companyId: user?.companyUserData?.companyId,
     pageSize: 5,
     active: true,
+    startDate: dateRange.startDate.toISOString(),
+    endDate: dateRange.endDate.toISOString(),
   });
 
+  const userActionLogs = useCompanyActionLogs({
+    companyId: user?.companyUserData?.companyId,
+    startDate: dateRange.startDate.toISOString(),
+    endDate: dateRange.endDate.toISOString(),
+    pageSize: 3,
+  });
+
+  useEffect(() => {
+    const range = getMonthRange(month);
+
+    setDateRange(range);
+  }, [month]);
+
   return (
-    <div className="flex flex-col gap-4 p-8 h-fit">
+    <div className="flex flex-col gap-4 p-8 h-full max-h-full">
       {/* Dashboard header */}
       <header className="flex flex-col gap-4 h-fit">
         {/* Welcome card */}
@@ -44,25 +73,34 @@ export default function Home() {
             <h4 className="text-2xl">Panel de inicio</h4>
             <div className="flex gap-1 items-center">
               <Icon icon={"tabler:calendar-week"} className="" />
-              <p className="text-sm">1 agosto de 2025 - 31 de agosto de 2025</p>
+              <p className="text-sm">
+                {formatDateToString({
+                  date: dateRange.startDate,
+                })}
+                {" - "}
+                {formatDateToString({
+                  date: dateRange.endDate,
+                })}
+              </p>
             </div>
           </div>
 
           {/* Tools */}
           <div className="flex-1 flex justify-end gap-3">
-            <Dropdown
+            {month != currentMonth.value && (
+              <Button
+                onClick={(_) => setMonth(currentMonth.value)}
+                hierarchy="tertiary"
+                className="underline font-normal!"
+              >
+                Este mes
+              </Button>
+            )}
+            <CustomSelect
+              className="w-full max-w-[200px] flex-none"
               value={month}
               onChange={(value) => setMonth(value)}
-              options={[
-                {
-                  value: "agosto",
-                  label: "Agosto",
-                },
-                {
-                  value: "diciembre",
-                  label: "Diciembre",
-                },
-              ]}
+              options={monthsOptions}
             />
 
             <Button
@@ -75,12 +113,12 @@ export default function Home() {
           </div>
         </div>
       </header>
-      <div className="w-full flex-1 gap-x-5 gap-y-4 grid grid-cols-2 grid-rows-2">
+      <div className="w-full flex-1 h-0 overflow-auto gap-x-5 gap-y-4 grid grid-cols-2 grid-rows-2">
         <DashboardChartCard
           title="Proceso de Campañas Activas"
           href="/admin/campanas"
           loading={campaigns.loading}
-          empty={!Boolean(campaigns.data && campaigns.data?.length)}
+          empty={campaigns.data ? campaigns.data?.length < 1 : false}
           error={campaigns.error}
         >
           <HorizontalBarChart
@@ -94,21 +132,22 @@ export default function Home() {
             )}
             barHeight="lg"
           />
-          {campaigns.data && campaigns.data.length < 3 && (
-            <div className="flex-1 text-center text-stone-500 flex items-center justify-center">
-              Añade o activa más campañas este mes para ver su proceso aquí.
-            </div>
-          )}
+          {campaigns.data &&
+            campaigns.data.length > 0 &&
+            campaigns.data.length < 3 && (
+              <div className="flex-1 text-center text-stone-500 flex items-center justify-center">
+                Añade o activa más campañas este mes para ver su proceso aquí.
+              </div>
+            )}
         </DashboardChartCard>
         <DashboardChartCard
           title="Estado de Aprobación de los Formularios"
           href="/admin/recoleccion"
           loading={collectFormsClasifications.loading}
           empty={
-            !Boolean(
-              collectFormsClasifications.data &&
-                collectFormsClasifications.data?.length
-            )
+            collectFormsClasifications.data
+              ? collectFormsClasifications.data?.length < 1
+              : false
           }
           error={collectFormsClasifications.error}
         >
@@ -124,14 +163,24 @@ export default function Home() {
             barHeight="lg"
           />
           {collectFormsClasifications.data &&
+            collectFormsClasifications.data.length > 0 &&
             collectFormsClasifications.data.length < 3 && (
               <div className="flex-1 text-center text-stone-500 flex items-center justify-center">
                 Añade más formularios este mes para ver su estado de aprobación.
               </div>
             )}
         </DashboardChartCard>
-        <DashboardChartCard title="Actividad y Usuarios">
-          <p>Usuarios</p>
+        <DashboardChartCard
+          loading={userActionLogs.loading}
+          empty={userActionLogs.data ? userActionLogs.data?.length < 1 : false}
+          error={userActionLogs.error}
+          title="Actividad y Usuarios"
+        >
+          {userActionLogs.data && userActionLogs.data.length ? (
+            <div className="w-full flex-1">
+              <UserActionLogsTable items={userActionLogs.data} />
+            </div>
+          ) : null}
         </DashboardChartCard>
         <div className="bg-red-500 rounded-lg p-9 bg-[linear-gradient(278.61deg,_#301AAC_0%,_#030014_99.37%)] text-white relative flex flex-col items-start text-left gap-4 overflow-hidden">
           <div className="w-2/5 aspect-square absolute right-[-10%] top-[-30%] rounded-full border-primary-50/50 border border-dashed" />

@@ -67,7 +67,7 @@ const DashboardNavbar = () => {
           priority
           className={clsx([
             "h-full w-auto absolute m-auto inset-0 transition-opacity",
-            { "opacity-0": isCollapsed },
+            { "opacity-0 pointer-events-none": isCollapsed },
           ])}
         />
 
@@ -78,7 +78,7 @@ const DashboardNavbar = () => {
           alt="Logo de Plataforma de Datos de Cerebiia"
           className={clsx([
             "h-full w-auto absolute m-auto inset-0 transition-opacity",
-            { "opacity-0": !isCollapsed },
+            { "opacity-0 pointer-events-none": !isCollapsed },
           ])}
         />
       </Link>

@@ -16,7 +16,6 @@ interface Props {
 }
 
 const CompanyUsersTable = ({ items, loading, error, refresh }: Props) => {
-  console.log(loading);
   const user = useSessionStore((store) => store.user);
 
   async function deleteUser(userId: string) {

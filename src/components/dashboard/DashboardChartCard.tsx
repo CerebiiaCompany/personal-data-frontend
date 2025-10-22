@@ -46,7 +46,7 @@ const DashboardChartCard = ({
           <div className="flex flex-col items-center text-center gap-1 text-stone-500 justify-center h-full">
             <Icon icon={"tabler:report"} className="text-6xl" />
 
-            <p className="font-medium">
+            <p className="font-medium text-stone-500">
               No hay datos para mostrar en el mes seleccionado
             </p>
           </div>

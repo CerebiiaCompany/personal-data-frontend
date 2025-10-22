@@ -95,7 +95,21 @@ const SelectTemplateDialog = ({ value, onSelect, items }: Props) => {
                 ))}
               </ul>
             ) : (
-              <p>No hay plantillas para mostrar</p>
+              <div className="flex flex-col items-center">
+                <h6 className="text-lg font-semibold text-primary-900">
+                  Falta algo aquí
+                </h6>
+                <p className="text-stone-500">
+                  No has cargado ninguna plantilla aún
+                </p>
+                <Button
+                  href="/admin/plantillas"
+                  hierarchy="primary"
+                  className="mt-4"
+                >
+                  Ir a crear una
+                </Button>
+              </div>
             )}
           </div>
         </div>

@@ -4,6 +4,7 @@ import Button from "@/components/base/Button";
 import SectionHeader from "@/components/base/SectionHeader";
 import CampaignsTable from "@/components/campaigns/CampaignsTable";
 import { useCampaigns } from "@/hooks/useCampaigns";
+import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import { deleteCampaign } from "@/lib/campaign.api";
 import { useSessionStore } from "@/store/useSessionStore";
 import { parseApiError } from "@/utils/parseApiError";
@@ -13,8 +14,10 @@ import { toast } from "sonner";
 
 export default function CampaignsPage() {
   const user = useSessionStore((store) => store.user);
+  const { search, debouncedValue, setSearch } = useDebouncedSearch();
   const { data, loading, error, refresh } = useCampaigns({
     companyId: user?.companyUserData?.companyId,
+    search: debouncedValue,
   });
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
@@ -54,7 +57,7 @@ export default function CampaignsPage() {
 
   return (
     <div className="flex flex-col">
-      <SectionHeader />
+      <SectionHeader search={search} onSearchChange={setSearch} />
 
       {/* Content */}
       <div className="px-8 py-6 flex flex-col gap-6">

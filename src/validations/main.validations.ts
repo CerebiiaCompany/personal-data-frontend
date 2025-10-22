@@ -129,6 +129,27 @@ export const customDateValidation = z.preprocess((v) => {
   }
 }, z.date({ error: "Fecha inválida" }));
 
+const dateYYYYMMDD = z
+  .string("Fecha obligatoria")
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Formato inválido (usa YYYY-MM-DD)")
+  .superRefine((val, ctx) => {
+    const [y, m, d] = val.split("-").map(Number);
+    // Basic range checks
+    if (m < 1 || m > 12 || d < 1 || d > 31) {
+      ctx.addIssue({ code: "custom", message: "Fecha inválida" });
+      return;
+    }
+    // Construct in UTC and verify round-trip integrity
+    const dt = new Date(Date.UTC(y, m - 1, d));
+    const isValid =
+      dt.getUTCFullYear() === y &&
+      dt.getUTCMonth() === m - 1 &&
+      dt.getUTCDate() === d;
+    if (!isValid) {
+      ctx.addIssue({ code: "custom", message: "Fecha inválida" });
+    }
+  });
+
 export const createCampaignValidationSchema = z.object({
   name: z
     .string()
@@ -138,12 +159,8 @@ export const createCampaignValidationSchema = z.object({
   active: z.boolean(),
   scheduling: z
     .object({
-      startDate: z.coerce.date<Date>({
-        error: "Fecha de inicio inválida",
-      }),
-      endDate: z.coerce.date<Date>({
-        error: "Fecha de fin inválida",
-      }),
+      startDate: dateYYYYMMDD, // "YYYY-MM-DD"
+      endDate: dateYYYYMMDD,
       ocurrences: z
         .number({ error: "Número de ocurrencias obligatorio" })
         .int("Debe ser un entero")
