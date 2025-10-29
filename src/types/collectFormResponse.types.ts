@@ -42,4 +42,5 @@ export interface CreateCollectFormResponse {
 export interface CollectFormResponse extends CreateCollectFormResponse {
   _id: string;
   collectFormId: string;
+  verifiedWithOTP?: boolean;
 }

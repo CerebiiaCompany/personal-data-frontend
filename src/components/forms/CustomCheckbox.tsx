@@ -8,13 +8,24 @@ interface Props extends React.ComponentProps<"input"> {
   error?: FieldError;
 }
 
-const CustomCheckbox = ({ label, className, error, ...props }: Props) => {
+const CustomCheckbox = ({ label, className, error, disabled, ...props }: Props) => {
   return (
     <div className="flex flex-col items-start gap-2 w-fit">
-      <label className={clsx(["custom-checkbox cursor-pointer", className])}>
-        <input {...props} className="hidden" type="checkbox" />
+      <label 
+        className={clsx([
+          "custom-checkbox",
+          {
+            "cursor-pointer": !disabled,
+            "cursor-not-allowed": disabled,
+          },
+          className
+        ])}
+      >
+        <input {...props} disabled={disabled} className="hidden" type="checkbox" />
         <div className="checkbox-visual"></div>
-        <span className="text-inherit">{label}</span>
+        <span className={clsx(["text-inherit", { "text-stone-400": disabled }])}>
+          {label}
+        </span>
       </label>
       {error && (
         <span className="text-red-400 text-sm font-semibold">

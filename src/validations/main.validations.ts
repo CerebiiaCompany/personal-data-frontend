@@ -12,11 +12,16 @@ export const createCollectFormValidationSchema = z.object({
   name: z.string().min(1, "Dale un nombre a tu formulario"),
   description: z.string().min(1, "Añade una descripción"),
   policyTemplateId: z.string().min(1, "Selecciona una plantilla"),
-  marketingChannels: z.object({
-    SMS: z.boolean(),
-    EMAIL: z.boolean(),
-    WHATSAPP: z.boolean(),
-  }),
+  marketingChannels: z
+    .object({
+      SMS: z.boolean(),
+      EMAIL: z.boolean(),
+      WHATSAPP: z.boolean(),
+    })
+    .refine((data) => data.SMS === true, {
+      message: "SMS debe estar seleccionado",
+      path: ["SMS"],
+    }),
   questions: z.array(
     z.object({
       title: z.string().min(1, "Este campo es obligatorio"),

@@ -127,6 +127,33 @@ input:focus {
   transform: rotate(-45deg) scale(0.8) translate(1.5px, -1.5px);
 }
 
+/* Style disabled checkboxes */
+.custom-checkbox:has(input[type="checkbox"]:disabled) {
+  cursor: not-allowed;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.custom-checkbox:has(input[type="checkbox"]:disabled) .checkbox-visual {
+  background-color: #e5e7eb !important;
+  border-color: #9ca3af !important;
+  cursor: not-allowed;
+}
+
+.custom-checkbox:has(input[type="checkbox"]:disabled) span {
+  color: #6b7280 !important;
+}
+
+/* Prevent checked state styling when disabled */
+.custom-checkbox:has(input[type="checkbox"]:disabled:checked) .checkbox-visual {
+  background-color: #e5e7eb !important;
+  border-color: #9ca3af !important;
+}
+
+.custom-checkbox:has(input[type="checkbox"]:disabled:checked) .checkbox-visual::after {
+  display: none;
+}
+
 .dialog-wrapper.dialog-visible {
   display: flex;
 }

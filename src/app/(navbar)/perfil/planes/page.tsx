@@ -20,7 +20,7 @@ export default function ProfilePlansPage() {
   const user = useSessionStore((store) => store.user);
   const router = useRouter();
   const { data, loading, error } = usePlans({});
-  const ownCompany = useOwnCompanyStore();
+  const company = useOwnCompanyStore((store) => store.company);
 
   const campaignsDeliveries = useCompanyCampaignsDeliveries({
     companyId: user?.companyUserData?.companyId,
@@ -40,26 +40,19 @@ export default function ProfilePlansPage() {
     let totalCredits = 0;
     // Calc total creditsConsumed
     if (campaignsDeliveries.data) {
-      // Calc how many credits in campaign deliveries
-      console.log(
-        `Amount of campaign deliveries ${campaignsDeliveries.data.length}`
-      );
-
       totalCredits +=
         campaignsDeliveries.data.length * (pricePerSMS.data.value as number);
     }
 
     if (companyOtpCodes.data) {
-      console.log(`Amount of otpCodes ${companyOtpCodes.data.length}`);
       totalCredits +=
         companyOtpCodes.data.length * (pricePerSMS.data.value as number);
     }
-    console.log(totalCredits);
 
     setCreditsConsumed(totalCredits);
   }, [campaignsDeliveries.data, companyOtpCodes.data, pricePerSMS.data]);
 
-  if (!ownCompany.company) {
+  if (!company) {
     return (
       <div className="w-full h-full relative">
         <LoadingCover />
@@ -67,7 +60,7 @@ export default function ProfilePlansPage() {
     );
   }
 
-  const planData = ownCompany.company.plan;
+  const planData = company.plan;
   const currentPlanCredits = planData.monthlyCredits;
 
   return (

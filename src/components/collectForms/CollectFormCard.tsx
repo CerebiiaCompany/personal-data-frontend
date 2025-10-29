@@ -1,6 +1,6 @@
 import { CollectForm } from "@/types/collectForm.types";
 import { formatDateToString } from "@/utils/date.utils";
-import React from "react";
+import React, { useMemo, useCallback } from "react";
 import Button from "../base/Button";
 import { copyToClipboard } from "@/utils/clipboard.utils";
 import { Icon } from "@iconify/react/dist/iconify.js";
@@ -11,7 +11,40 @@ interface Props {
 }
 
 const CollectFormCard = ({ data, deleteHandler }: Props) => {
-  let formUrl = `${window.location.origin}/formularios/${data._id}`;
+  const formUrl = useMemo(
+    () => `${window.location.origin}/formularios/${data._id}`,
+    [data._id]
+  );
+
+  const channelsText = useMemo(
+    () =>
+      Object.keys(data.marketingChannels)
+        .filter(
+          (key) =>
+            data.marketingChannels[
+              key as keyof typeof data.marketingChannels
+            ]
+        )
+        .join(", "),
+    [data.marketingChannels]
+  );
+
+  const formattedDate = useMemo(
+    () =>
+      formatDateToString({
+        date: data.createdAt,
+        format: "DD/MM/YYYY",
+      }),
+    [data.createdAt]
+  );
+
+  const handleCopyLink = useCallback(() => {
+    copyToClipboard(formUrl, "Enlace copiado");
+  }, [formUrl]);
+
+  const handleDelete = useCallback(() => {
+    deleteHandler(data._id);
+  }, [data._id, deleteHandler]);
 
   return (
     <div className="bg-primary-700 overflow-hidden rounded-lg relative after:absolute after:top-2 after:rounded-lg after:left-0 after:w-full after:h-full after:bg-white border border-disabled aspect-[4.5/5] after:z-0 shadow-[5px_5px_12px] shadow-primary-shadows">
@@ -29,27 +62,13 @@ const CollectFormCard = ({ data, deleteHandler }: Props) => {
             <h6 className="text-left font-bold leading-tight">
               Ruta de envío:
             </h6>
-            <p className="text-left leading-tight">
-              {Object.keys(data.marketingChannels)
-                .filter(
-                  (key) =>
-                    data.marketingChannels[
-                      key as keyof typeof data.marketingChannels
-                    ]
-                )
-                .join(", ")}
-            </p>
+            <p className="text-left leading-tight">{channelsText}</p>
           </div>
           <div className="text-primary-700">
             <h6 className="text-left font-bold leading-tight">
               Fecha de creación:
             </h6>
-            <p className="text-left leading-tight">
-              {formatDateToString({
-                date: data.createdAt,
-                format: "DD/MM/YYYY",
-              })}
-            </p>
+            <p className="text-left leading-tight">{formattedDate}</p>
           </div>
           <div className="text-primary-700">
             <h6 className="text-left font-bold leading-tight">Origen:</h6>
@@ -68,10 +87,7 @@ const CollectFormCard = ({ data, deleteHandler }: Props) => {
             Ver reporte
           </Button>
 
-          <Button
-            hierarchy="secondary"
-            onClick={() => copyToClipboard(formUrl, "Enlace copiado")}
-          >
+          <Button hierarchy="secondary" onClick={handleCopyLink}>
             <Icon icon={"tabler:link"} className="text-xl" />
           </Button>
           <Button hierarchy="secondary" href={`/admin/recoleccion/${data._id}`}>
@@ -79,7 +95,7 @@ const CollectFormCard = ({ data, deleteHandler }: Props) => {
           </Button>
           <Button
             className="bg-red-400/20 border-red-400"
-            onClick={(_) => deleteHandler(data._id)}
+            onClick={handleDelete}
           >
             <Icon icon={"bx:trash"} className="text-xl text-red-400" />
           </Button>
@@ -89,4 +105,4 @@ const CollectFormCard = ({ data, deleteHandler }: Props) => {
   );
 };
 
-export default CollectFormCard;
+export default React.memo(CollectFormCard);

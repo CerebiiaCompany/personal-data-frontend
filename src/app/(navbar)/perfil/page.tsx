@@ -15,7 +15,6 @@ import { Icon } from "@iconify/react/dist/iconify.js";
 
 export default function ProfilePage() {
   const user = useSessionStore((store) => store.user);
-  const companyStore = useOwnCompanyStore();
 
   return (
     <div className="flex-1 flex h-full flex-col gap-3 max-h-full overflow-y-auto">

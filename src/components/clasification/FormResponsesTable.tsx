@@ -90,6 +90,12 @@ const FormResponsesTable = ({ items, loading, error, refresh }: Props) => {
                 >
                   Teléfono
                 </th>
+              <th
+                scope="col"
+                className="text-center font-medium text-stone-600 text-xs py-2 px-3 w-1/6"
+              >
+                Usó OTP
+              </th>
                 <th
                   scope="col"
                   className="text-center font-medium text-stone-600 text-xs py-2 px-3 w-1/6"
@@ -118,7 +124,13 @@ const FormResponsesTable = ({ items, loading, error, refresh }: Props) => {
                     {item.user.lastName}
                   </td>
                   <td className="py-3 text-ellipsis px-4 bg-primary-50 font-medium">
-                    {item.user.age}
+                    {item.user.age && item.user.age >= 18 ? (
+                      item.user.age
+                    ) : (
+                      <span className="text-stone-400" title="Información protegida para menores de edad">
+                        —
+                      </span>
+                    )}
                   </td>
                   <td className="py-3 text-ellipsis px-4 bg-primary-50 font-medium">
                     {parseUserGenderToString(item.user.gender)}
@@ -128,6 +140,13 @@ const FormResponsesTable = ({ items, loading, error, refresh }: Props) => {
                   </td>
                   <td className="py-3 text-ellipsis px-4 bg-primary-50 font-medium">
                     {item.user.phone}
+                  </td>
+                  <td className="py-3 text-ellipsis px-4 bg-primary-50 font-medium">
+                    {item.verifiedWithOTP ? (
+                      <span className="text-green-600 font-semibold">Sí</span>
+                    ) : (
+                      <span className="text-stone-600">No</span>
+                    )}
                   </td>
                   <td className="py-3 text-ellipsis px-4 bg-primary-50 font-medium">
                     <div className="w-full flex justify-center">

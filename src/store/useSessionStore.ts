@@ -13,7 +13,7 @@ interface AuthState {
 
 export const useSessionStore = create<AuthState>((set) => ({
   user: undefined,
-  loading: true, // Empezar con loading: true para que la app espere la verificación inicial de sesión
+  loading: true, // Iniciar en true para que la app espere la verificación inicial
   error: undefined,
   setUser: (user) => set({ user, loading: false, error: undefined }),
   setError: (error) => set({ error, loading: false }),

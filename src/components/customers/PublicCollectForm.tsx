@@ -15,6 +15,7 @@ import {
   userGendersOptions,
 } from "@/types/collectFormResponse.types";
 import { DocType, docTypesOptions } from "@/types/user.types";
+import { CustomSelectOption } from "@/types/forms.types";
 import CustomInput from "../forms/CustomInput";
 import CustomSelect from "../forms/CustomSelect";
 import { registerCollectFormResponse } from "@/lib/collectFormResponse.api";
@@ -30,6 +31,22 @@ interface Props {
   data: CollectForm;
   initialValues?: { [key: string]: any };
 }
+
+// Opciones de códigos telefónicos de países
+type PhoneCountryCode = "57" | "58" | "1" | "52" | "51" | "56" | "54" | "55" | "593" | "507";
+
+const phoneCountryCodeOptions: CustomSelectOption<PhoneCountryCode>[] = [
+  { value: "57", title: "+57" },
+  { value: "58", title: "+58" },
+  { value: "1", title: "+1" },
+  { value: "52", title: "+52" },
+  { value: "51", title: "+51" },
+  { value: "56", title: "+56" },
+  { value: "54", title: "+54" },
+  { value: "55", title: "+55" },
+  { value: "593", title: "+593" },
+  { value: "507", title: "+507" },
+];
 
 const PublicCollectForm = ({ data, initialValues }: Props) => {
   const [pendingOtpId, setPendingOtpId] = useState<string | null>(null);
@@ -132,14 +149,15 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
           typeof v === "string" ? v.replace(/[^\d]/g, "") : (v as string),
         z
           .string()
-          .regex(/^57\d{10}$/, "Usa el formato 57XXXXXXXXXX (solo números)")
+          .regex(/^\d{10}$/, "Ingresa 10 dígitos (solo números)")
       ),
+      phoneCountryCode: z.string().min(1, "Código de país requerido"),
     }),
     dataProcessing: z.boolean().refine((val) => val === true, {
       error: "Debes aceptar el tratamiento de datos",
     }),
-    otpCode: z.string(),
-    otpCodeId: z.string(),
+    otpCode: z.string().optional(),
+    otpCodeId: z.string().optional(),
   });
 
   const dynamicDefaultValues = React.useMemo(() => {
@@ -147,6 +165,28 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
       Object.entries(fields).map(([k, v]) => [k, v.default])
     );
   }, [data]);
+
+  // Extraer código de país del teléfono si existe en initialValues
+  const getInitialPhoneData = React.useMemo(() => {
+    if (initialValues?.user?.phone) {
+      const phone = initialValues.user.phone as string;
+      // Buscar si el teléfono comienza con algún código de país conocido
+      for (const code of phoneCountryCodeOptions) {
+        if (phone.startsWith(code.value)) {
+          return {
+            phone: phone.substring(code.value.length),
+            phoneCountryCode: code.value,
+          };
+        }
+      }
+      // Si no se encuentra código, asumir que ya está en formato sin código y usar 57 por defecto
+      return {
+        phone: phone.length > 10 ? phone.substring(phone.length - 10) : phone,
+        phoneCountryCode: "57",
+      };
+    }
+    return { phone: "", phoneCountryCode: "57" };
+  }, [initialValues]);
 
   const {
     register,
@@ -162,53 +202,95 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
         (initialValues?.data as typeof dynamicDefaultValues) ||
         dynamicDefaultValues,
       dataProcessing: initialValues ? true : false,
-      user: (initialValues?.user as CollectFormResponseUser) || {
-        docType: "CC",
-      },
+      user: initialValues?.user
+        ? {
+            ...(initialValues.user as CollectFormResponseUser),
+            phone: getInitialPhoneData.phone,
+            phoneCountryCode: getInitialPhoneData.phoneCountryCode,
+          }
+        : {
+            docType: "CC",
+            phoneCountryCode: "57",
+          },
       otpCode: "",
       otpCodeId: "",
     },
   });
 
-  async function onSubmit(formData: CreateCollectFormResponse) {
-    if (!pendingOtpId) return toast.warning("No has generado un código OTP");
-    const otpValidation = await validateOtpCode(pendingOtpId, formData.otpCode);
+  async function onSubmit(formData: any) {
+    // Concatenar código de país con el número de teléfono
+    const phoneCountryCode = watch("user.phoneCountryCode") || "57";
+    const fullPhoneNumber = `${phoneCountryCode}${formData.user.phone}`;
 
-    if (otpValidation.error) {
-      console.log(otpValidation.error);
-      return toast.error(parseApiError(otpValidation.error));
+    // Si hay un OTP pendiente y se ingresó un código, validarlo
+    if (pendingOtpId && formData.otpCode && formData.otpCode.trim() !== "") {
+      const otpValidation = await validateOtpCode(pendingOtpId, formData.otpCode);
+
+      if (otpValidation.error) {
+        console.log(otpValidation.error);
+        return toast.error(parseApiError(otpValidation.error));
+      }
+
+      toast.success("Código OTP validado");
+
+      //? register user response con OTP validado
+      const res = await registerCollectFormResponse(data._id, {
+        ...formData,
+        user: {
+          ...formData.user,
+          phone: fullPhoneNumber,
+        },
+        otpCode: formData.otpCode || "",
+        otpCodeId: otpValidation.data.id,
+      });
+
+      if (res.error) {
+        return toast.error(parseApiError(res.error));
+      }
+
+      toast.success("Respuesta registrada");
+      setFullName(`${formData.user.name} ${formData.user.lastName}`);
+      showDialog(HTML_IDS_DATA.collectFormResponseSavedModal);
+      reset();
+    } else {
+      // Enviar sin validación OTP
+      const res = await registerCollectFormResponse(data._id, {
+        ...formData,
+        user: {
+          ...formData.user,
+          phone: fullPhoneNumber,
+        },
+        otpCode: "",
+        otpCodeId: "", // Sin OTP
+      });
+
+      if (res.error) {
+        return toast.error(parseApiError(res.error));
+      }
+
+      toast.success("Respuesta registrada");
+      setFullName(`${formData.user.name} ${formData.user.lastName}`);
+      showDialog(HTML_IDS_DATA.collectFormResponseSavedModal);
+      reset();
     }
-
-    toast.success("Código OTP validado");
-
-    //? register user response
-    const res = await registerCollectFormResponse(data._id, {
-      ...formData,
-      otpCodeId: otpValidation.data.id,
-    });
-
-    if (res.error) {
-      return toast.error(parseApiError(res.error));
-    }
-
-    toast.success("Respuesta registrada");
-    setFullName(`${formData.user.name} ${formData.user.lastName}`);
-    showDialog(HTML_IDS_DATA.collectFormResponseSavedModal);
-    reset();
   }
 
   async function createOtpCode() {
     const phone = watch("user.phone");
+    const phoneCountryCode = watch("user.phoneCountryCode") || "57";
     
     // Validar que el teléfono esté ingresado
     if (!phone || phone.trim() === "") {
       return toast.error("Por favor ingresa tu número de teléfono primero");
     }
 
+    // Concatenar código de país con el número
+    const fullPhoneNumber = `${phoneCountryCode}${phone}`;
+
     const res = await generateOtpCode({
       collectFormId: data._id,
       recipientData: {
-        address: phone,
+        address: fullPhoneNumber,
         channel: "SMS",
       },
     });
@@ -298,12 +380,25 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
             {...register("user.email")}
             error={errors.user?.email}
           />
-          <CustomInput
-            label="Teléfono"
-            {...register("user.phone")}
-            placeholder="Ej. 57XXXXXXXXXX"
-            error={errors.user?.phone as FieldError}
-          />
+          <div className="flex gap-2 flex-1">
+            <div className="w-32 flex-shrink-0">
+              <CustomSelect<PhoneCountryCode>
+                label="Código"
+                value={(watch("user.phoneCountryCode") || "57") as PhoneCountryCode}
+                onChange={(value) => setValue("user.phoneCountryCode", value)}
+                options={phoneCountryCodeOptions}
+                unselectedText="Código"
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <CustomInput
+                label="Teléfono"
+                {...register("user.phone")}
+                placeholder="Ej. 7316939392"
+                error={errors.user?.phone as FieldError}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -322,21 +417,56 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
       ) : null}
 
       <div className="rounded-xl border border-disabled p-10 flex flex-col items-stretch gap-5">
-        <div className="flex items-end gap-2">
-          <CustomInput
-            label="Código OTP"
-            {...register("otpCode")}
-            error={errors.otpCode}
-            placeholder="XXX-XXX"
-          />
-          <Button
-            type="button"
-            onClick={createOtpCode}
-            className="h-fit"
-            hierarchy="secondary"
-          >
-            <Icon icon={"tabler:send"} className="text-2xl" />
-          </Button>
+        {/* Instrucciones para el cajero */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-2">
+          <div className="flex items-start gap-3">
+            <Icon 
+              icon={"material-symbols:info-outline"} 
+              className="text-2xl text-blue-600 flex-shrink-0 mt-0.5" 
+            />
+            <div className="flex flex-col gap-2">
+              <h3 className="font-semibold text-blue-900 text-base">
+                Verificación por código OTP
+              </h3>
+              <p className="text-sm text-blue-800 leading-relaxed">
+                Para continuar, debe enviar un código de verificación al número de teléfono 
+                del cliente ingresado arriba. Haga clic en el botón <strong>"Enviar código OTP"</strong> 
+                para que el cliente reciba el código por SMS. Una vez recibido, ingrese el código 
+                en el campo correspondiente.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Campo de código OTP y botón de envío */}
+        <div className="flex flex-col gap-3">
+          <div className="flex items-end gap-3">
+            <div className="flex-1">
+              <CustomInput
+                label="Código de verificación (OTP)"
+                {...register("otpCode")}
+                error={errors.otpCode}
+                placeholder="XXX-XXX"
+              />
+            </div>
+            <Button
+              type="button"
+              onClick={createOtpCode}
+              className="h-fit min-w-[180px]"
+              hierarchy="primary"
+              startContent={<Icon icon={"tabler:send"} className="text-xl" />}
+            >
+              Enviar código OTP
+            </Button>
+          </div>
+          {pendingOtpId && (
+            <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md p-3">
+              <Icon icon={"material-symbols:check-circle"} className="text-lg" />
+              <span className="font-medium">
+                Código enviado exitosamente. El cliente recibirá un SMS con el código de verificación.
+              </span>
+            </div>
+          )}
         </div>
         {policyUrl ? (
           <CustomCheckbox

@@ -58,12 +58,70 @@ export async function customFetch<T>(
       ...options,
     });
 
+    // Check for HTTP 401 status before parsing JSON
+    if (req.status === 401) {
+      // Try to parse server error to preserve backend message
+      let serverBody: APIResponse | null = null;
+      try {
+        serverBody = (await req.json()) as APIResponse;
+      } catch {}
+
+      const isPublic = endpoint.startsWith("/public/");
+
+      if (isPublic) {
+        // For public endpoints, DO NOT logout or redirect; just return server error/message
+        return (
+          serverBody ?? {
+            error: { code: "auth/unauthenticated", message: "Error en la autenticación" },
+          }
+        );
+      }
+
+      // For protected endpoints, handle logout and redirect, but preserve server message in response
+      const sessionStore = useSessionStore.getState();
+      sessionStore.logout();
+      sessionStore.setError("Sesión expirada");
+
+      if (
+        typeof window !== "undefined" &&
+        !window.location.pathname.includes("/login") &&
+        !isPublic
+      ) {
+        const currentPath = window.location.pathname;
+        setTimeout(() => {
+          window.location.href = `/login?callback_url=${encodeURIComponent(currentPath)}`;
+        }, 0);
+      }
+
+      // Return server error if available, otherwise a default
+      return (
+        serverBody ?? {
+          error: { message: "Sesión expirada", code: "auth/unauthenticated" },
+        }
+      );
+    }
+
     const res = (await req.json()) as APIResponse;
 
     if (res.error?.code === "auth/unauthenticated") {
-      // notify user session has ended
-      useSessionStore.getState().logout();
-      useSessionStore.getState().setError("Sesión expirada");
+      const isPublic = endpoint.startsWith("/public/");
+      if (!isPublic) {
+        // notify user session has ended only for protected endpoints
+        const sessionStore = useSessionStore.getState();
+        sessionStore.logout();
+        sessionStore.setError("Sesión expirada");
+
+        // Redirect to login if not already there
+        if (
+          typeof window !== "undefined" &&
+          !window.location.pathname.includes("/login")
+        ) {
+          const currentPath = window.location.pathname;
+          setTimeout(() => {
+            window.location.href = `/login?callback_url=${encodeURIComponent(currentPath)}`;
+          }, 0);
+        }
+      }
     }
 
     return res;

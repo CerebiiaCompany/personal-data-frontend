@@ -13,7 +13,16 @@ export const ERROR_DICTIONARY = {
 };
 
 export function parseApiError(error: APIError): string {
-  const message = ERROR_DICTIONARY[error.code] || "Error desconocido";
+  // Priorizar el mensaje que viene del backend si existe
+  if (error?.message && typeof error.message === "string" && error.message.trim().length > 0) {
+    return error.message;
+  }
 
-  return message;
+  // Si no hay mensaje, usar el diccionario por código
+  if (error?.code && ERROR_DICTIONARY[error.code]) {
+    return ERROR_DICTIONARY[error.code];
+  }
+
+  // Fallback seguro
+  return "Error desconocido";
 }

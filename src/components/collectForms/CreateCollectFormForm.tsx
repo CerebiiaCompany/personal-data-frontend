@@ -46,7 +46,7 @@ const CreateCollectFormForm = ({ initialValues }: Props) => {
       description: "",
       policyTemplateId: "",
       marketingChannels: {
-        SMS: false,
+        SMS: true,
         EMAIL: false,
         WHATSAPP: false,
       },
@@ -216,10 +216,12 @@ const CreateCollectFormForm = ({ initialValues }: Props) => {
         <CustomCheckbox
           label="Email"
           {...register("marketingChannels.EMAIL")}
+          disabled
         />{" "}
         <CustomCheckbox
           label="WhatsApp"
           {...register("marketingChannels.WHATSAPP")}
+          disabled
         />
       </div>
 

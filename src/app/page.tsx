@@ -1,40 +1,66 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSessionStore } from "@/store/useSessionStore";
 
 export default function HomePage() {
   const router = useRouter();
-  const { user, loading } = useSessionStore();
+  const user = useSessionStore((store) => store.user);
+  const loading = useSessionStore((store) => store.loading);
+  const error = useSessionStore((store) => store.error);
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     // Evitar redirecciones múltiples
     if (isRedirecting) return;
 
-    // Esperar a que termine de verificar la sesión
-    if (loading) {
-      console.log("⏳ Verificando sesión...");
-      return;
-    }
-
-    // Ya terminó de cargar, tomar decisión
-    console.log("🔍 Sesión verificada:", { user: !!user });
-
-    // Si no hay usuario, redirigir a login
-    if (!user) {
-      console.log("❌ Sin sesión activa, redirigiendo a /login");
+    // Si hay error de sesión, redirigir inmediatamente
+    if (error && (error === "Sesión expirada" || error.includes("Sesión"))) {
       setIsRedirecting(true);
       router.push("/login");
       return;
     }
 
-    // Si hay usuario, redirigir al dashboard
-    console.log("✅ Sesión activa, redirigiendo a /admin");
-    setIsRedirecting(true);
-    router.push("/admin");
-  }, [user, loading, router, isRedirecting]);
+    // Timeout de seguridad: si después de 3 segundos no hay respuesta, redirigir a login
+    if (loading && !timeoutRef.current && !user) {
+      timeoutRef.current = setTimeout(() => {
+        if (!user) {
+          setIsRedirecting(true);
+          router.push("/login");
+        }
+      }, 3000);
+    }
+
+    // Si ya terminó de cargar, tomar decisión
+    if (!loading) {
+      // Limpiar timeout si existe
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+
+      // Si no hay usuario, redirigir a login
+      if (!user) {
+        setIsRedirecting(true);
+        router.push("/login");
+        return;
+      }
+
+      // Si hay usuario, redirigir al dashboard
+      setIsRedirecting(true);
+      router.push("/admin");
+    }
+
+    // Cleanup timeout
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+  }, [user, loading, error, router, isRedirecting]);
 
   // Mostrar pantalla de carga mientras se decide la redirección
   return (
