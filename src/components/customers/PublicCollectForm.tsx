@@ -430,7 +430,7 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
               </h3>
               <p className="text-sm text-blue-800 leading-relaxed">
                 Para continuar, debe enviar un código de verificación al número de teléfono 
-                del cliente ingresado arriba. Haga clic en el botón <strong>"Enviar código OTP"</strong> 
+                del cliente ingresado arriba. Haga clic en el botón <strong>&quot;Enviar código OTP&quot;</strong> 
                 para que el cliente reciba el código por SMS. Una vez recibido, ingrese el código 
                 en el campo correspondiente.
               </p>
