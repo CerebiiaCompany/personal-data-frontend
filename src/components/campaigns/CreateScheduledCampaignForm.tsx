@@ -290,9 +290,9 @@ const CreateScheduledCampaignForm = () => {
           {...register("scheduling.scheduledDateTime")}
           error={errors.scheduling?.scheduledDateTime as FieldError}
           min={(() => {
-            // Calcular la fecha mínima (2.5 horas en el futuro)
+            // Calcular la fecha mínima (2 minutos en el futuro)
             const now = new Date();
-            const minDateTime = new Date(now.getTime() + 2.5 * 60 * 60 * 1000);
+            const minDateTime = new Date(now.getTime() + 2 * 60 * 1000);
             // Formato para datetime-local: YYYY-MM-DDTHH:mm
             const year = minDateTime.getFullYear();
             const month = String(minDateTime.getMonth() + 1).padStart(2, "0");
@@ -304,7 +304,7 @@ const CreateScheduledCampaignForm = () => {
         />
         <span className="text-sm text-stone-500 flex items-center gap-2">
           <Icon icon={"tabler:info-circle"} className="text-base" />
-          La campaña debe programarse al menos 2 horas y 30 minutos en el futuro
+          La campaña debe programarse al menos 2 minutos en el futuro
         </span>
       </div>
 

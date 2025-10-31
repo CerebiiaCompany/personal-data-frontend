@@ -267,12 +267,12 @@ export const createScheduledCampaignValidationSchema = z.object({
         (val) => {
           const selectedDate = new Date(val);
           const now = new Date();
-          // Agregar 2 horas y 30 minutos (2.5 horas = 150 minutos = 9000000 ms)
-          const minDateTime = new Date(now.getTime() + 2.5 * 60 * 60 * 1000);
+          // Agregar 2 minutos (120000 ms)
+          const minDateTime = new Date(now.getTime() + 2 * 60 * 1000);
           return selectedDate >= minDateTime;
         },
         {
-          message: "La campaña debe programarse al menos 2 horas y 30 minutos en el futuro",
+          message: "La campaña debe programarse al menos 2 minutos en el futuro",
         }
       ), // "YYYY-MM-DDTHH:mm" - fecha y hora específica
   }),
