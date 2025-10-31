@@ -43,4 +43,13 @@ export interface CollectFormResponse extends CreateCollectFormResponse {
   _id: string;
   collectFormId: string;
   verifiedWithOTP?: boolean;
+  createdAt?: string;
+  createdBy?: {
+    _id?: string;
+    userId?: string;
+    name?: string;
+    lastName?: string;
+    email?: string;
+    username?: string;
+  };
 }

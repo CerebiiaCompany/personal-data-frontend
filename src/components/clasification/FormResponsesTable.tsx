@@ -94,6 +94,18 @@ const FormResponsesTable = ({ items, loading, error, refresh }: Props) => {
                 scope="col"
                 className="text-center font-medium text-stone-600 text-xs py-2 px-3 w-1/6"
               >
+                Registrado por
+              </th>
+              <th
+                scope="col"
+                className="text-center font-medium text-stone-600 text-xs py-2 px-3 w-1/6"
+              >
+                Fecha y hora
+              </th>
+              <th
+                scope="col"
+                className="text-center font-medium text-stone-600 text-xs py-2 px-3 w-1/6"
+              >
                 Usó OTP
               </th>
                 <th
@@ -140,6 +152,18 @@ const FormResponsesTable = ({ items, loading, error, refresh }: Props) => {
                   </td>
                   <td className="py-3 text-ellipsis px-4 bg-primary-50 font-medium">
                     {item.user.phone}
+                  </td>
+                  <td className="py-3 text-ellipsis px-4 bg-primary-50 font-medium">
+                    {item.createdBy?.name || item.createdBy?.lastName
+                      ? `${item.createdBy?.name || ""}${
+                          item.createdBy?.lastName ? ` ${item.createdBy.lastName}` : ""
+                        }`
+                      : item.createdBy?.username || item.createdBy?.email || "—"}
+                  </td>
+                  <td className="py-3 text-ellipsis px-4 bg-primary-50 font-medium">
+                    {item.createdAt
+                      ? new Date(item.createdAt).toLocaleString()
+                      : "—"}
                   </td>
                   <td className="py-3 text-ellipsis px-4 bg-primary-50 font-medium">
                     {item.verifiedWithOTP ? (
