@@ -182,15 +182,23 @@ const UploadExcelTemplateDialog = ({ refresh }: Props) => {
                 error={errors.name as FieldError}
               />
 
-              <CustomSelect
-                label="Plantilla de política"
-                options={policyTemplateOptions}
-                value={watch("policyTemplateId")}
-                onChange={(value) => setValue("policyTemplateId", value)}
-                error={errors.policyTemplateId as FieldError}
-                unselectedText="Selecciona una plantilla"
-                disabled={loadingTemplates}
-              />
+              <div className="flex flex-col gap-1">
+                <CustomSelect
+                  label="Plantilla de política"
+                  options={policyTemplateOptions}
+                  value={watch("policyTemplateId")}
+                  onChange={(value) => setValue("policyTemplateId", value)}
+                  unselectedText={
+                    loadingTemplates ? "Cargando..." : "Selecciona una plantilla"
+                  }
+                  className={errors.policyTemplateId ? "opacity-50" : ""}
+                />
+                {errors.policyTemplateId && (
+                  <p className="text-sm text-red-500 pl-2">
+                    {errors.policyTemplateId.message as string}
+                  </p>
+                )}
+              </div>
 
               <div className="flex flex-col items-start gap-2">
                 <p className="font-semibold text-sm text-stone-500">
