@@ -124,6 +124,13 @@ const CreateCampaignForm = ({ initialValues }: Props) => {
 
     let res;
 
+    // Construir mensaje concatenado para SMS: Título + Mensaje + Link (si existe)
+    const contentName = data.content?.name?.trim() || "";
+    const contentBody = data.content?.bodyText?.trim() || "";
+    const contentLink = data.content?.link?.trim() || "";
+    const parts = [contentName, contentBody, contentLink].filter((p) => p && p.length > 0);
+    const compiledMessage = parts.join("\n\n");
+
     if (initialValues) {
       //? handle updating
       res = await updateCampaign(
@@ -131,6 +138,10 @@ const CreateCampaignForm = ({ initialValues }: Props) => {
         params.campaignId as string,
         {
           ...data,
+          content: {
+            ...data.content,
+            bodyText: compiledMessage,
+          },
           active: undefined,
           scheduling: {
             ...data.scheduling,
@@ -143,6 +154,10 @@ const CreateCampaignForm = ({ initialValues }: Props) => {
       //? handle creating
       res = await createCampaign(user?.companyUserData?.companyId, {
         ...data,
+        content: {
+          ...data.content,
+          bodyText: compiledMessage,
+        },
         scheduling: {
           ...data.scheduling,
           startDate: new Date(data.scheduling.startDate).toISOString(),

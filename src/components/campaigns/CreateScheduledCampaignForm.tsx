@@ -134,8 +134,20 @@ const CreateScheduledCampaignForm = () => {
     // Convertir fecha y hora a ISO string
     const scheduledDateTime = new Date(data.scheduling.scheduledDateTime).toISOString();
 
+    // Construir mensaje concatenado para SMS: Título + Mensaje + Link (si existe)
+    const contentName = data.content?.name?.trim() || "";
+    const contentBody = data.content?.bodyText?.trim() || "";
+    const contentLink = data.content?.link?.trim() || "";
+    const parts = [contentName, contentBody, contentLink].filter((p) => p && p.length > 0);
+    const compiledMessage = parts.join("\n\n");
+
     const payload = {
       ...data,
+      content: {
+        ...data.content,
+        // Enviar en el SMS el contenido concatenado
+        bodyText: compiledMessage,
+      },
       scheduling: {
         scheduledDateTime,
       },
