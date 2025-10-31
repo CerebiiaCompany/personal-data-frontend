@@ -122,14 +122,12 @@ export default function Home() {
           error={campaigns.error}
         >
           <HorizontalBarChart
-            items={campaigns.data?.map(
-              ({ _id, name, audience: { count, deliveredCount } }) => ({
-                id: _id,
-                label: name,
-                value: deliveredCount,
-                max: count,
-              })
-            )}
+            items={campaigns.data?.map(({ _id, name, audience }) => ({
+              id: _id,
+              label: name,
+              value: (audience as any).delivered ?? 0,
+              max: (audience as any).total ?? audience.count ?? 0,
+            }))}
             barHeight="lg"
           />
           {campaigns.data &&

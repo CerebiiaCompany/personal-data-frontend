@@ -67,15 +67,13 @@ const CreateScheduledCampaignForm = () => {
 
   const router = useRouter();
   
-  // Obtener valores de edad con valores por defecto
+  // Obtener valores de edad con valores por defecto, evitando comparaciones inválidas
   const minAgeValue = watch("audience.minAge");
   const maxAgeValue = watch("audience.maxAge");
-  const minAge = minAgeValue !== undefined && minAgeValue !== null && minAgeValue !== "" 
-    ? Number(minAgeValue) 
-    : 0;
-  const maxAge = maxAgeValue !== undefined && maxAgeValue !== null && maxAgeValue !== "" 
-    ? Number(maxAgeValue) 
-    : 100;
+  const parsedMinAge = Number(minAgeValue);
+  const parsedMaxAge = Number(maxAgeValue);
+  const minAge = Number.isFinite(parsedMinAge) ? parsedMinAge : 0;
+  const maxAge = Number.isFinite(parsedMaxAge) ? parsedMaxAge : 100;
 
   const sourceFormsValue = watch("sourceFormIds").join(",");
   const genderValue = watch("audience.gender") || "ALL";

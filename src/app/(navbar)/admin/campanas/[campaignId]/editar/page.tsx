@@ -53,7 +53,46 @@ export default function EditCampaignPage() {
           </div>
         )}
         {error && <p>{error}</p>}
-        {data && <CreateCampaignForm initialValues={data} />}
+        {data && (
+          <CreateCampaignForm
+            initialValues={{
+              name: data.name,
+              active: data.active,
+              goal: data.goal,
+              scheduling: {
+                startDate:
+                  data.scheduling?.startDate ||
+                  data.scheduling?.scheduledDateTime ||
+                  data.scheduledFor ||
+                  new Date().toISOString(),
+                endDate:
+                  data.scheduling?.endDate ||
+                  data.scheduling?.scheduledDateTime ||
+                  data.scheduledFor ||
+                  new Date().toISOString(),
+                ocurrences:
+                  typeof data.scheduling?.ocurrences === "number"
+                    ? data.scheduling!.ocurrences
+                    : 1,
+              },
+              sourceFormIds: data.sourceFormIds || [],
+              deliveryChannel: data.deliveryChannel,
+              audience: {
+                minAge: data.audience.minAge,
+                maxAge: data.audience.maxAge,
+                gender: data.audience.gender,
+                count:
+                  (data.audience as any).count ?? data.audience.total ?? 0,
+              },
+              content: {
+                name: data.content?.name || "",
+                bodyText: data.content?.bodyText || "",
+                link: data.content?.link,
+                imageUrl: data.content?.imageUrl,
+              },
+            }}
+          />
+        )}
       </div>
     </div>
   );
