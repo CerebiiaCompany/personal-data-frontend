@@ -22,6 +22,8 @@ import { CreateCollectFormFromTemplate } from "@/types/collectForm.types";
 import { toast } from "sonner";
 import { CollectFormResponseUser } from "@/types/collectFormResponse.types";
 import { parseExcelTemplate } from "@/utils/parseExcelTemplate";
+import { usePolicyTemplates } from "@/hooks/usePolicyTemplates";
+import CustomSelect from "../forms/CustomSelect";
 
 const acceptedFiletypes = [
   "application/vnd.ms-excel",
@@ -30,6 +32,7 @@ const acceptedFiletypes = [
 
 const formSchema = z.object({
   name: z.string().min(1, "Este campo es obligatorio"),
+  policyTemplateId: z.string().min(1, "Debes seleccionar una plantilla"),
   marketingChannels: z.object({
     SMS: z.boolean(),
     EMAIL: z.boolean(),
@@ -54,14 +57,16 @@ const UploadExcelTemplateDialog = ({ refresh }: Props) => {
     watch,
     handleSubmit,
     control,
+    setValue,
   } = useForm<any>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       description: "",
+      policyTemplateId: "",
       marketingChannels: {
+        SMS: true,
         EMAIL: false,
-        SMS: false,
         WHATSAPP: false,
       },
       attachments: [],
@@ -69,6 +74,20 @@ const UploadExcelTemplateDialog = ({ refresh }: Props) => {
   });
   const [loading, setLoading] = useState<boolean>();
   const id = HTML_IDS_DATA.uploadExcelTemplateDialog;
+
+  // Cargar plantillas de política
+  const { data: policyTemplates, loading: loadingTemplates } = usePolicyTemplates({
+    companyId: user?.companyUserData?.companyId,
+  });
+
+  // Convertir plantillas a opciones para el select
+  const policyTemplateOptions = React.useMemo(() => {
+    if (!policyTemplates || !Array.isArray(policyTemplates)) return [];
+    return policyTemplates.map((template) => ({
+      value: template._id,
+      title: template.name,
+    }));
+  }, [policyTemplates]);
 
   function handleClick(e: React.MouseEvent<HTMLDivElement, MouseEvent>) {
     if ((e.target as HTMLElement).id === id) {
@@ -103,6 +122,7 @@ const UploadExcelTemplateDialog = ({ refresh }: Props) => {
     // Make request to server
     const res = await createCollectFormFromTemplate(companyId, {
       name: data.name,
+      policyTemplateId: data.policyTemplateId,
       marketingChannels: data.marketingChannels,
       responses: rows,
     } as CreateCollectFormFromTemplate);
@@ -160,6 +180,16 @@ const UploadExcelTemplateDialog = ({ refresh }: Props) => {
                 placeholder="Nombre del formulario"
                 {...register("name")}
                 error={errors.name as FieldError}
+              />
+
+              <CustomSelect
+                label="Plantilla de política"
+                options={policyTemplateOptions}
+                value={watch("policyTemplateId")}
+                onChange={(value) => setValue("policyTemplateId", value)}
+                error={errors.policyTemplateId as FieldError}
+                unselectedText="Selecciona una plantilla"
+                disabled={loadingTemplates}
               />
 
               <div className="flex flex-col items-start gap-2">
