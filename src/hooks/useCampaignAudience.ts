@@ -10,13 +10,19 @@ export function useCampaignAudience(params: QueryParams) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Validar que minAge y maxAge sean números válidos (incluyendo 0)
+    const minAgeValid = params.minAge !== undefined && params.minAge !== null && !isNaN(Number(params.minAge));
+    const maxAgeValid = params.maxAge !== undefined && params.maxAge !== null && !isNaN(Number(params.maxAge));
+    const minAgeNum = Number(params.minAge);
+    const maxAgeNum = Number(params.maxAge);
+
     if (
       !params.companyId ||
       !params.sourceForms ||
       !params.gender ||
-      !params.minAge ||
-      !params.maxAge ||
-      params.minAge > params.maxAge
+      !minAgeValid ||
+      !maxAgeValid ||
+      minAgeNum > maxAgeNum
     ) {
       setData(null);
       return;
@@ -24,7 +30,11 @@ export function useCampaignAudience(params: QueryParams) {
 
     (async () => {
       setLoading(true);
-      const fetchedData = await fetchCalcCampaignAudience(params);
+      const fetchedData = await fetchCalcCampaignAudience({
+        ...params,
+        minAge: minAgeNum,
+        maxAge: maxAgeNum,
+      });
 
       if (fetchedData.error) {
         let parsedError = parseApiError(fetchedData.error);

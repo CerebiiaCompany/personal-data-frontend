@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from "react";
 import LoadingCover from "../layout/LoadingCover";
-import { Campaign } from "@/types/campaign.types";
+import { 
+  Campaign, 
+  campaignGoalLabels, 
+  campaignStatusLabels, 
+  campaignStatusColors,
+  deliveryChannelLabels 
+} from "@/types/campaign.types";
 import CustomCheckbox from "../forms/CustomCheckbox";
 import { formatDateToString } from "@/utils/date.utils";
 import Button from "../base/Button";
@@ -14,6 +20,8 @@ import { useAppSetting } from "@/hooks/useAppSetting";
 import { showDialog } from "@/utils/dialogs.utils";
 import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import { useConfirm } from "../dialogs/ConfirmProvider";
+import { Icon } from "@iconify/react/dist/iconify.js";
+import clsx from "clsx";
 
 interface Props {
   items: Campaign[] | null;
@@ -82,6 +90,20 @@ const CampaignsTable = ({
 
   const pricePerSMS = useAppSetting("SMS_PRICE_PER_MESSAGE");
 
+  // Función helper para obtener la fecha de programación
+  const getScheduledDate = (item: Campaign): string => {
+    if (item.scheduledFor) {
+      return formatDateToString({ date: item.scheduledFor });
+    }
+    if (item.scheduling?.scheduledDateTime) {
+      return formatDateToString({ date: item.scheduling.scheduledDateTime });
+    }
+    if (item.scheduling?.startDate && item.scheduling?.endDate) {
+      return `${formatDateToString({ date: item.scheduling.startDate })} - ${formatDateToString({ date: item.scheduling.endDate })}`;
+    }
+    return "—";
+  };
+
   return (
     <div className="w-full overflow-x-auto flex-1 relative min-h-20">
       {loading && <LoadingCover />}
@@ -113,7 +135,13 @@ const CampaignsTable = ({
                   scope="col"
                   className="text-center font-bold text-primary-900 text-xs py-2 px-3"
                 >
-                  Fecha de finalización
+                  Objetivo
+                </th>
+                <th
+                  scope="col"
+                  className="text-center font-bold text-primary-900 text-xs py-2 px-3"
+                >
+                  Fecha programada
                 </th>
                 <th
                   scope="col"
@@ -142,69 +170,117 @@ const CampaignsTable = ({
               </tr>
             </thead>
             <tbody>
-              {localItems.map((item) => (
-                <tr
-                  key={item._id}
-                  className="align-middle text-center shadow-lg rounded-md"
-                >
-                  <td className="py-3 px-4 bg-white font-medium text-ellipsis rounded-l-md">
-                    <div className="flex items-center justify-center">
-                      <CustomCheckbox
-                        onClick={(_) => toggleSelected(item._id)}
-                        readOnly
-                        checked={selectedIds.includes(item._id)}
-                      />
-                    </div>
-                  </td>
-                  <td className="py-3 px-4 bg-white font-medium text-ellipsis">
-                    <div className="flex items-center justify-center">
-                      <CustomToggle
-                        readOnly
-                        onClick={(_) =>
-                          updateCampaignStatus(item._id, !item.active)
-                        }
-                        checked={item.active}
-                      />
-                    </div>
-                  </td>
-                  <td className="py-3 px-4 bg-white font-medium text-ellipsis">
-                    {item.name}
-                  </td>
-                  <td className="py-3 px-4 bg-white font-medium text-ellipsis">
-                    {formatDateToString({ date: item.scheduling.endDate })}
-                  </td>
-                  <td className="py-3 px-4 bg-white font-medium text-ellipsis">
-                    {item.deliveryChannel}
-                  </td>
-                  <td className="py-3 px-4 bg-white font-medium text-ellipsis">
-                    {item.audience.count}
-                  </td>
-                  <td className="py-3 px-4 bg-white font-medium text-ellipsis">
-                    {/* {appSettings ? (
-                      (appSettings.find(
-                        (setting) => setting.key === "SMS_PRICE_PER_MESSAGE"
-                      )!.value as number) * item.audience.count
-                    ) : (
-                      <p>...</p>
-                    )} */}
-                    {pricePerSMS.data ? (
-                      (pricePerSMS.data.value as number) * item.audience.count
-                    ) : (
-                      <p>...</p>
-                    )}
-                  </td>
-                  <td className="py-3 px-4 bg-white font-medium text-ellipsis rounded-r-md">
-                    <div className="flex flex-col items-center justify-center gap-2 h-full">
-                      <Button className="text-xs w-full py-1.5!">
-                        Ver detalle
-                      </Button>
-                      <div className="text-xs w-full py-1.5 rounded-lg border border-primary-500 font-semibold text-primary-500">
-                        En proceso
+              {localItems.map((item) => {
+                const status = item.status || "DRAFT";
+                const audienceTotal = item.audience.total ?? item.audience.count ?? 0;
+                const audienceDelivered = item.audience.delivered ?? 0;
+                const credits = pricePerSMS.data 
+                  ? (pricePerSMS.data.value as number) * audienceTotal 
+                  : null;
+
+                return (
+                  <tr
+                    key={item._id}
+                    className="align-middle text-center shadow-lg rounded-md"
+                  >
+                    <td className="py-3 px-4 bg-white font-medium text-ellipsis rounded-l-md">
+                      <div className="flex items-center justify-center">
+                        <CustomCheckbox
+                          onClick={(_) => toggleSelected(item._id)}
+                          readOnly
+                          checked={selectedIds.includes(item._id)}
+                        />
                       </div>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="py-3 px-4 bg-white font-medium text-ellipsis">
+                      <div className="flex items-center justify-center">
+                        <CustomToggle
+                          readOnly
+                          onClick={(_) =>
+                            updateCampaignStatus(item._id, !item.active)
+                          }
+                          checked={item.active}
+                        />
+                      </div>
+                    </td>
+                    <td className="py-3 px-4 bg-white font-medium text-ellipsis">
+                      <div className="flex flex-col items-start gap-1">
+                        <span className="font-semibold">{item.name}</span>
+                        {item.content?.name && (
+                          <span className="text-xs text-stone-500">{item.content.name}</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-3 px-4 bg-white font-medium text-ellipsis">
+                      {item.goal ? (
+                        <div className="flex items-center justify-center gap-1">
+                          <Icon 
+                            icon={
+                              item.goal === "SALES" ? "tabler:basket-bolt" :
+                              item.goal === "INTERACTION" ? "tabler:message-share" :
+                              item.goal === "POTENTIAL_CUSTOMERS" ? "tabler:user-share" :
+                              item.goal === "PROMOTION" ? "tabler:speakerphone" :
+                              "icon-park-outline:other"
+                            }
+                            className="text-lg"
+                          />
+                          <span className="text-sm">
+                            {campaignGoalLabels[item.goal] || item.goal}
+                          </span>
+                        </div>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="py-3 px-4 bg-white font-medium text-ellipsis">
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-sm">{getScheduledDate(item)}</span>
+                        {item.scheduling?.scheduledDateTime && (
+                          <span className="text-xs text-stone-500">
+                            {new Date(item.scheduling.scheduledDateTime).toLocaleTimeString("es-CO", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-3 px-4 bg-white font-medium text-ellipsis">
+                      <div className="flex items-center justify-center gap-1">
+                        <Icon 
+                          icon={item.deliveryChannel === "SMS" ? "tabler:device-mobile-message" : "tabler:mail"}
+                          className="text-lg"
+                        />
+                        <span>{deliveryChannelLabels[item.deliveryChannel] || item.deliveryChannel}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4 bg-white font-medium text-ellipsis">
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="font-semibold">
+                          {audienceDelivered}/{audienceTotal}
+                        </span>
+                        <span className="text-xs text-stone-500">
+                          Entregados / Total
+                        </span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4 bg-white font-medium text-ellipsis">
+                      {credits !== null ? (
+                        <span className="font-semibold">{credits} Créditos</span>
+                      ) : (
+                        <p className="text-stone-400">...</p>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 bg-white font-medium text-ellipsis rounded-r-md">
+                      <div className="flex flex-col items-center justify-center gap-2 h-full">
+                        <Button className="text-xs w-full py-1.5!" href={`/admin/campanas/${item._id}`}>
+                          Ver detalle
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         ) : (

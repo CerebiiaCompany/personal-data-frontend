@@ -64,3 +64,15 @@ export async function deleteCampaign(
 
   return res;
 }
+
+export async function createScheduledCampaign(
+  companyId: string,
+  data: any
+): Promise<APIResponse> {
+  const res = await customFetch(`/companies/${companyId}/campaigns/scheduled`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+
+  return res;
+}

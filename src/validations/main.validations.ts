@@ -252,3 +252,74 @@ export const createCampaignValidationSchema = z.object({
     imageUrl: z.url({ error: "URL de imagen inválida" }).optional(),
   }),
 });
+
+// Esquema para campañas programadas (fecha y hora específica)
+export const createScheduledCampaignValidationSchema = z.object({
+  name: z
+    .string()
+    .min(1, "Este campo es obligatorio")
+    .max(80, "Máximo 80 caracteres"),
+  goal: z.string<CampaignGoal>("Selecciona un objetivo"),
+  active: z.boolean(),
+  scheduling: z.object({
+    scheduledDateTime: dateTimeLocal
+      .refine(
+        (val) => {
+          const selectedDate = new Date(val);
+          const now = new Date();
+          // Agregar 2 horas y 30 minutos (2.5 horas = 150 minutos = 9000000 ms)
+          const minDateTime = new Date(now.getTime() + 2.5 * 60 * 60 * 1000);
+          return selectedDate >= minDateTime;
+        },
+        {
+          message: "La campaña debe programarse al menos 2 horas y 30 minutos en el futuro",
+        }
+      ), // "YYYY-MM-DDTHH:mm" - fecha y hora específica
+  }),
+  sourceFormIds: z
+    .array(z.string().min(1, "ID inválido"))
+    .nonempty("Selecciona al menos un formulario"),
+  deliveryChannel: z.string<CampaignDeliveryChannel>(
+    "Selecciona una ruta de envío"
+  ),
+  audience: z
+    .object({
+      minAge: z.coerce
+        .number<number>({ error: "Edad mínima obligatoria" })
+        .int("Debe ser entero"),
+      maxAge: z.coerce
+        .number<number>({ error: "Edad máxima obligatoria" })
+        .int("Debe ser entero"),
+      gender: z.string<CampaignAudienceGender>("Selecciona una opción"),
+      count: z.coerce
+        .number<number>("Cantidad de usuarios objetivo obligatoria")
+        .int("El número de audiencia debe ser un entero")
+        .min(1, "No puedes crear una campaña para 0 usuarios"),
+    })
+    .superRefine(({ minAge, maxAge }, ctx) => {
+      if (minAge > maxAge) {
+        ctx.addIssue({
+          code: "custom",
+          message: "La edad máxima debe ser ≥ a la mínima",
+          path: ["minAge"],
+        });
+        ctx.addIssue({
+          code: "custom",
+          message: "La edad máxima debe ser ≥ a la mínima",
+          path: ["maxAge"],
+        });
+      }
+    }),
+  content: z.object({
+    name: z
+      .string({ error: "Nombre de contenido obligatorio" })
+      .min(1, "Nombre de contenido obligatorio")
+      .max(100, "Máximo 100 caracteres"),
+    bodyText: z
+      .string({ error: "Texto obligatorio" })
+      .min(1, "Texto obligatorio")
+      .max(1000, "Máximo 1000 caracteres"),
+    link: z.url("Link inválido").or(z.literal("")).optional(),
+    imageUrl: z.url({ error: "URL de imagen inválida" }).optional(),
+  }),
+});

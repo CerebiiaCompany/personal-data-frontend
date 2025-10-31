@@ -16,6 +16,7 @@ interface GoalRadioGroupProps<T extends string> {
     title: string;
     desc?: string;
     icon?: string;
+    disabled?: boolean;
   }[];
 }
 
@@ -38,15 +39,18 @@ export function CustomRadioGroup<T extends string>({
         {options.map((opt) => {
           const id = `goal-${opt.value.toLowerCase()}`;
           const checked = value === opt.value;
+          const isDisabled = opt.disabled || false;
 
           return (
             <label
               key={opt.value}
               htmlFor={id}
               className={clsx([
-                "relative flex cursor-pointer items-center gap-3 rounded-2xl border p-4 transition",
-                "hover:shadow-md",
-                checked
+                "relative flex items-center gap-3 rounded-2xl border p-4 transition",
+                isDisabled
+                  ? "cursor-not-allowed opacity-50"
+                  : "cursor-pointer hover:shadow-md",
+                checked && !isDisabled
                   ? "border-transparent ring-2 ring-offset-0 ring-primary-500 shadow-lg"
                   : "border-neutral-200",
               ])}
@@ -58,7 +62,8 @@ export function CustomRadioGroup<T extends string>({
                 name={name}
                 value={opt.value}
                 checked={checked}
-                onChange={() => onChange(opt.value)}
+                disabled={isDisabled}
+                onChange={() => !isDisabled && onChange(opt.value)}
                 className="peer sr-only"
                 aria-describedby={`${id}-desc`}
               />
