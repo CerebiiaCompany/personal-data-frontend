@@ -13,7 +13,7 @@ interface Props {
   loading: boolean;
   error: string | null;
   refresh: () => void;
-  editActions: boolean;
+  editActions?: boolean;
 }
 
 const CompanyUsersTable = ({
@@ -21,7 +21,7 @@ const CompanyUsersTable = ({
   loading,
   error,
   refresh,
-  editActions,
+  editActions = true,
 }: Props) => {
   const user = useSessionStore((store) => store.user);
 
