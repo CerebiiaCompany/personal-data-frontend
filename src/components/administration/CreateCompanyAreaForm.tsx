@@ -194,6 +194,7 @@ const CreateCompanyAreaForm = ({ initialValues }: Props) => {
           error={errors.name}
         />
         <CustomSelect
+          label="País"
           options={countriesOptions}
           value={watch("country")}
           onChange={(value) => setValue("country", value)}

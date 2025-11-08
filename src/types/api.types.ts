@@ -1,5 +1,6 @@
 import { ERROR_DICTIONARY } from "@/utils/parseApiError";
 import { CampaignAudienceGender } from "./campaign.types";
+import { UserRole } from "./user.types";
 
 export interface APIError {
   code: keyof typeof ERROR_DICTIONARY;
@@ -28,6 +29,7 @@ export interface QueryParams {
   active?: boolean;
   campaignId?: string;
   search?: string;
+  role?: UserRole;
 
   //for date range filtering
   startDate?: string;

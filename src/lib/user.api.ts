@@ -2,6 +2,15 @@ import { APIResponse, QueryParams } from "@/types/api.types";
 import { CreateUser, UpdateUser } from "@/types/user.types";
 import { customFetch } from "@/utils/customFetch";
 
+export async function fetchUsers(params: QueryParams): Promise<APIResponse> {
+  let endpoint = `/superadmin/users`;
+
+  if (params.id) endpoint += `/${params.id}`;
+  const res = await customFetch(endpoint, {}, params);
+
+  return res;
+}
+
 export async function fetchCompanyUsers(
   params: QueryParams
 ): Promise<APIResponse> {

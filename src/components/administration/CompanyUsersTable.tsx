@@ -13,9 +13,16 @@ interface Props {
   loading: boolean;
   error: string | null;
   refresh: () => void;
+  editActions: boolean;
 }
 
-const CompanyUsersTable = ({ items, loading, error, refresh }: Props) => {
+const CompanyUsersTable = ({
+  items,
+  loading,
+  error,
+  refresh,
+  editActions,
+}: Props) => {
   const user = useSessionStore((store) => store.user);
 
   async function deleteUser(userId: string) {
@@ -72,12 +79,14 @@ const CompanyUsersTable = ({ items, loading, error, refresh }: Props) => {
               >
                 Teléfono
               </th>
-              <th
-                scope="col"
-                className="text-center font-medium text-stone-600 text-xs py-2 px-3 w-1/6"
-              >
-                Acciones
-              </th>
+              {editActions && (
+                <th
+                  scope="col"
+                  className="text-center font-medium text-stone-600 text-xs py-2 px-3 w-1/6"
+                >
+                  Acciones
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -102,34 +111,36 @@ const CompanyUsersTable = ({ items, loading, error, refresh }: Props) => {
                 <td className="py-3 px-4 bg-primary-50 font-medium text-ellipsis">
                   {item.companyUserData?.phone}
                 </td>
-                <td className="py-3 px-4 bg-primary-50 font-medium text-ellipsis rounded-r-xl">
-                  <div className="flex items-center justify-center gap-1.5 h-full">
-                    {item._id !== user?._id ? (
-                      <>
-                        <Link
-                          href={`/admin/administracion/usuarios/${item._id}`}
-                          className="h-full rounded-lg hover:bg-primary-900/10 transition-colors p-1.5 aspect-square"
-                        >
-                          <Icon
-                            icon="material-symbols:edit-outline"
-                            className="text-2xl"
-                          />
-                        </Link>
-                        <button
-                          onClick={() => deleteUser(item._id)}
-                          className="h-full rounded-lg hover:bg-red-400/10 transition-colors p-1.5 aspect-square"
-                        >
-                          <Icon
-                            icon="bx:trash"
-                            className="text-2xl text-red-400"
-                          />
-                        </button>
-                      </>
-                    ) : (
-                      <p>(Tú)</p>
-                    )}
-                  </div>
-                </td>
+                {editActions && (
+                  <td className="py-3 px-4 bg-primary-50 font-medium text-ellipsis rounded-r-xl">
+                    <div className="flex items-center justify-center gap-1.5 h-full">
+                      {item._id !== user?._id ? (
+                        <>
+                          <Link
+                            href={`/admin/administracion/usuarios/${item._id}`}
+                            className="h-full rounded-lg hover:bg-primary-900/10 transition-colors p-1.5 aspect-square"
+                          >
+                            <Icon
+                              icon="material-symbols:edit-outline"
+                              className="text-2xl"
+                            />
+                          </Link>
+                          <button
+                            onClick={() => deleteUser(item._id)}
+                            className="h-full rounded-lg hover:bg-red-400/10 transition-colors p-1.5 aspect-square"
+                          >
+                            <Icon
+                              icon="bx:trash"
+                              className="text-2xl text-red-400"
+                            />
+                          </button>
+                        </>
+                      ) : (
+                        <p>(Tú)</p>
+                      )}
+                    </div>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

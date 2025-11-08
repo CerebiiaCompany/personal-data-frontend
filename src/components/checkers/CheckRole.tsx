@@ -24,7 +24,9 @@ const CheckRole = () => {
     if (error && (error === "Sesión expirada" || error.includes("Sesión"))) {
       if (!hasRedirectedRef.current) {
         hasRedirectedRef.current = true;
-        window.location.href = `/login?callback_url=${encodeURIComponent(pathname)}`;
+        window.location.href = `/login?callback_url=${encodeURIComponent(
+          pathname
+        )}`;
       }
       return;
     }
@@ -33,20 +35,39 @@ const CheckRole = () => {
     if (!loading && !user) {
       if (!hasRedirectedRef.current) {
         hasRedirectedRef.current = true;
-        window.location.href = `/login?callback_url=${encodeURIComponent(pathname)}`;
+        window.location.href = `/login?callback_url=${encodeURIComponent(
+          pathname
+        )}`;
       }
       return;
     }
 
     // Verificar permisos de rol solo si hay usuario
     if (!loading && user) {
+      //? Check for superadmin role
+      if (pathname.includes("/superadmin") && user.role != "SUPERADMIN") {
+        if (user.role === "COMPANY_ADMIN") {
+          router.push("/admin");
+          return;
+        }
+        if (!hasRedirectedRef.current) {
+          hasRedirectedRef.current = true;
+          window.location.href = `/login?callback_url=${encodeURIComponent(
+            pathname
+          )}`;
+        }
+        return;
+      }
+
       if (
         pathname.includes("/admin") &&
         !["COMPANY_ADMIN", "SUPERADMIN"].includes(user.role)
       ) {
         if (!hasRedirectedRef.current) {
           hasRedirectedRef.current = true;
-          window.location.href = `/login?callback_url=${encodeURIComponent(pathname)}`;
+          window.location.href = `/login?callback_url=${encodeURIComponent(
+            pathname
+          )}`;
         }
         return;
       }
@@ -76,4 +97,3 @@ const CheckRole = () => {
 };
 
 export default CheckRole;
-

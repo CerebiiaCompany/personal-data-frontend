@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation";
 import { NAVBAR_DATA } from "@/constants/navbarData";
 import Link from "next/link";
 import SectionSearchBar from "./SectionSearchBar";
+import { useSessionStore } from "@/store/useSessionStore";
+import { SUPERADMIN_NAVBAR_DATA } from "@/constants/superadminNavbarData";
 
 interface Props {
   dynamicEndpoint?: string;
@@ -18,6 +20,9 @@ const SectionHeader = ({ dynamicEndpoint, search, onSearchChange }: Props) => {
   const paths = pathname.split("/");
   paths.shift();
   const pathsLength = paths.length;
+  const user = useSessionStore((store) => store.user);
+  const navbarData =
+    user?.role === "SUPERADMIN" ? SUPERADMIN_NAVBAR_DATA : NAVBAR_DATA;
 
   const formattedPaths = [];
 
@@ -38,7 +43,7 @@ const SectionHeader = ({ dynamicEndpoint, search, onSearchChange }: Props) => {
       <nav className="w-full flex flex-col items-start gap-1">
         <div className="px-5 flex items-center gap-1">
           {formattedPaths.reverse().map((path, index) => {
-            const pathData = NAVBAR_DATA.find((e) => e.path === `/${path}`);
+            const pathData = navbarData.find((e) => e.path === `/${path}`);
 
             return (
               <React.Fragment key={path}>

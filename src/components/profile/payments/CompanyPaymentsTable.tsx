@@ -42,8 +42,9 @@ const CompanyPaymentsTable = ({ items, loading, error, refresh }: Props) => {
                 scope="col"
                 className="text-center font-medium text-stone-600 text-xs py-2 px-3 w-1/6"
               >
-                Créditos usados
+                Empresa
               </th>
+
               <th
                 scope="col"
                 className="text-center font-medium text-stone-600 text-xs py-2 px-3 w-1/6"
@@ -66,8 +67,9 @@ const CompanyPaymentsTable = ({ items, loading, error, refresh }: Props) => {
                   {formatDateToString({ date: item.period.end })}
                 </td>
                 <td className="py-3 px-4 bg-primary-50 font-medium text-ellipsis">
-                  350
+                  {item.company?.name}
                 </td>
+
                 <td className="py-3 px-4 bg-primary-50 font-medium text-ellipsis">
                   {parsePeriodTypeToString(item.periodType)}
                 </td>

@@ -43,7 +43,7 @@ export const updateUserValidationSchema = z.object({
     personalEmail: z
       .email("Correo inválido")
       .min(1, "Este campo es obligatorio"),
-    companyAreaId: z.string().min(1, "Este campo es obligatorio"),
+    companyAreaId: z.string().optional(),
     /* companyRoleId: z.string().min(1, "Este campo es obligatorio"), */
     note: z.string().optional(),
     docNumber: z.coerce.number("Este campo es obligatorio"),
@@ -110,31 +110,7 @@ export const createCompanyRoleValidationSchema = z.object({
   }),
 });
 
-export const customDateValidation = z.preprocess((v) => {
-  if (typeof v === "string") {
-    const parts = v.split("-").map(Number);
-
-    if (
-      parts.length === 3 &&
-      !isNaN(parts[0]) &&
-      !isNaN(parts[1]) &&
-      !isNaN(parts[2])
-    ) {
-      const date = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
-      if (
-        date.getUTCFullYear() === parts[0] &&
-        date.getUTCMonth() === parts[1] - 1 &&
-        date.getUTCDate() === parts[2]
-      ) {
-        return date;
-      }
-    }
-
-    return null; // Return null to trigger an invalid_type_error
-  }
-}, z.date({ error: "Fecha inválida" }));
-
-const dateTimeLocal = z
+export const dateTimeLocalValidation = z
   .string("Fecha y hora obligatorias")
   .regex(
     /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}$/,
@@ -190,8 +166,8 @@ export const createCampaignValidationSchema = z.object({
   active: z.boolean(),
   scheduling: z
     .object({
-      startDate: dateTimeLocal, // "YYYY-MM-DDTHH:mm"
-      endDate: dateTimeLocal,
+      startDate: dateTimeLocalValidation, // "YYYY-MM-DDTHH:mm"
+      endDate: dateTimeLocalValidation,
       ocurrences: z
         .number({ error: "Número de ocurrencias obligatorio" })
         .int("Debe ser un entero")
@@ -262,19 +238,18 @@ export const createScheduledCampaignValidationSchema = z.object({
   goal: z.string<CampaignGoal>("Selecciona un objetivo"),
   active: z.boolean(),
   scheduling: z.object({
-    scheduledDateTime: dateTimeLocal
-      .refine(
-        (val) => {
-          const selectedDate = new Date(val);
-          const now = new Date();
-          // Agregar 2 minutos (120000 ms)
-          const minDateTime = new Date(now.getTime() + 2 * 60 * 1000);
-          return selectedDate >= minDateTime;
-        },
-        {
-          message: "La campaña debe programarse al menos 2 minutos en el futuro",
-        }
-      ), // "YYYY-MM-DDTHH:mm" - fecha y hora específica
+    scheduledDateTime: dateTimeLocalValidation.refine(
+      (val) => {
+        const selectedDate = new Date(val);
+        const now = new Date();
+        // Agregar 2 minutos (120000 ms)
+        const minDateTime = new Date(now.getTime() + 2 * 60 * 1000);
+        return selectedDate >= minDateTime;
+      },
+      {
+        message: "La campaña debe programarse al menos 2 minutos en el futuro",
+      }
+    ), // "YYYY-MM-DDTHH:mm" - fecha y hora específica
   }),
   sourceFormIds: z
     .array(z.string().min(1, "ID inválido"))

@@ -1,6 +1,6 @@
 import { UserRole } from "@/types/user.types";
 
-type NavbarData = {
+export type NavbarData = {
   title: string;
   path: string;
   icon?: string;

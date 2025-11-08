@@ -12,12 +12,15 @@ import clsx from "clsx";
 import { toast } from "sonner";
 import { useSessionStore } from "@/store/useSessionStore";
 import { logoutUser } from "@/lib/auth.api";
+import { SUPERADMIN_NAVBAR_DATA } from "@/constants/superadminNavbarData";
 
 const DashboardNavbar = () => {
   const session = useSessionStore();
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
-  const mainNavbarRoutes = NAVBAR_DATA.filter((e) => e.icon);
+  const mainNavbarRoutes = (
+    session.user?.role === "SUPERADMIN" ? SUPERADMIN_NAVBAR_DATA : NAVBAR_DATA
+  ).filter((e) => e.icon);
   const router = useRouter();
 
   useEffect(() => {

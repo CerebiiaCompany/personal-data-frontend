@@ -73,7 +73,11 @@ function LoginForm() {
     toast.success(`Bienvenid@ ${session.data?.name}`);
 
     // Redirigir solo después de login exitoso
-    router.push(callbackUrl || "/admin");
+    router.push(
+      callbackUrl || session.data?.role === "SUPERADMIN"
+        ? "/superadmin"
+        : "/admin"
+    );
   }
 
   return (
@@ -170,16 +174,18 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={
-      <div className="flex flex-col p-8 bg-[linear-gradient(180deg,#301AAC_0.96%,#150668_48.56%,#030014_100%)] w-full flex-1 justify-center items-center">
-        <div className="w-full max-w-md bg-white/20 px-12 py-20 rounded-xl flex flex-col gap-10">
-          <div className="flex flex-col items-center gap-3">
-            <div className="animate-pulse bg-white/30 rounded-lg h-20 w-20"></div>
-            <div className="animate-pulse bg-white/30 rounded h-6 w-32"></div>
+    <Suspense
+      fallback={
+        <div className="flex flex-col p-8 bg-[linear-gradient(180deg,#301AAC_0.96%,#150668_48.56%,#030014_100%)] w-full flex-1 justify-center items-center">
+          <div className="w-full max-w-md bg-white/20 px-12 py-20 rounded-xl flex flex-col gap-10">
+            <div className="flex flex-col items-center gap-3">
+              <div className="animate-pulse bg-white/30 rounded-lg h-20 w-20"></div>
+              <div className="animate-pulse bg-white/30 rounded h-6 w-32"></div>
+            </div>
           </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <LoginForm />
     </Suspense>
   );

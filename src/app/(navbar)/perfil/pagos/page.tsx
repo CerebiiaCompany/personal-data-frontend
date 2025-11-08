@@ -26,8 +26,6 @@ export default function ProfilePaymentsHistoryPage() {
     companyId: user?.companyUserData?.companyId,
   });
 
-  console.log(data);
-
   return (
     <div className="flex-1 flex h-full flex-col gap-3 max-h-full overflow-y-auto">
       <h6 className="font-bold text-xl text-primary-900 mb-2">

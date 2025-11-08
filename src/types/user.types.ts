@@ -51,7 +51,7 @@ export interface CreateUser {
     position: string;
     phone: string;
     personalEmail: string;
-    companyAreaId: string;
+    companyAreaId?: string;
     /* companyRoleId: string; */
     note?: string;
     docNumber: number;

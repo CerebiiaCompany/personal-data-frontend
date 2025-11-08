@@ -1,5 +1,4 @@
 import { APIResponse, QueryParams } from "@/types/api.types";
-import { CreateCompanyPayment } from "@/types/payment.types";
 import { CreatePolicyTemplate } from "@/types/policyTemplate.types";
 import { customFetch } from "@/utils/customFetch";
 
