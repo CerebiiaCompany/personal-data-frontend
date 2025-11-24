@@ -36,3 +36,15 @@ export async function validateOtpCode(
 
   return res;
 }
+
+export async function resendOtpCodeByEmail(
+  id: string,
+  email: string
+): Promise<APIResponse> {
+  const res = await customFetch(`/public/otp/${id}/resend-email`, {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+
+  return res;
+}

@@ -23,7 +23,7 @@ import CollectFormResponseSavedModal from "./CollectFormResponseSavedModal";
 import { showDialog } from "@/utils/dialogs.utils";
 import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import { Icon } from "@iconify/react/dist/iconify.js";
-import { generateOtpCode, validateOtpCode } from "@/lib/oneTimeCode.api";
+import { generateOtpCode, validateOtpCode, resendOtpCodeByEmail } from "@/lib/oneTimeCode.api";
 import { getPresignedUrl } from "@/lib/server/getPresignedUrl";
 import LoadingCover from "../layout/LoadingCover";
 
@@ -363,37 +363,32 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
         startCountdown();
         toast.success("Código enviado por SMS");
       } else {
-        // Enviar por EMAIL
+        // Reenviar por EMAIL usando el endpoint de reenvío
         if (!email || email.trim() === "") {
           toast.error("Por favor ingresa tu correo electrónico primero");
           setIsSendingOtp(false);
           return;
         }
 
-        const res = await generateOtpCode({
-          collectFormId: data._id,
-          recipientData: {
-            address: email,
-            channel: "EMAIL",
-          },
-        });
+        // Validar que ya existe un OTP pendiente
+        if (!pendingOtpId) {
+          toast.error("Primero debes enviar el código por SMS");
+          setIsSendingOtp(false);
+          return;
+        }
+
+        // Reenviar el código OTP existente por email
+        const res = await resendOtpCodeByEmail(pendingOtpId, email);
 
         if (res.error) {
-          if (res.error.code === "otp/pending-code") {
-            const otpId = res.data.id;
-            setPendingOtpId(otpId);
-            setValue("otpCodeId", otpId);
-          }
           toast.error(parseApiError(res.error));
           setIsSendingOtp(false);
           return;
         }
 
-        const otpId = res.data.id;
-        setPendingOtpId(otpId);
-        setValue("otpCodeId", otpId);
+        // El OTP ID ya existe, solo marcamos que se envió por email
         setOtpSentViaEmail(true);
-        toast.success("Código enviado por correo electrónico");
+        toast.success("Código reenviado por correo electrónico");
       }
     } catch (error) {
       console.error("Error al enviar OTP:", error);
@@ -425,13 +420,28 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
   }, [otpCountdown]);
 
   useEffect(() => {
-    if (data.policyTemplateFile) {
-      (async () => {
-        const presignedUrl = await getPresignedUrl(data.policyTemplateFile.key);
-        setPolicyUrl(presignedUrl);
-      })();
+    // Obtener la URL del archivo de la plantilla de política
+    const fetchPolicyUrl = async () => {
+      if (data.policyTemplateFile?.key) {
+        try {
+          const presignedUrl = await getPresignedUrl(
+            data.policyTemplateFile.key,
+            data.policyTemplateFile.originalName
+          );
+          setPolicyUrl(presignedUrl);
+        } catch (error) {
+          console.error("Error al obtener URL de la política:", error);
+          toast.error("No se pudo cargar la política de tratamiento de datos");
+        }
+      } else {
+        console.warn("El formulario no tiene un archivo de política asignado");
+      }
+    };
+
+    if (data) {
+      fetchPolicyUrl();
     }
-  }, []);
+  }, [data]);
 
   return (
     <form
@@ -643,16 +653,27 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
             label={
               <p>
                 Acepto la{" "}
-                <a target="_blank" href={policyUrl} className="underline">
+                <a 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  href={policyUrl} 
+                  className="underline text-primary-600 hover:text-primary-800 transition-colors font-medium"
+                >
                   política de tratamiento de datos personales.
                 </a>
               </p>
             }
             error={errors.dataProcessing as FieldError}
           />
-        ) : (
+        ) : data.policyTemplateFile ? (
           <div className="w-10 h-10 relative">
             <LoadingCover size="sm" />
+          </div>
+        ) : (
+          <div className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-md p-3">
+            <p className="font-medium">
+              No hay política de tratamiento de datos disponible para este formulario.
+            </p>
           </div>
         )}
       </div>
