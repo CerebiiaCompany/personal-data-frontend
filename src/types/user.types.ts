@@ -52,7 +52,7 @@ export interface CreateUser {
     phone: string;
     personalEmail: string;
     companyAreaId?: string;
-    /* companyRoleId: string; */
+    companyRoleId?: string;
     note?: string;
     docNumber: number;
     docType: DocType;

@@ -52,6 +52,12 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
   const [pendingOtpId, setPendingOtpId] = useState<string | null>(null);
   const [fullName, setFullName] = useState<string>("");
   const [policyUrl, setPolicyUrl] = useState<string | null>(null);
+  const [formKey, setFormKey] = useState<number>(0); // Para forzar el reseteo del formulario
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false); // Estado de loading para el botón
+  const [otpCountdown, setOtpCountdown] = useState<number>(0); // Contador de 15 segundos
+  const [canSendEmailOtp, setCanSendEmailOtp] = useState<boolean>(false); // Habilitar envío por email después de 15 segundos
+  const [isSendingOtp, setIsSendingOtp] = useState<boolean>(false); // Estado de loading para envío de OTP
+  const [otpSentViaEmail, setOtpSentViaEmail] = useState<boolean>(false); // Si ya se envió por email
   const fields: {
     [key: string]: {
       type: AnswerType;
@@ -156,8 +162,8 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
     dataProcessing: z.boolean().refine((val) => val === true, {
       error: "Debes aceptar el tratamiento de datos",
     }),
-    otpCode: z.string().optional(),
-    otpCodeId: z.string().optional(),
+    otpCode: z.string().min(1, "El código OTP es obligatorio"),
+    otpCodeId: z.string().optional(), // Se validará en el submit
   });
 
   const dynamicDefaultValues = React.useMemo(() => {
@@ -217,98 +223,206 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
     },
   });
 
-  async function onSubmit(formData: any) {
-    // Concatenar código de país con el número de teléfono
-    const phoneCountryCode = watch("user.phoneCountryCode") || "57";
-    const fullPhoneNumber = `${phoneCountryCode}${formData.user.phone}`;
+  // Función para limpiar el formulario
+  const resetForm = () => {
+    // Incrementar la clave para forzar el reseteo del formulario
+    setFormKey(prev => prev + 1);
+    // Restablecer el estado del formulario
+    reset({
+      data: dynamicDefaultValues,
+      dataProcessing: false,
+      user: {
+        docType: "CC" as DocType,
+        docNumber: undefined,
+        phoneCountryCode: "57",
+        phone: "",
+        name: "",
+        lastName: "",
+        age: undefined,
+        email: "",
+        gender: undefined as UserGender | undefined,
+      },
+      otpCode: "",
+      otpCodeId: "",
+    });
+    // Resetear estados de OTP
+    setPendingOtpId(null);
+    setOtpCountdown(0);
+    setCanSendEmailOtp(false);
+    setOtpSentViaEmail(false);
+    setIsSendingOtp(false);
+  };
 
-    // Si hay un OTP pendiente y se ingresó un código, validarlo
-    if (pendingOtpId && formData.otpCode && formData.otpCode.trim() !== "") {
+  async function onSubmit(formData: any) {
+    // Prevenir múltiples envíos
+    if (isSubmitting) return;
+    
+    // Validar que se haya enviado el OTP
+    if (!pendingOtpId) {
+      toast.error("Por favor, envía el código OTP primero");
+      return;
+    }
+
+    // Validar que se haya ingresado el código OTP
+    if (!formData.otpCode || formData.otpCode.trim() === "") {
+      toast.error("Por favor, ingresa el código OTP recibido");
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      // Concatenar código de país con el número de teléfono
+      const phoneCountryCode = watch("user.phoneCountryCode") || "57";
+      const fullPhoneNumber = `${phoneCountryCode}${formData.user.phone}`;
+
+      // Validar el código OTP (ahora es obligatorio)
       const otpValidation = await validateOtpCode(pendingOtpId, formData.otpCode);
 
       if (otpValidation.error) {
         console.log(otpValidation.error);
-        return toast.error(parseApiError(otpValidation.error));
+        toast.error(parseApiError(otpValidation.error));
+        setIsSubmitting(false);
+        return;
       }
 
       toast.success("Código OTP validado");
 
-      //? register user response con OTP validado
+      // Registrar respuesta con OTP validado
       const res = await registerCollectFormResponse(data._id, {
         ...formData,
         user: {
           ...formData.user,
           phone: fullPhoneNumber,
         },
-        otpCode: formData.otpCode || "",
+        otpCode: formData.otpCode,
         otpCodeId: otpValidation.data.id,
       });
 
       if (res.error) {
-        return toast.error(parseApiError(res.error));
+        toast.error(parseApiError(res.error));
+        setIsSubmitting(false);
+        return;
       }
 
       toast.success("Respuesta registrada");
       setFullName(`${formData.user.name} ${formData.user.lastName}`);
+      // No hacemos reset aquí, lo manejamos desde el modal
       showDialog(HTML_IDS_DATA.collectFormResponseSavedModal);
-      reset();
-    } else {
-      // Enviar sin validación OTP
-      const res = await registerCollectFormResponse(data._id, {
-        ...formData,
-        user: {
-          ...formData.user,
-          phone: fullPhoneNumber,
-        },
-        otpCode: "",
-        otpCodeId: "", // Sin OTP
-      });
-
-      if (res.error) {
-        return toast.error(parseApiError(res.error));
-      }
-
-      toast.success("Respuesta registrada");
-      setFullName(`${formData.user.name} ${formData.user.lastName}`);
-      showDialog(HTML_IDS_DATA.collectFormResponseSavedModal);
-      reset();
+      setIsSubmitting(false);
+    } catch (error) {
+      console.error("Error al enviar formulario:", error);
+      toast.error("Ocurrió un error al enviar el formulario. Por favor, intenta nuevamente.");
+      setIsSubmitting(false);
     }
   }
 
-  async function createOtpCode() {
+  async function createOtpCode(channel: "SMS" | "EMAIL" = "SMS") {
     const phone = watch("user.phone");
     const phoneCountryCode = watch("user.phoneCountryCode") || "57";
+    const email = watch("user.email");
     
-    // Validar que el teléfono esté ingresado
-    if (!phone || phone.trim() === "") {
-      return toast.error("Por favor ingresa tu número de teléfono primero");
-    }
+    setIsSendingOtp(true);
 
-    // Concatenar código de país con el número
-    const fullPhoneNumber = `${phoneCountryCode}${phone}`;
+    try {
+      if (channel === "SMS") {
+        // Validar que el teléfono esté ingresado
+        if (!phone || phone.trim() === "") {
+          toast.error("Por favor ingresa tu número de teléfono primero");
+          setIsSendingOtp(false);
+          return;
+        }
 
-    const res = await generateOtpCode({
-      collectFormId: data._id,
-      recipientData: {
-        address: fullPhoneNumber,
-        channel: "SMS",
-      },
-    });
+        // Concatenar código de país con el número
+        const fullPhoneNumber = `${phoneCountryCode}${phone}`;
 
-    console.log(res);
+        const res = await generateOtpCode({
+          collectFormId: data._id,
+          recipientData: {
+            address: fullPhoneNumber,
+            channel: "SMS",
+          },
+        });
 
-    if (res.error) {
-      if (res.error.code === "otp/pending-code") {
-        //? server returns otp id in the data
-        setPendingOtpId(res.data.id);
+        if (res.error) {
+          if (res.error.code === "otp/pending-code") {
+            //? server returns otp id in the data
+            const otpId = res.data.id;
+            setPendingOtpId(otpId);
+            setValue("otpCodeId", otpId);
+            startCountdown();
+          }
+          toast.error(parseApiError(res.error));
+          setIsSendingOtp(false);
+          return;
+        }
+
+        const otpId = res.data.id;
+        setPendingOtpId(otpId);
+        setValue("otpCodeId", otpId);
+        startCountdown();
+        toast.success("Código enviado por SMS");
+      } else {
+        // Enviar por EMAIL
+        if (!email || email.trim() === "") {
+          toast.error("Por favor ingresa tu correo electrónico primero");
+          setIsSendingOtp(false);
+          return;
+        }
+
+        const res = await generateOtpCode({
+          collectFormId: data._id,
+          recipientData: {
+            address: email,
+            channel: "EMAIL",
+          },
+        });
+
+        if (res.error) {
+          if (res.error.code === "otp/pending-code") {
+            const otpId = res.data.id;
+            setPendingOtpId(otpId);
+            setValue("otpCodeId", otpId);
+          }
+          toast.error(parseApiError(res.error));
+          setIsSendingOtp(false);
+          return;
+        }
+
+        const otpId = res.data.id;
+        setPendingOtpId(otpId);
+        setValue("otpCodeId", otpId);
+        setOtpSentViaEmail(true);
+        toast.success("Código enviado por correo electrónico");
       }
-      return toast.error(parseApiError(res.error));
+    } catch (error) {
+      console.error("Error al enviar OTP:", error);
+      toast.error("Ocurrió un error al enviar el código. Por favor, intenta nuevamente.");
+    } finally {
+      setIsSendingOtp(false);
     }
-
-    setPendingOtpId(res.data.id);
-
-    toast.success("Código enviado");
   }
+
+  // Función para iniciar el contador de 15 segundos
+  const startCountdown = () => {
+    setOtpCountdown(15);
+    setCanSendEmailOtp(false);
+    setOtpSentViaEmail(false);
+  }
+
+  // Efecto para el contador
+  useEffect(() => {
+    if (otpCountdown > 0) {
+      const timer = setTimeout(() => {
+        setOtpCountdown(otpCountdown - 1);
+        if (otpCountdown === 1) {
+          setCanSendEmailOtp(true);
+        }
+      }, 1000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [otpCountdown]);
 
   useEffect(() => {
     if (data.policyTemplateFile) {
@@ -324,7 +438,10 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
       onSubmit={handleSubmit(onSubmit)}
       className="flex flex-col gap-3 max-w-2xl items-stretch w-full"
     >
-      <CollectFormResponseSavedModal fullName={fullName} />
+      <CollectFormResponseSavedModal 
+        fullName={fullName} 
+        onNewRegistration={resetForm}
+      />
       <h1 className="font-bold text-2xl text-primary-900">{data.name}</h1>
 
       <div className="rounded-xl border border-disabled p-10 flex flex-col items-stretch gap-5">
@@ -429,10 +546,10 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
                 Verificación por código OTP
               </h3>
               <p className="text-sm text-blue-800 leading-relaxed">
-                Para continuar, debe enviar un código de verificación al número de teléfono 
-                del cliente ingresado arriba. Haga clic en el botón <strong>&quot;Enviar código OTP&quot;</strong> 
-                para que el cliente reciba el código por SMS. Una vez recibido, ingrese el código 
-                en el campo correspondiente.
+                Para continuar, debe enviar un código de verificación obligatorio. Primero, haga clic en 
+                <strong> &quot;Enviar por SMS&quot;</strong> para que el cliente reciba el código por mensaje de texto. 
+                Si después de 15 segundos el cliente no ha recibido el código, podrá enviarlo por correo electrónico. 
+                Una vez recibido, ingrese el código en el campo correspondiente.
               </p>
             </div>
           </div>
@@ -443,27 +560,79 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
           <div className="flex items-end gap-3">
             <div className="flex-1">
               <CustomInput
-                label="Código de verificación (OTP)"
+                label="Código de verificación (OTP) *"
                 {...register("otpCode")}
                 error={errors.otpCode}
                 placeholder="XXX-XXX"
+                disabled={!pendingOtpId}
               />
             </div>
             <Button
               type="button"
-              onClick={createOtpCode}
+              onClick={() => createOtpCode("SMS")}
               className="h-fit min-w-[180px]"
               hierarchy="primary"
+              loading={isSendingOtp}
+              disabled={isSendingOtp || otpCountdown > 0}
               startContent={<Icon icon={"tabler:send"} className="text-xl" />}
             >
-              Enviar código OTP
+              {otpCountdown > 0 ? `Esperar (${otpCountdown}s)` : "Enviar por SMS"}
             </Button>
           </div>
+
+          {/* Contador y opción de email */}
           {pendingOtpId && (
-            <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md p-3">
-              <Icon icon={"material-symbols:check-circle"} className="text-lg" />
+            <div className="flex flex-col gap-3">
+              {otpCountdown > 0 ? (
+                <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-50 border border-blue-200 rounded-md p-3">
+                  <Icon icon={"material-symbols:schedule"} className="text-lg animate-pulse" />
+                  <span className="font-medium">
+                    Código enviado por SMS. Espera {otpCountdown} segundo{otpCountdown !== 1 ? 's' : ''} para poder enviarlo por correo electrónico.
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md p-3">
+                  <Icon icon={"material-symbols:check-circle"} className="text-lg" />
+                  <span className="font-medium">
+                    {otpSentViaEmail 
+                      ? "Código enviado por correo electrónico. Revisa tu bandeja de entrada."
+                      : "Código enviado por SMS. Si no lo recibiste, puedes enviarlo por correo electrónico."}
+                  </span>
+                </div>
+              )}
+
+              {/* Botón para enviar por email (se habilita después de 15 segundos) */}
+              {canSendEmailOtp && !otpSentViaEmail && (
+                <Button
+                  type="button"
+                  onClick={() => createOtpCode("EMAIL")}
+                  className="w-full"
+                  hierarchy="secondary"
+                  loading={isSendingOtp}
+                  disabled={isSendingOtp}
+                  startContent={<Icon icon={"material-symbols:email"} className="text-xl" />}
+                >
+                  Enviar código por correo electrónico
+                </Button>
+              )}
+
+              {otpSentViaEmail && (
+                <div className="flex items-center gap-2 text-sm text-purple-600 bg-purple-50 border border-purple-200 rounded-md p-3">
+                  <Icon icon={"material-symbols:mark-email-read"} className="text-lg" />
+                  <span className="font-medium">
+                    Código enviado por correo electrónico. Revisa tu bandeja de entrada y spam.
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Mensaje inicial si no se ha enviado OTP */}
+          {!pendingOtpId && (
+            <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-md p-3">
+              <Icon icon={"material-symbols:info-outline"} className="text-lg" />
               <span className="font-medium">
-                Código enviado exitosamente. El cliente recibirá un SMS con el código de verificación.
+                Para continuar, primero debes enviar el código OTP por SMS.
               </span>
             </div>
           )}
@@ -489,10 +658,27 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
       </div>
 
       <div className="flex gap-4 mt-8 justify-center">
-        <Button className="w-full max-w-lg" type="submit">
-          Enviar
+        <Button 
+          className="w-full max-w-lg" 
+          type="submit"
+          loading={isSubmitting}
+          disabled={isSubmitting || !pendingOtpId || !watch("otpCode") || watch("otpCode")?.trim() === ""}
+        >
+          {isSubmitting ? "Enviando..." : "Enviar"}
         </Button>
       </div>
+      
+      {/* Mensaje informativo si falta el código OTP */}
+      {(!pendingOtpId || !watch("otpCode") || watch("otpCode")?.trim() === "") && (
+        <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-md p-3 mt-4">
+          <Icon icon={"material-symbols:warning-outline"} className="text-lg" />
+          <span className="font-medium">
+            {!pendingOtpId 
+              ? "Debes enviar el código OTP primero para poder enviar el formulario."
+              : "Debes ingresar el código OTP recibido para poder enviar el formulario."}
+          </span>
+        </div>
+      )}
     </form>
   );
 };

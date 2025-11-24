@@ -44,7 +44,7 @@ export const updateUserValidationSchema = z.object({
       .email("Correo inválido")
       .min(1, "Este campo es obligatorio"),
     companyAreaId: z.string().optional(),
-    /* companyRoleId: z.string().min(1, "Este campo es obligatorio"), */
+    companyRoleId: z.string().optional(),
     note: z.string().optional(),
     docNumber: z.coerce.number("Este campo es obligatorio"),
     docType: z.string<DocType>(),

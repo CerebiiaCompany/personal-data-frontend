@@ -154,6 +154,10 @@ input:focus {
   display: none;
 }
 
+.dialog-wrapper {
+  display: none;
+}
+
 .dialog-wrapper.dialog-visible {
   display: flex;
 }

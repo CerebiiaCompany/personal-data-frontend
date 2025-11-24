@@ -8,7 +8,7 @@ import { CompanyArea } from "@/types/companyArea.types";
 import { CompanyRole } from "@/types/companyRole.types";
 import { SessionUser } from "@/types/user.types";
 import { parseApiError } from "@/utils/parseApiError";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
 
 export function useCompanyRoles<T = CompanyRole[]>(params: QueryParams) {
@@ -16,7 +16,7 @@ export function useCompanyRoles<T = CompanyRole[]>(params: QueryParams) {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function fetch() {
+  const fetch = useCallback(async () => {
     setLoading(true);
     const fetchedData = await fetchCompanyRoles(params);
 
@@ -30,13 +30,13 @@ export function useCompanyRoles<T = CompanyRole[]>(params: QueryParams) {
 
     setLoading(false);
     setData(fetchedData.data);
-  }
+  }, [params]);
 
   useEffect(() => {
     if (!params.companyId) return;
 
     fetch();
-  }, [params.companyId]);
+  }, [params.companyId, fetch]);
 
   return {
     data,

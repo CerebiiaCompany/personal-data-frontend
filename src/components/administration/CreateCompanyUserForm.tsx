@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import Button from "../base/Button";
 import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import {
@@ -28,6 +28,7 @@ import {
 import { CreateUser, docTypesOptions, UpdateUser } from "@/types/user.types";
 import { createCompanyUser, updateCompanyUser } from "@/lib/user.api";
 import { useCompanyAreas } from "@/hooks/useCompanyAreas";
+import { useCompanyRoles } from "@/hooks/useCompanyRoles";
 
 interface Props {
   initialValues?: CreateUser | UpdateUser;
@@ -42,6 +43,9 @@ const CreateCompanyUserForm = ({
 }: Props) => {
   const { user, setUser } = useSessionStore();
   const areas = useCompanyAreas({
+    companyId: user?.companyUserData?.companyId,
+  });
+  const roles = useCompanyRoles({
     companyId: user?.companyUserData?.companyId,
   });
   const [loading, setLoading] = useState<boolean>(false);
@@ -77,17 +81,25 @@ const CreateCompanyUserForm = ({
       "&>div"
     ) as HTMLElement;
 
-    scrollContainer.addEventListener("scroll", (e) => {
+    const handleScroll = (e: Event) => {
       if (!floatingActionNavbarRef.current) return;
+      const target = e.target as HTMLElement;
       if (
-        (e.target as HTMLElement).scrollTop >
+        target.scrollTop >
         firstFormContainer.offsetTop + 20
       ) {
         setFloatingNavbarToggle(true);
       } else {
         setFloatingNavbarToggle(false);
       }
-    });
+    };
+
+    scrollContainer.addEventListener("scroll", handleScroll);
+
+    // Cleanup: remover el event listener cuando el componente se desmonte
+    return () => {
+      scrollContainer.removeEventListener("scroll", handleScroll);
+    };
   }, []);
 
   async function onSubmit(data: CreateUser | UpdateUser) {
@@ -221,20 +233,48 @@ const CreateCompanyUserForm = ({
           />
         </div>
 
-        {areas.data && (
-          <CustomSelect
-            onChange={(value) =>
-              setValue("companyUserData.companyAreaId", value)
-            }
-            options={areas.data.map((area) => ({
-              value: area._id,
-              title: area.name,
-            }))}
-            label="Asignar Área"
-            unselectedText="Seleccionar área"
-            value={watch("companyUserData.companyAreaId")}
-          />
-        )}
+        {/* Memoizar las opciones para evitar recrearlas en cada render */}
+        {useMemo(() => {
+          if (!areas.data) return null;
+          
+          const areaOptions = areas.data.map((area) => ({
+            value: area._id,
+            title: area.name,
+          }));
+
+          return (
+            <CustomSelect
+              onChange={(value) =>
+                setValue("companyUserData.companyAreaId", value)
+              }
+              options={areaOptions}
+              label="Asignar Área"
+              unselectedText="Seleccionar área"
+              value={watch("companyUserData.companyAreaId")}
+            />
+          );
+        }, [areas.data, setValue, watch])}
+
+        {useMemo(() => {
+          if (!roles.data) return null;
+          
+          const roleOptions = roles.data.map((role) => ({
+            value: role._id,
+            title: role.position,
+          }));
+
+          return (
+            <CustomSelect
+              onChange={(value) =>
+                setValue("companyUserData.companyRoleId", value)
+              }
+              options={roleOptions}
+              label="Asignar Rol"
+              unselectedText="Seleccionar rol"
+              value={watch("companyUserData.companyRoleId")}
+            />
+          );
+        }, [roles.data, setValue, watch])}
 
         <CustomTextarea
           {...register("companyUserData.note")}
