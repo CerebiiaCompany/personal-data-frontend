@@ -14,6 +14,13 @@ const interFont = Inter({
 export const metadata: Metadata = {
   title: "Cerebiia Plataforma de Datos",
   description: "",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
