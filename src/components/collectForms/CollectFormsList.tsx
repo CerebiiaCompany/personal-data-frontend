@@ -31,7 +31,7 @@ const CollectFormsList = ({ items, loading, error, refresh }: Props) => {
   }
 
   return (
-    <div className="w-full grid grid-cols-[repeat(auto-fill,_minmax(280px,_1fr))] gap-6 relative flex-1">
+    <div className="w-full grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,_minmax(280px,_1fr))] gap-4 sm:gap-5 md:gap-6 relative flex-1">
       {loading && <LoadingCover />}
       {items ? (
         items.length ? (
@@ -43,10 +43,16 @@ const CollectFormsList = ({ items, loading, error, refresh }: Props) => {
             />
           ))
         ) : (
-          <p>No hay formularios para mostrar</p>
+          <div className="col-span-full flex flex-col items-center justify-center py-8 px-4">
+            <p className="text-stone-500 text-sm sm:text-base text-center">No hay formularios para mostrar</p>
+          </div>
         )
       ) : null}
-      {error && <p>Error: {error}</p>}
+      {error && (
+        <div className="col-span-full flex flex-col items-center justify-center py-8 px-4">
+          <p className="text-red-500 text-sm sm:text-base text-center">Error: {error}</p>
+        </div>
+      )}
     </div>
   );
 };

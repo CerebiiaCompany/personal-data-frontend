@@ -25,17 +25,17 @@ export default function ClassificationPage() {
       <UploadExcelTemplateDialog refresh={refresh} />
 
       {/* Content */}
-      <div className="px-8 py-6 flex flex-col gap-6 flex-1">
-        <header className="w-full flex gap-2 justify-between items-center">
+      <div className="px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-5 md:py-6 flex flex-col gap-4 sm:gap-5 md:gap-6 flex-1">
+        <header className="w-full flex flex-col sm:flex-row gap-3 sm:gap-4 sm:justify-between sm:items-center">
           <Button
             onClick={(_) => showDialog(HTML_IDS_DATA.uploadExcelTemplateDialog)}
+            className="w-full sm:w-auto text-sm sm:text-base"
           >
             Cargar plantilla de excel
           </Button>
-          <h4 className="font-semibold text-xl text-primary-900">
+          <h4 className="font-semibold text-lg sm:text-xl text-primary-900 text-center sm:text-left">
             Clasificación de los formularios
           </h4>
-          <span />
         </header>
 
         {/* Forms Table */}

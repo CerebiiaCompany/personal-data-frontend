@@ -30,14 +30,14 @@ const AdministrationPageSelector = () => {
           href={tab.href}
           key={tab.href}
           className={clsx([
-            "flex-1 text-primary-900 rounded-lg py-1.5 px-3 flex gap-1 items-center justify-center border-primary-900 border",
+            "flex-1 text-primary-900 rounded-lg py-2 sm:py-1.5 px-2 sm:px-3 flex gap-1 items-center justify-center border-primary-900 border",
             {
               "bg-primary-900 text-white": pathname === tab.href,
             },
           ])}
         >
-          <p className="text-lg font-bold">{tab.label}</p>
-          <Icon icon={tab.icon} className="text-xl" />
+          <p className="text-sm sm:text-base md:text-lg font-bold">{tab.label}</p>
+          <Icon icon={tab.icon} className="text-base sm:text-lg md:text-xl flex-shrink-0" />
         </Link>
       ))}
     </div>

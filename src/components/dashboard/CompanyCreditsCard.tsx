@@ -29,20 +29,20 @@ const CompanyCreditsCard = ({ data, loading, error }: Props) => {
   };
 
   return (
-    <div className="bg-gradient-to-br from-blue-500 to-indigo-700 rounded-lg px-5 py-3 text-white relative flex items-center justify-between overflow-hidden shadow-lg">
+    <div className="bg-gradient-to-br from-blue-500 to-indigo-700 rounded-lg px-3 sm:px-4 md:px-5 py-3 sm:py-3.5 text-white relative flex items-center justify-between overflow-hidden shadow-lg">
       {/* Decoración de fondo */}
-      <div className="w-32 aspect-square absolute right-[-20px] top-[-20px] rounded-full border-white/20 border border-dashed" />
+      <div className="w-20 sm:w-24 md:w-32 aspect-square absolute right-[-12px] sm:right-[-15px] md:right-[-20px] top-[-12px] sm:top-[-15px] md:top-[-20px] rounded-full border-white/20 border border-dashed" />
 
       {/* Contenido */}
-      <div className="relative z-10 flex items-center justify-between w-full gap-4">
+      <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between w-full gap-2 sm:gap-3 md:gap-4">
         {/* Título */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          <Icon icon="mdi:credit-card-outline" className="text-xl" />
-          <h4 className="font-semibold text-base whitespace-nowrap">Créditos Consumidos</h4>
+          <Icon icon="mdi:credit-card-outline" className="text-lg sm:text-xl md:text-2xl flex-shrink-0" />
+          <h4 className="font-semibold text-sm sm:text-base whitespace-nowrap">Créditos Consumidos</h4>
         </div>
 
         {/* Contenido dinámico */}
-        <div className="flex items-center gap-4 flex-shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-wrap sm:flex-nowrap">
           {loading && (
             <div className="relative w-20 h-6">
               <LoadingCover size="sm" />
@@ -51,18 +51,18 @@ const CompanyCreditsCard = ({ data, loading, error }: Props) => {
 
           {error && (
             <div className="flex items-center gap-2 text-white/90">
-              <Icon icon="material-symbols:report-outline-rounded" className="text-lg" />
-              <p className="font-medium text-sm">Error: {error}</p>
+              <Icon icon="material-symbols:report-outline-rounded" className="text-base sm:text-lg flex-shrink-0" />
+              <p className="font-medium text-xs sm:text-sm">Error: {error}</p>
             </div>
           )}
 
           {!loading && !error && data && (
             <>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold">{data.creditsUsed}</span>
-                <span className="text-sm text-white/80">créditos</span>
+              <div className="flex items-baseline gap-1.5 sm:gap-2">
+                <span className="text-2xl sm:text-3xl md:text-4xl font-bold leading-none">{data.creditsUsed}</span>
+                <span className="text-xs sm:text-sm text-white/90">créditos</span>
               </div>
-              <p className="text-white/80 text-xs whitespace-nowrap">
+              <p className="text-white/90 text-xs sm:text-sm">
                 {getMonthName(data.month)} {data.year}
               </p>
             </>
@@ -70,8 +70,8 @@ const CompanyCreditsCard = ({ data, loading, error }: Props) => {
 
           {!loading && !error && !data && (
             <div className="flex items-center gap-2 text-white/90">
-              <Icon icon="tabler:report" className="text-lg" />
-              <p className="font-medium text-sm">No hay datos disponibles</p>
+              <Icon icon="tabler:report" className="text-base sm:text-lg flex-shrink-0" />
+              <p className="font-medium text-xs sm:text-sm">No hay datos disponibles</p>
             </div>
           )}
         </div>

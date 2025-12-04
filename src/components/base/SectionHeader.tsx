@@ -32,16 +32,16 @@ const SectionHeader = ({ dynamicEndpoint, search, onSearchChange }: Props) => {
   }
 
   return (
-    <header className="w-full flex flex-col gap-6 pt-6">
+    <header className="w-full flex flex-col gap-3 sm:gap-4 md:gap-6 pt-4 sm:pt-5 md:pt-6">
       {/* Search bar */}
       {search != undefined && onSearchChange && (
-        <nav className="w-full flex gap-2 justify-center px-3 items-stretch">
+        <nav className="w-full flex gap-2 justify-center px-3 sm:px-4 items-stretch">
           <SectionSearchBar search={search} onSearchChange={onSearchChange} />
         </nav>
       )}
 
       <nav className="w-full flex flex-col items-start gap-1">
-        <div className="px-5 flex items-center gap-1">
+        <div className="px-3 sm:px-4 md:px-5 flex items-center gap-1 flex-wrap">
           {formattedPaths.reverse().map((path, index) => {
             const pathData = navbarData.find((e) => e.path === `/${path}`);
 
@@ -51,11 +51,11 @@ const SectionHeader = ({ dynamicEndpoint, search, onSearchChange }: Props) => {
                   <Icon
                     key={1}
                     icon={"tabler:chevron-right"}
-                    className="text-xl"
+                    className="text-base sm:text-lg md:text-xl flex-shrink-0"
                   />
                 ) : null}
                 <Link
-                  className="font-normal text-xl text-primary-900 hover:underline"
+                  className="font-normal text-base sm:text-lg md:text-xl text-primary-900 hover:underline"
                   href={pathData ? pathData.path : pathname}
                 >
                   {pathData ? pathData.title : dynamicEndpoint}
@@ -64,7 +64,7 @@ const SectionHeader = ({ dynamicEndpoint, search, onSearchChange }: Props) => {
             );
           })}
         </div>
-        <span className="inline-block w-full h-1.5 bg-primary-50" />
+        <span className="inline-block w-full h-1 sm:h-1.5 bg-primary-50" />
       </nav>
     </header>
   );

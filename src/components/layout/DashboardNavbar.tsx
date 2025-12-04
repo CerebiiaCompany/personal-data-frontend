@@ -52,14 +52,14 @@ const DashboardNavbar = () => {
   return (
     <nav
       className={clsx([
-        "w-full max-w-20 flex h-full flex-col items-stretch bg-primary-50 p-3 gap-10 overflow-y-hidden transition-all",
-        { "max-w-72 p-5": !isCollapsed },
+        "w-full max-w-16 sm:max-w-20 flex h-full flex-col items-stretch bg-primary-50 p-2 sm:p-3 gap-4 sm:gap-6 md:gap-10 overflow-y-hidden transition-all",
+        { "max-w-64 sm:max-w-72 p-3 sm:p-4 md:p-5": !isCollapsed },
       ])}
     >
       <Link
         href={"/admin"}
         className={clsx([
-          "w-full flex justify-center relative h-full max-h-12",
+          "w-full flex justify-center relative h-full max-h-10 sm:max-h-12",
           { "": isCollapsed },
         ])}
       >
@@ -94,14 +94,14 @@ const DashboardNavbar = () => {
             { "opacity-0 pointer-events-none": isCollapsed },
           ])}
         >
-          <p className={clsx(["pl-6 font-semibold sticky top-0 mb-4"])}>Menú</p>
-          <ul className="flex flex-col items-stretch gap-2 w-full">
+          <p className={clsx(["pl-3 sm:pl-4 md:pl-6 font-semibold sticky top-0 mb-2 sm:mb-3 md:mb-4 text-xs sm:text-sm"])}>Menú</p>
+          <ul className="flex flex-col items-stretch gap-1.5 sm:gap-2 w-full">
             {mainNavbarRoutes.map((e) => (
               <li key={e.title} className="w-full">
                 <Link
                   href={e.path}
                   className={clsx([
-                    "flex items-center gap-3 rounded-lg px-6 py-3 w-full font-medium",
+                    "flex items-center gap-2 sm:gap-3 rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 w-full font-medium text-xs sm:text-sm",
                     {
                       "bg-white shadow-md text-primary-900":
                         e.path === pathname,
@@ -114,7 +114,7 @@ const DashboardNavbar = () => {
                 >
                   <Icon
                     icon={e.icon || "tabler:question-mark"}
-                    className="text-2xl h-full aspect-square min-w-fit"
+                    className="text-lg sm:text-xl md:text-2xl h-full aspect-square min-w-fit"
                   />
                   <p className="w-full text-ellipsis whitespace-nowrap overflow-hidden">
                     {e.title}
@@ -128,7 +128,7 @@ const DashboardNavbar = () => {
         {/* Navbar links collapsed */}
         <ul
           className={clsx([
-            "flex flex-col items-stretch gap-2 h-full px-1 w-full transition-opacity",
+            "flex flex-col items-stretch gap-1.5 sm:gap-2 h-full px-0.5 sm:px-1 w-full transition-opacity",
             { "opacity-0 pointer-events-none": !isCollapsed },
           ])}
         >
@@ -138,7 +138,7 @@ const DashboardNavbar = () => {
                 href={e.path}
                 title={e.title}
                 className={clsx([
-                  "grid place-content-center gap-3 rounded-lg w-full aspect-square relative",
+                  "grid place-content-center gap-2 sm:gap-3 rounded-lg w-full aspect-square relative",
                   {
                     "bg-white shadow-md text-primary-900": e.path === pathname,
                   },
@@ -150,7 +150,7 @@ const DashboardNavbar = () => {
               >
                 <Icon
                   icon={e.icon || "tabler:question-mark"}
-                  className="text-2xl aspect-square"
+                  className="text-lg sm:text-xl md:text-2xl aspect-square"
                 />
                 {/*  <span className="absolute bg-red-500 px-2 py-1 h-fit inline-block rounded-lg group-hover:opacity-1 left-full bottom-0 top-0 my-auto">
                   {e.title}

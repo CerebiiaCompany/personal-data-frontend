@@ -162,31 +162,32 @@ const CreateCompanyAreaForm = ({ initialValues }: Props) => {
         <div
           className={clsx(
             [
-              "pointer-events-auto sticky top-0 w-full shadow-md bg-white border border-stone-100 rounded-b-xl flex items-center justify-between px-5 py-4",
+              "pointer-events-auto sticky top-0 w-full shadow-md bg-white border border-stone-100 rounded-b-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 px-3 sm:px-4 md:px-5 py-3 sm:py-4",
             ],
             { "pointer-events-none": !floatingNavbarToggle }
           )}
         >
-          <h4 className="font-bold text-lg text-primary-900 flex items-center gap-2">
+          <h4 className="font-bold text-base sm:text-lg text-primary-900 flex items-center gap-2">
             <Button
               onClick={() => router.back()}
               hierarchy="tertiary"
               isIconOnly
+              className="flex-shrink-0"
             >
-              <Icon icon={"tabler:arrow-narrow-left"} className="text-2xl" />
+              <Icon icon={"tabler:arrow-narrow-left"} className="text-xl sm:text-2xl" />
             </Button>
-            {initialValues ? "Actualizar área" : "Crear nueva área"}
+            <span className="truncate">{initialValues ? "Actualizar área" : "Crear nueva área"}</span>
           </h4>
 
-          <div className="flex justify-end gap-4 items-center">
-            <Button className="w-fit" type="submit" loading={loading}>
+          <div className="flex justify-end gap-2 sm:gap-4 items-center flex-shrink-0">
+            <Button className="w-full sm:w-fit text-sm sm:text-base" type="submit" loading={loading}>
               {initialValues ? "Guardar cambios" : "Crear área"}
             </Button>
           </div>
         </div>
       </nav>
 
-      <div className="p-4 flex flex-col items-stretch gap-5">
+      <div className="p-3 sm:p-4 md:p-5 flex flex-col items-stretch gap-4 sm:gap-5">
         <CustomInput
           label="Nombre del Área"
           {...register("name")}
@@ -199,16 +200,18 @@ const CreateCompanyAreaForm = ({ initialValues }: Props) => {
           value={watch("country")}
           onChange={(value) => setValue("country", value)}
         />
-        <div className="flex gap-5">
+        <div className="flex flex-col sm:flex-row gap-4 sm:gap-5">
           <CustomInput
             label="Departamento/Estado"
             {...register("state")}
             error={errors.state}
+            className="flex-1"
           />
           <CustomInput
             label="Ciudad"
             {...register("city")}
             error={errors.city}
+            className="flex-1"
           />
         </div>
         <CustomInput
@@ -218,39 +221,40 @@ const CreateCompanyAreaForm = ({ initialValues }: Props) => {
         />
 
         <div className="flex flex-col items-start gap-1.5">
-          <p className="font-medium w-full pl-2 text-stone-500 text-sm">
+          <p className="font-medium w-full pl-2 text-stone-500 text-xs sm:text-sm">
             Añadir Etiquetas
           </p>
-          <div className="flex gap-3 items-stretch w-full">
+          <div className="flex gap-2 sm:gap-3 items-stretch w-full">
             <CustomInput
               placeholder="Equipo 1"
               value={tagInput}
               onChange={(e) => setTagInput(e.target.value)}
+              className="flex-1"
             />
 
             <Button
-              className="h-[unset] items-center"
+              className="h-[unset] items-center flex-shrink-0"
               type="button"
               onClick={addTag}
             >
-              <Icon icon={"tabler:plus"} className="text-xl" />
+              <Icon icon={"tabler:plus"} className="text-lg sm:text-xl" />
             </Button>
           </div>
         </div>
 
-        <div className="w-fill grid grid-cols-[repeat(auto-fit,_minmax(120px,_30%))] gap-x-6 gap-y-4 justify-start">
+        <div className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[repeat(auto-fit,_minmax(120px,_30%))] gap-3 sm:gap-4 md:gap-x-6 md:gap-y-4 justify-start">
           {(watch("tags") || []).map((tag, index) => (
             <div
               key={tag}
-              className="flex flex-1 p-1.5 rounded-md gap-2 items-center justify-start text-primary-900 bg-primary-50"
+              className="flex flex-1 p-2 sm:p-1.5 rounded-md gap-2 items-center justify-start text-primary-900 bg-primary-50"
             >
               <button
                 onClick={(_) => removeTag(index)}
-                className="p-1 hover:bg-primary-900/10 rounded-md transition-colors"
+                className="p-1 hover:bg-primary-900/10 rounded-md transition-colors flex-shrink-0"
               >
-                <Icon icon={"tabler:x"} className="text-lg" />
+                <Icon icon={"tabler:x"} className="text-base sm:text-lg" />
               </button>
-              <p className="font-normal text-ellipsis">{tag}</p>
+              <p className="font-normal text-ellipsis text-sm sm:text-base truncate">{tag}</p>
             </div>
           ))}
         </div>
@@ -265,7 +269,7 @@ const CreateCompanyAreaForm = ({ initialValues }: Props) => {
               }))}
               onChange={addUser}
             />
-            <div className="w-fill grid grid-cols-[repeat(auto-fit,_minmax(120px,_30%))] gap-x-6 gap-y-4 justify-start">
+            <div className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[repeat(auto-fit,_minmax(120px,_30%))] gap-3 sm:gap-4 md:gap-x-6 md:gap-y-4 justify-start">
               {(watch("users") || []).map((userId) => {
                 const userData = companyUsers.data?.find(
                   (e) => e._id === userId
@@ -274,17 +278,16 @@ const CreateCompanyAreaForm = ({ initialValues }: Props) => {
                 return (
                   <div
                     key={userId}
-                    className="flex flex-1 p-1.5 rounded-md gap-2 items-center justify-start text-primary-900 bg-primary-50"
+                    className="flex flex-1 p-2 sm:p-1.5 rounded-md gap-2 items-center justify-start text-primary-900 bg-primary-50"
                   >
                     <button
                       onClick={(_) => removeUser(userId)}
-                      className="p-1 hover:bg-primary-900/10 rounded-md transition-colors"
+                      className="p-1 hover:bg-primary-900/10 rounded-md transition-colors flex-shrink-0"
                     >
-                      <Icon icon={"tabler:x"} className="text-lg" />
+                      <Icon icon={"tabler:x"} className="text-base sm:text-lg" />
                     </button>
-                    <p className="font-normal text-ellipsis">
-                      {userData?.name} {userData?.lastName} - $
-                      {userData?.companyUserData?.docType}{" "}
+                    <p className="font-normal text-ellipsis text-sm sm:text-base truncate">
+                      {userData?.name} {userData?.lastName} - {userData?.companyUserData?.docType}{" "}
                       {userData?.companyUserData?.docNumber}
                     </p>
                   </div>
@@ -295,9 +298,9 @@ const CreateCompanyAreaForm = ({ initialValues }: Props) => {
         )}
       </div>
 
-      <div className="p-4">
-        <Button type="submit" className="w-full" loading={loading}>
-          {initialValues ? "Guardar cambios" : "Crear usuario"}
+      <div className="p-2 sm:p-3 md:p-4">
+        <Button type="submit" className="w-full text-sm sm:text-base" loading={loading}>
+          {initialValues ? "Guardar cambios" : "Crear área"}
         </Button>
       </div>
     </form>

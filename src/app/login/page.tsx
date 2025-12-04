@@ -41,7 +41,7 @@ function LoginForm() {
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting },
     setValue,
     watch,
   } = useForm({
@@ -108,18 +108,18 @@ function LoginForm() {
             )}
           </div>
           <div className="flex flex-col items-left w-full gap-1">
-            <div className="w-full flex gap-2">
+            <div className="w-full flex items-center gap-2">
               <input
                 placeholder="Clave"
                 type={shownPassword ? "text" : "password"}
-                className="px-5 flex-1 text-white font-medium py-3 bg-white/30 rounded-lg placeholder:text-white/80"
+                className="px-5 flex-1 min-w-0 text-white font-medium py-3 bg-white/30 rounded-lg placeholder:text-white/80"
                 {...register("password")}
               />
 
               <button
                 onClick={(_) => setShownPassword(!shownPassword)}
                 type="button"
-                className="h-full aspect-square bg-white/30 rounded-lg grid place-content-center"
+                className="h-11 w-11 bg-white/30 rounded-lg grid place-content-center flex-shrink-0"
               >
                 <Icon
                   icon={shownPassword ? "tabler:eye" : "tabler:eye-closed"}
@@ -162,7 +162,8 @@ function LoginForm() {
             type="submit"
             hierarchy="secondary"
             className="bg-white text-primary-900 mt-5"
-            loading={loading}
+            loading={isSubmitting || loading}
+            disabled={isSubmitting || loading}
           >
             Ingresar
           </Button>

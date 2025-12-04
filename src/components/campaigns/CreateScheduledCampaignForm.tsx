@@ -205,32 +205,33 @@ const CreateScheduledCampaignForm = () => {
         <div
           className={clsx(
             [
-              "pointer-events-auto sticky top-0 w-full shadow-md bg-white border border-stone-100 rounded-b-xl flex items-center justify-between px-5 py-4",
+              "pointer-events-auto sticky top-0 w-full shadow-md bg-white border border-stone-100 rounded-b-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 px-3 sm:px-4 md:px-5 py-3 sm:py-4",
             ],
             { "pointer-events-none": !floatingNavbarToggle }
           )}
         >
-          <h4 className="font-bold text-lg text-primary-900 flex items-center gap-2">
+          <h4 className="font-bold text-base sm:text-lg text-primary-900 flex items-center gap-2">
             <Button
               onClick={() => router.back()}
               hierarchy="tertiary"
               isIconOnly
+              className="flex-shrink-0"
             >
-              <Icon icon={"tabler:arrow-narrow-left"} className="text-2xl" />
+              <Icon icon={"tabler:arrow-narrow-left"} className="text-xl sm:text-2xl" />
             </Button>
-            Crear nueva campaña programada
+            <span className="truncate">Crear nueva campaña programada</span>
           </h4>
 
-          <div className="flex justify-end gap-4 items-center">
-            <Button className="w-fit" type="submit" loading={loading}>
+          <div className="flex justify-end gap-2 sm:gap-4 items-center flex-shrink-0">
+            <Button className="w-full sm:w-fit text-sm sm:text-base" type="submit" loading={loading}>
               Crear campaña programada
             </Button>
           </div>
         </div>
       </nav>
       {/* Name */}
-      <div className="rounded-xl border border-disabled p-10 py-6 flex flex-col items-stretch gap-1.5">
-        <h6 className="text-primary-900 font-normal text-lg">
+      <div className="rounded-xl border border-disabled p-4 sm:p-6 md:p-10 py-4 sm:py-5 md:py-6 flex flex-col items-stretch gap-1.5">
+        <h6 className="text-primary-900 font-normal text-base sm:text-lg">
           Nombre de la campaña
         </h6>
         <CustomInput
@@ -241,8 +242,8 @@ const CreateScheduledCampaignForm = () => {
       </div>
 
       {/* Goal */}
-      <div className="rounded-xl border border-disabled p-10 py-6 flex flex-col items-stretch gap-4">
-        <h6 className="text-primary-900 font-normal text-lg">
+      <div className="rounded-xl border border-disabled p-4 sm:p-6 md:p-10 py-4 sm:py-5 md:py-6 flex flex-col items-stretch gap-4">
+        <h6 className="text-primary-900 font-normal text-base sm:text-lg">
           Objetivo de la campaña
         </h6>
 
@@ -293,8 +294,8 @@ const CreateScheduledCampaignForm = () => {
       </div>
 
       {/* Scheduling - Fecha y hora específica */}
-      <div className="rounded-xl border border-disabled p-10 py-6 flex flex-col items-stretch gap-6">
-        <h6 className="text-primary-900 font-normal text-lg">Programación</h6>
+      <div className="rounded-xl border border-disabled p-4 sm:p-6 md:p-10 py-4 sm:py-5 md:py-6 flex flex-col items-stretch gap-4 sm:gap-5 md:gap-6">
+        <h6 className="text-primary-900 font-normal text-base sm:text-lg">Programación</h6>
 
         <CustomInput
           type="datetime-local"
@@ -314,15 +315,15 @@ const CreateScheduledCampaignForm = () => {
             return `${year}-${month}-${day}T${hours}:${minutes}`;
           })()}
         />
-        <span className="text-sm text-stone-500 flex items-center gap-2">
-          <Icon icon={"tabler:info-circle"} className="text-base" />
+        <span className="text-xs sm:text-sm text-stone-500 flex items-center gap-2">
+          <Icon icon={"tabler:info-circle"} className="text-sm sm:text-base flex-shrink-0" />
           La campaña debe programarse al menos 2 minutos en el futuro
         </span>
       </div>
 
       {/* DeliveryChannel - Solo SMS (EMAIL deshabilitado) */}
-      <div className="rounded-xl border border-disabled p-10 py-6 flex flex-col items-stretch gap-6">
-        <h6 className="text-primary-900 font-normal text-lg">
+      <div className="rounded-xl border border-disabled p-4 sm:p-6 md:p-10 py-4 sm:py-5 md:py-6 flex flex-col items-stretch gap-4 sm:gap-5 md:gap-6">
+        <h6 className="text-primary-900 font-normal text-base sm:text-lg">
           Ruta de envío
         </h6>
 
@@ -354,8 +355,8 @@ const CreateScheduledCampaignForm = () => {
       </div>
 
       {/* Source Form Ids */}
-      <div className="rounded-xl border border-disabled p-10 py-6 flex flex-col items-stretch gap-6">
-        <h6 className="text-primary-900 font-normal text-lg">
+      <div className="rounded-xl border border-disabled p-4 sm:p-6 md:p-10 py-4 sm:py-5 md:py-6 flex flex-col items-stretch gap-4 sm:gap-5 md:gap-6">
+        <h6 className="text-primary-900 font-normal text-base sm:text-lg">
           Selección de datos
         </h6>
 
@@ -374,7 +375,7 @@ const CreateScheduledCampaignForm = () => {
                 setError("sourceFormIds", { message: "" });
               }}
             />
-            <div className="w-fill grid grid-cols-[repeat(auto-fit,_minmax(120px,_30%))] gap-x-6 gap-y-4 justify-start">
+            <div className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[repeat(auto-fit,_minmax(120px,_30%))] gap-3 sm:gap-4 md:gap-x-6 md:gap-y-4 justify-start">
               {watch("sourceFormIds").map((formId) => {
                 const formData = collectForms.data?.find(
                   (form) => form._id === formId
@@ -384,15 +385,15 @@ const CreateScheduledCampaignForm = () => {
                   formData && (
                     <div
                       key={formId}
-                      className="flex flex-1 p-1.5 rounded-md gap-2 items-center justify-start text-primary-900 bg-primary-50"
+                      className="flex flex-1 p-2 sm:p-1.5 rounded-md gap-2 items-center justify-start text-primary-900 bg-primary-50"
                     >
                       <button
                         onClick={(_) => deleteSourceFormId(formId)}
-                        className="p-1 hover:bg-primary-900/10 rounded-md transition-colors"
+                        className="p-1 hover:bg-primary-900/10 rounded-md transition-colors flex-shrink-0"
                       >
-                        <Icon icon={"tabler:x"} className="text-lg" />
+                        <Icon icon={"tabler:x"} className="text-base sm:text-lg" />
                       </button>
-                      <p className="font-normal text-ellipsis">
+                      <p className="font-normal text-ellipsis text-sm sm:text-base truncate">
                         {formData.name}
                       </p>
                     </div>
@@ -409,15 +410,15 @@ const CreateScheduledCampaignForm = () => {
           </span>
         )}
 
-        <span className="text-sm w-fit flex gap-1 items-center py-1 px-2 bg-primary-500/10 rounded-lg text-primary-500">
-          <Icon icon={"tabler:info-circle"} className="text-lg" />
+        <span className="text-xs sm:text-sm w-fit flex gap-1 items-center py-1 px-2 bg-primary-500/10 rounded-lg text-primary-500">
+          <Icon icon={"tabler:info-circle"} className="text-base sm:text-lg flex-shrink-0" />
           La selección de cada formulario tiene un costo de 20 créditos.
         </span>
       </div>
 
       {/* Audience */}
-      <div className="rounded-xl border border-disabled p-10 py-6 flex flex-col items-stretch gap-6">
-        <h6 className="text-primary-900 font-normal text-lg">Audiencia</h6>
+      <div className="rounded-xl border border-disabled p-4 sm:p-6 md:p-10 py-4 sm:py-5 md:py-6 flex flex-col items-stretch gap-4 sm:gap-5 md:gap-6">
+        <h6 className="text-primary-900 font-normal text-base sm:text-lg">Audiencia</h6>
 
         <Controller
           name="audience.gender"
@@ -452,26 +453,30 @@ const CreateScheduledCampaignForm = () => {
           <p className="font-medium w-full pl-2 text-stone-500 text-sm">
             Edad
           </p>
-          <div className="flex gap-3 items-center">
-            <CustomInput
-              type="number"
-              className="flex-none"
-              {...register("audience.minAge")}
-              error={errors.audience?.minAge as FieldError}
-            />
-            <p className="font-normal text-stone-500">Hasta</p>
-            <CustomInput
-              type="number"
-              className="flex-none"
-              {...register("audience.maxAge")}
-              error={errors.audience?.maxAge as FieldError}
-            />
-            <p className="font-normal text-stone-500">
-              Personas en este rango
-            </p>
-            <p className="bg-primary-50 px-5 py-2 rounded-lg">
-              {watch("audience.count") ?? "--"}
-            </p>
+          <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+            <div className="flex items-center gap-2 sm:gap-3 flex-1 sm:flex-none">
+              <CustomInput
+                type="number"
+                className="flex-none w-20 sm:w-auto"
+                {...register("audience.minAge")}
+                error={errors.audience?.minAge as FieldError}
+              />
+              <p className="font-normal text-stone-500 text-sm sm:text-base whitespace-nowrap">Hasta</p>
+              <CustomInput
+                type="number"
+                className="flex-none w-20 sm:w-auto"
+                {...register("audience.maxAge")}
+                error={errors.audience?.maxAge as FieldError}
+              />
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <p className="font-normal text-stone-500 text-sm sm:text-base whitespace-nowrap">
+                Personas en este rango
+              </p>
+              <p className="bg-primary-50 px-3 sm:px-5 py-2 rounded-lg text-sm sm:text-base font-medium">
+                {watch("audience.count") ?? "--"}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -483,23 +488,23 @@ const CreateScheduledCampaignForm = () => {
       </div>
 
       {/* Credits */}
-      <div className="rounded-xl border border-disabled p-10 py-6 flex flex-col items-stretch">
-        <h6 className="text-primary-900 font-normal text-lg">
+      <div className="rounded-xl border border-disabled p-4 sm:p-6 md:p-10 py-4 sm:py-5 md:py-6 flex flex-col items-stretch">
+        <h6 className="text-primary-900 font-normal text-base sm:text-lg">
           Créditos de campaña
         </h6>
-        <p className="text-sm font-normal text-stone-500">
+        <p className="text-xs sm:text-sm font-normal text-stone-500">
           Creditos estimados en campaña en base a los formularios seleccionados
           y segmentación realizada.
         </p>
-        <p className="font-bold text-xl text-primary-900 mt-3">
+        <p className="font-bold text-lg sm:text-xl text-primary-900 mt-3">
           {pricePerSMS.data && watch("audience.count")
             ? `${
                 (pricePerSMS.data.value as number) * watch("audience.count")
               } Créditos`
             : "..."}
         </p>
-        <span className="text-sm w-fit flex gap-1 items-start py-1 px-2 bg-primary-500/10 rounded-lg text-primary-500 mt-3 -ml-1">
-          <Icon icon={"tabler:info-circle"} className="text-lg mt-0.5" />
+        <span className="text-xs sm:text-sm w-fit flex gap-1 items-start py-1 px-2 bg-primary-500/10 rounded-lg text-primary-500 mt-3 -ml-1">
+          <Icon icon={"tabler:info-circle"} className="text-base sm:text-lg mt-0.5 flex-shrink-0" />
           Este número puede diferir de la cantidad de créditos final de la
           campaña ya que solo consumes créditos si la campaña llega al
           destinatario.
@@ -507,8 +512,8 @@ const CreateScheduledCampaignForm = () => {
       </div>
 
       {/* Content */}
-      <div className="rounded-xl border border-disabled p-10 py-6 flex flex-col items-stretch gap-6">
-        <h6 className="text-primary-900 font-normal text-lg">
+      <div className="rounded-xl border border-disabled p-4 sm:p-6 md:p-10 py-4 sm:py-5 md:py-6 flex flex-col items-stretch gap-4 sm:gap-5 md:gap-6">
+        <h6 className="text-primary-900 font-normal text-base sm:text-lg">
           Contenido del anuncio
         </h6>
 
@@ -535,8 +540,8 @@ const CreateScheduledCampaignForm = () => {
         />
       </div>
 
-      <div className="p-4">
-        <Button type="submit" className="w-full" loading={loading}>
+      <div className="p-2 sm:p-3 md:p-4">
+        <Button type="submit" className="w-full text-sm sm:text-base" loading={loading}>
           Crear campaña programada
         </Button>
       </div>

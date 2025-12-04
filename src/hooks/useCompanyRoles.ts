@@ -1,27 +1,31 @@
-import { fetchCollectForms } from "@/lib/collectForm.api";
-import { fetchCompanyAreas } from "@/lib/companyArea.api";
 import { fetchCompanyRoles } from "@/lib/companyRole.api";
-import { fetchCompanyUsers } from "@/lib/user.api";
 import { QueryParams } from "@/types/api.types";
-import { CollectForm } from "@/types/collectForm.types";
-import { CompanyArea } from "@/types/companyArea.types";
 import { CompanyRole } from "@/types/companyRole.types";
-import { SessionUser } from "@/types/user.types";
 import { parseApiError } from "@/utils/parseApiError";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { toast } from "sonner";
 
 export function useCompanyRoles<T = CompanyRole[]>(params: QueryParams) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const paramsRef = useRef(params);
+
+  useEffect(() => {
+    paramsRef.current = params;
+  }, [params]);
 
   const fetch = useCallback(async () => {
+    const currentParams = paramsRef.current;
+    if (!currentParams.companyId) return;
+
     setLoading(true);
-    const fetchedData = await fetchCompanyRoles(params);
+    setError(null);
+    
+    const fetchedData = await fetchCompanyRoles(currentParams);
 
     if (fetchedData.error) {
-      let parsedError = parseApiError(fetchedData.error);
+      const parsedError = parseApiError(fetchedData.error);
       setError(parsedError);
       setLoading(false);
       toast.error(parsedError);
@@ -30,7 +34,7 @@ export function useCompanyRoles<T = CompanyRole[]>(params: QueryParams) {
 
     setLoading(false);
     setData(fetchedData.data);
-  }, [params]);
+  }, []);
 
   useEffect(() => {
     if (!params.companyId) return;

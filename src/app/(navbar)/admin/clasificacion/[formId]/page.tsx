@@ -29,21 +29,20 @@ export default function FormClassificationPage() {
       />
 
       {/* Content */}
-      <div className="px-8 py-6 flex flex-col gap-6 flex-1">
-        <header className="w-full flex gap-2 justify-between items-center">
-          <Button href="/admin/clasificacion" hierarchy="tertiary" isIconOnly>
-            <Icon icon={"tabler:arrow-narrow-left"} className="text-2xl" />
+      <div className="px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-5 md:py-6 flex flex-col gap-4 sm:gap-5 md:gap-6 flex-1 min-h-0">
+        <header className="w-full flex gap-3 sm:gap-4 items-center flex-shrink-0">
+          <Button href="/admin/clasificacion" hierarchy="tertiary" isIconOnly className="flex-shrink-0">
+            <Icon icon={"tabler:arrow-narrow-left"} className="text-xl sm:text-2xl" />
           </Button>
-          <h4 className="font-semibold text-xl text-primary-900">
+          <h4 className="font-semibold text-base sm:text-lg md:text-xl text-primary-900 leading-tight">
             Reporte total de usuarios de{" "}
             <Link
-              className="underline"
+              className="underline break-words"
               href={`/admin/recoleccion/${data?._id}`}
             >
-              {data?.name}
+              {data?.name || "..."}
             </Link>
           </h4>
-          <span />
         </header>
 
         {/* Forms Table */}

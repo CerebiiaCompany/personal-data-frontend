@@ -46,108 +46,115 @@ const CompanyUsersTable = ({
       {loading && <LoadingCover />}
 
       {items && (
-        <table className="w-full table-fixed border-separate border-spacing-y-2">
-          <thead>
-            <tr>
-              <th
-                scope="col"
-                className="text-center font-medium text-stone-600 text-xs py-2 px-3 w-1/6"
-              >
-                Nombre
-              </th>
-              <th
-                scope="col"
-                className="text-center font-medium text-stone-600 text-xs py-2 px-3 w-1/6"
-              >
-                Área
-              </th>
-              <th
-                scope="col"
-                className="text-center font-medium text-stone-600 text-xs py-2 px-3 w-1/6"
-              >
-                Cargo
-              </th>
-              <th
-                scope="col"
-                className="text-center font-medium text-stone-600 text-xs py-2 px-3 w-1/6"
-              >
-                Correo
-              </th>
-              <th
-                scope="col"
-                className="text-center font-medium text-stone-600 text-xs py-2 px-3 w-1/6"
-              >
-                Teléfono
-              </th>
-              {editActions && (
+        <div className="w-full overflow-x-auto">
+          <table className="w-full min-w-[600px] table-auto border-separate border-spacing-y-2">
+            <thead className="sticky top-0 bg-white z-10">
+              <tr>
                 <th
                   scope="col"
-                  className="text-center font-medium text-stone-600 text-xs py-2 px-3 w-1/6"
+                  className="text-center font-medium text-stone-600 text-xs py-2 px-2 sm:px-3 whitespace-nowrap min-w-[120px]"
                 >
-                  Acciones
+                  Nombre
                 </th>
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {[...items].map((item) => (
-              <tr key={item._id} className="align-middle text-center">
-                <td className="py-3 px-4 bg-primary-50 font-medium text-ellipsis rounded-l-xl">
-                  {item.name} {item.lastName}
-                </td>
-                <td className="py-3 px-4 bg-primary-50 font-medium text-ellipsis">
-                  {item.companyUserData?.companyArea
-                    ? item.companyUserData?.companyArea.name
-                    : "Ninguna"}
-                </td>
-                <td className="py-3 px-4 bg-primary-50 font-medium text-ellipsis">
-                  {item.companyUserData?.companyRole
-                    ? item.companyUserData?.companyRole.position
-                    : "Ninguno"}
-                </td>
-                <td className="py-3 px-4 bg-primary-50 font-medium text-ellipsis">
-                  {item.companyUserData?.personalEmail}
-                </td>
-                <td className="py-3 px-4 bg-primary-50 font-medium text-ellipsis">
-                  {item.companyUserData?.phone}
-                </td>
+                <th
+                  scope="col"
+                  className="text-center font-medium text-stone-600 text-xs py-2 px-2 sm:px-3 whitespace-nowrap min-w-[100px]"
+                >
+                  Área
+                </th>
+                <th
+                  scope="col"
+                  className="text-center font-medium text-stone-600 text-xs py-2 px-2 sm:px-3 whitespace-nowrap min-w-[100px]"
+                >
+                  Cargo
+                </th>
+                <th
+                  scope="col"
+                  className="text-center font-medium text-stone-600 text-xs py-2 px-2 sm:px-3 whitespace-nowrap min-w-[150px]"
+                >
+                  Correo
+                </th>
+                <th
+                  scope="col"
+                  className="text-center font-medium text-stone-600 text-xs py-2 px-2 sm:px-3 whitespace-nowrap min-w-[120px]"
+                >
+                  Teléfono
+                </th>
                 {editActions && (
-                  <td className="py-3 px-4 bg-primary-50 font-medium text-ellipsis rounded-r-xl">
-                    <div className="flex items-center justify-center gap-1.5 h-full">
-                      {item._id !== user?._id ? (
-                        <>
-                          <Link
-                            href={`/admin/administracion/usuarios/${item._id}`}
-                            className="h-full rounded-lg hover:bg-primary-900/10 transition-colors p-1.5 aspect-square"
-                          >
-                            <Icon
-                              icon="material-symbols:edit-outline"
-                              className="text-2xl"
-                            />
-                          </Link>
-                          <button
-                            onClick={() => deleteUser(item._id)}
-                            className="h-full rounded-lg hover:bg-red-400/10 transition-colors p-1.5 aspect-square"
-                          >
-                            <Icon
-                              icon="bx:trash"
-                              className="text-2xl text-red-400"
-                            />
-                          </button>
-                        </>
-                      ) : (
-                        <p>(Tú)</p>
-                      )}
-                    </div>
-                  </td>
+                  <th
+                    scope="col"
+                    className="text-center font-medium text-stone-600 text-xs py-2 px-2 sm:px-3 whitespace-nowrap min-w-[100px]"
+                  >
+                    Acciones
+                  </th>
                 )}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {[...items].map((item) => (
+                <tr key={item._id} className="align-middle text-center">
+                  <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm rounded-l-xl whitespace-nowrap">
+                    {item.name} {item.lastName}
+                  </td>
+                  <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm truncate max-w-[120px]">
+                    {item.companyUserData?.companyArea
+                      ? item.companyUserData?.companyArea.name
+                      : "Ninguna"}
+                  </td>
+                  <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm truncate max-w-[120px]">
+                    {item.companyUserData?.companyRole
+                      ? item.companyUserData?.companyRole.position
+                      : "Ninguno"}
+                  </td>
+                  <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm truncate max-w-[180px]">
+                    {item.companyUserData?.personalEmail}
+                  </td>
+                  <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm whitespace-nowrap">
+                    {item.companyUserData?.phone}
+                  </td>
+                  {editActions && (
+                    <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm rounded-r-xl whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-1 sm:gap-1.5 h-full">
+                        {item._id !== user?._id ? (
+                          <>
+                            <Link
+                              href={`/admin/administracion/usuarios/${item._id}`}
+                              className="h-full rounded-lg hover:bg-primary-900/10 transition-colors p-1 sm:p-1.5 aspect-square"
+                            >
+                              <Icon
+                                icon="material-symbols:edit-outline"
+                                className="text-lg sm:text-xl"
+                              />
+                            </Link>
+                            <button
+                              onClick={() => deleteUser(item._id)}
+                              className="h-full rounded-lg hover:bg-red-400/10 transition-colors p-1 sm:p-1.5 aspect-square"
+                              aria-label="Eliminar usuario"
+                            >
+                              <Icon
+                                icon="bx:trash"
+                                className="text-lg sm:text-xl text-red-400"
+                              />
+                            </button>
+                          </>
+                        ) : (
+                          <p className="text-xs sm:text-sm">(Tú)</p>
+                        )}
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
-      {error && <p>Error: {error}</p>}
+      {error && (
+        <div className="flex flex-col items-center justify-center py-8 px-4">
+          <p className="text-center text-red-500 text-sm sm:text-base">Error: {error}</p>
+        </div>
+      )}
     </div>
   );
 };

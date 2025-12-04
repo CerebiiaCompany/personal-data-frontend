@@ -1,7 +1,6 @@
 import clsx from "clsx";
 import Link from "next/link";
 import React, { JSX } from "react";
-import LoadingCover from "../layout/LoadingCover";
 
 interface Props {
   children: React.ReactNode;
@@ -31,7 +30,7 @@ const Button = ({
   disabled = false,
 }: Props) => {
   const baseClassName = clsx([
-    "px-3 py-2 rounded-lg flex items-center text-center justify-center gap-2 font-sans font-semibold transition-all hover:brightness-90",
+    "px-3 py-2 rounded-lg flex items-center text-center justify-center gap-2 font-sans font-semibold transition-all",
     {
       "text-white bg-primary-900 border border-primary-900":
         hierarchy === "primary",
@@ -41,7 +40,11 @@ const Button = ({
     }, //? for secondary buttons
     { "": hierarchy === "tertiary" }, //? for tertiary buttons
     { "w-fit rounded-full! p-2!": isIconOnly },
-    { "pointer-events-none opacity-40": disabled },
+    {
+      "hover:brightness-90":
+        !disabled && !loading && hierarchy !== "tertiary",
+    },
+    { "pointer-events-none opacity-40 cursor-not-allowed": disabled || loading },
     customClassName,
   ]);
 
@@ -53,23 +56,19 @@ const Button = ({
     </Link>
   ) : (
     <button
-      disabled={disabled}
+      disabled={disabled || loading}
       type={type}
       onClick={onClick}
       className={baseClassName}
     >
       {startContent}
-      <div className="flex-1 h-fit relative">
-        {loading && <LoadingCover size="sm" />}
-        <div
-          className={clsx([
-            "transition-opacity w-full h-full",
-            { "opacity-0": loading },
-          ])}
-        >
-          {children}
+      {loading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <span className="inline-block h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
         </div>
-      </div>
+      ) : (
+        <div className="flex-1 h-fit">{children}</div>
+      )}
       {endContent}
     </button>
   );

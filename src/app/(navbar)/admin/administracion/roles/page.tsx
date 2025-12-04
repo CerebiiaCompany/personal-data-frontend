@@ -18,14 +18,15 @@ export default function AdministrationRolesPage() {
   });
 
   return (
-    <div className="w-full p-4 rounded-md border border-disabled">
-      <header className="w-full flex gap-2 justify-between items-center">
-        <h4 className="font-semibold text-xl text-primary-900">Roles</h4>
-        <div className="flex gap-2">
+    <div className="w-full p-3 sm:p-4 md:p-5 rounded-md border border-disabled">
+      <header className="w-full flex flex-col sm:flex-row gap-3 sm:gap-2 sm:justify-between sm:items-center">
+        <h4 className="font-semibold text-lg sm:text-xl text-primary-900 text-center sm:text-left">Roles</h4>
+        <div className="flex gap-2 justify-center sm:justify-end">
           <Button
             href="/admin/administracion/roles/crear"
+            className="w-full sm:w-auto text-sm sm:text-base"
             endContent={
-              <Icon icon={"fluent:tag-add-16-regular"} className="text-xl" />
+              <Icon icon={"fluent:tag-add-16-regular"} className="text-lg sm:text-xl" />
             }
           >
             Crear Rol
