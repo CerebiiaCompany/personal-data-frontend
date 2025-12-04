@@ -5,10 +5,12 @@ import Dropdown from "@/components/base/Dropdown";
 import DashboardChartCard from "@/components/dashboard/DashboardChartCard";
 import HorizontalBarChart from "@/components/dashboard/HorizontalBarChart";
 import UserActionLogsTable from "@/components/dashboard/UserActionLogsTable";
+import CompanyCreditsCard from "@/components/dashboard/CompanyCreditsCard";
 import CustomSelect from "@/components/forms/CustomSelect";
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { useCollectFormClasifications } from "@/hooks/useCollectFormClasifications";
 import { useCompanyActionLogs } from "@/hooks/useCompanyActionLogs";
+import { useCompanyCredits } from "@/hooks/useCompanyCredits";
 import { useSessionStore } from "@/store/useSessionStore";
 import { CustomSelectOption } from "@/types/forms.types";
 import { getMonthRange, MONTH_KEY, monthsOptions } from "@/types/months.types";
@@ -46,6 +48,8 @@ export default function Home() {
     endDate: dateRange.endDate.toISOString(),
     pageSize: 3,
   });
+
+  const companyCredits = useCompanyCredits();
 
   useEffect(() => {
     const range = getMonthRange(month);
@@ -113,6 +117,16 @@ export default function Home() {
           </div>
         </div>
       </header>
+      
+      {/* Créditos del mes actual */}
+      <div className="w-full">
+        <CompanyCreditsCard
+          data={companyCredits.data}
+          loading={companyCredits.loading}
+          error={companyCredits.error}
+        />
+      </div>
+
       <div className="w-full flex-1 h-0 overflow-auto gap-x-5 gap-y-4 grid grid-cols-2 grid-rows-2">
         <DashboardChartCard
           title="Proceso de Campañas Activas"

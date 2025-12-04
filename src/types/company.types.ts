@@ -23,3 +23,10 @@ export interface Company extends CreateCompany {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface CompanyCreditsCurrentMonth {
+  creditsUsed: number;
+  month: number;
+  year: number;
+  period: string;
+}

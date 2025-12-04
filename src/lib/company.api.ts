@@ -1,5 +1,5 @@
 import { APIResponse, QueryParams } from "@/types/api.types";
-import { CreateCompany, PlanStatus } from "@/types/company.types";
+import { CreateCompany, CompanyCreditsCurrentMonth, PlanStatus } from "@/types/company.types";
 import { customFetch } from "@/utils/customFetch";
 
 export async function fetchOwnCompany(): Promise<APIResponse> {
@@ -42,6 +42,14 @@ export async function updateCompanyPlan(
     method: "PATCH",
     body: JSON.stringify(data),
   });
+
+  return res;
+}
+
+export async function fetchCompanyCreditsCurrentMonth(): Promise<
+  APIResponse<CompanyCreditsCurrentMonth>
+> {
+  const res = await customFetch<CompanyCreditsCurrentMonth>(`/companies/credits/current-month`);
 
   return res;
 }
