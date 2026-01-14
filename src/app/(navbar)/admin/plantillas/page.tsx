@@ -7,13 +7,16 @@ import CustomCheckbox from "@/components/forms/CustomCheckbox";
 import LoadingCover from "@/components/layout/LoadingCover";
 import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import { usePolicyTemplates } from "@/hooks/usePolicyTemplates";
+import { deletePolicyTemplate } from "@/lib/policyTemplate.api";
 import { getPresignedUrl } from "@/lib/server/getPresignedUrl";
 import { FORMS_MOCK_DATA } from "@/mock/formMock";
 import { TEMPLATES_MOCK_DATA } from "@/mock/templatesMock";
 import { useSessionStore } from "@/store/useSessionStore";
 import { formatDateToString } from "@/utils/date.utils";
+import { parseApiError } from "@/utils/parseApiError";
 import { showDialog } from "@/utils/dialogs.utils";
 import { Icon } from "@iconify/react";
+import { toast } from "sonner";
 
 export default function TemplatesPage() {
   const user = useSessionStore((store) => store.user);
@@ -34,6 +37,20 @@ export default function TemplatesPage() {
 
     a.click();
     a.remove();
+  }
+
+  async function deleteTemplate(policyId: string) {
+    const companyId = user?.companyUserData?.companyId;
+    if (!companyId) return;
+
+    const res = await deletePolicyTemplate(companyId, policyId);
+
+    if (res.error) {
+      return toast.error(parseApiError(res.error));
+    }
+
+    toast.success("Plantilla eliminada");
+    refresh();
   }
 
   return (
@@ -110,6 +127,16 @@ export default function TemplatesPage() {
                         hierarchy="secondary"
                       >
                         Descargar
+                      </Button>
+                      <Button
+                        onClick={(_) => deleteTemplate(policyTemplate._id)}
+                        className="bg-red-400/20 border-red-400 p-2 sm:p-3 flex-shrink-0"
+                        aria-label="Eliminar plantilla"
+                      >
+                        <Icon
+                          icon="bx:trash"
+                          className="text-lg sm:text-xl text-red-400"
+                        />
                       </Button>
                     </div>
                   </div>
