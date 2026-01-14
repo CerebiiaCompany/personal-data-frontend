@@ -25,3 +25,17 @@ export async function createCompanyPolicyTemplate(
 
   return res;
 }
+
+export async function deletePolicyTemplate(
+  companyId: string,
+  policyId: string
+): Promise<APIResponse> {
+  const res = await customFetch(
+    `/companies/${companyId}/policyTemplates/${policyId}`,
+    {
+      method: "DELETE",
+    }
+  );
+
+  return res;
+}
