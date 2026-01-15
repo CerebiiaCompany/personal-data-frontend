@@ -30,6 +30,7 @@ export interface QueryParams {
   campaignId?: string;
   search?: string;
   role?: UserRole;
+  expiresIn?: string | number; // Para parámetros de query como expiresIn
 
   //for date range filtering
   startDate?: string;

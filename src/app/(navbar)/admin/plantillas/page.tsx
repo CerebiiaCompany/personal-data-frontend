@@ -8,7 +8,7 @@ import LoadingCover from "@/components/layout/LoadingCover";
 import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import { usePolicyTemplates } from "@/hooks/usePolicyTemplates";
 import { deletePolicyTemplate } from "@/lib/policyTemplate.api";
-import { getPresignedUrl } from "@/lib/server/getPresignedUrl";
+import { getPolicyTemplateFileUrl } from "@/lib/policyTemplate.api";
 import { FORMS_MOCK_DATA } from "@/mock/formMock";
 import { TEMPLATES_MOCK_DATA } from "@/mock/templatesMock";
 import { useSessionStore } from "@/store/useSessionStore";
@@ -24,19 +24,39 @@ export default function TemplatesPage() {
     companyId: user?.companyUserData?.companyId,
   });
 
-  async function viewInWeb(fileKey: string, download?: string) {
-    const presignedUrl = await getPresignedUrl(fileKey, download);
-    const a = document.createElement("a");
-    a.href = presignedUrl;
-    if (download) {
-      a.download = download;
-      a.removeAttribute("target");
-    } else {
-      a.target = "_blank";
+  async function viewInWeb(policyTemplateId: string, download?: string) {
+    const companyId = user?.companyUserData?.companyId;
+    if (!companyId) {
+      toast.error("No se pudo obtener la información de la compañía");
+      return;
     }
 
-    a.click();
-    a.remove();
+    try {
+      const res = await getPolicyTemplateFileUrl(companyId, policyTemplateId);
+
+      if (res.error) {
+        return toast.error(parseApiError(res.error));
+      }
+
+      if (!res.data?.url) {
+        return toast.error("Error al obtener la URL del archivo");
+      }
+
+      const a = document.createElement("a");
+      a.href = res.data.url;
+      if (download) {
+        a.download = download;
+        a.removeAttribute("target");
+      } else {
+        a.target = "_blank";
+      }
+
+      a.click();
+      a.remove();
+    } catch (error) {
+      toast.error("Error al obtener la URL del archivo");
+      console.error(error);
+    }
   }
 
   async function deleteTemplate(policyId: string) {
@@ -106,7 +126,7 @@ export default function TemplatesPage() {
                     {/* Action buttons */}
                     <div className="w-full mt-4 sm:mt-7 items-stretch sm:items-center gap-2 sm:gap-3 md:gap-4 justify-between flex flex-col sm:flex-row flex-1 h-full">
                       <Button
-                        onClick={(_) => viewInWeb(policyTemplate.file.key)}
+                        onClick={(_) => viewInWeb(policyTemplate._id)}
                         className="text-xs sm:text-sm flex-1 w-full sm:w-auto"
                         hierarchy="secondary"
                       >
@@ -115,7 +135,7 @@ export default function TemplatesPage() {
                       <Button
                         onClick={(_) =>
                           viewInWeb(
-                            policyTemplate.file.key,
+                            policyTemplate._id,
                             `${
                               policyTemplate.name
                             }.${policyTemplate.file.originalName

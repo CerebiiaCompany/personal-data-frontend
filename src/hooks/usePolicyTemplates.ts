@@ -32,7 +32,8 @@ export function usePolicyTemplates<T = PolicyTemplate[]>(params: QueryParams) {
     if (!params.companyId) return;
 
     fetch();
-  }, [params.companyId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.companyId, params.page, params.pageSize]);
 
   return {
     data,

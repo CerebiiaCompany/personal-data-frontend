@@ -39,3 +39,38 @@ export async function deletePolicyTemplate(
 
   return res;
 }
+
+export interface PolicyTemplateFileUrlResponse {
+  url: string;
+  expiresIn: number;
+  file: {
+    id: string;
+    originalName: string;
+    contentType: string;
+    size: number;
+  };
+  policyTemplate: {
+    id: string;
+    name: string;
+  };
+}
+
+/**
+ * Obtiene una presigned URL para ver el archivo de una plantilla de política
+ */
+export async function getPolicyTemplateFileUrl(
+  companyId: string,
+  policyTemplateId: string,
+  expiresIn?: number
+): Promise<APIResponse<PolicyTemplateFileUrlResponse>> {
+  const queryParams = expiresIn ? { expiresIn: expiresIn.toString() } : undefined;
+  const res = await customFetch<PolicyTemplateFileUrlResponse>(
+    `/companies/${companyId}/policyTemplates/${policyTemplateId}/file/url`,
+    {
+      method: "GET",
+    },
+    queryParams
+  );
+
+  return res;
+}

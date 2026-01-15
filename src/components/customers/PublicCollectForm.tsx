@@ -24,7 +24,7 @@ import { showDialog } from "@/utils/dialogs.utils";
 import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import { generateOtpCode, validateOtpCode, resendOtpCodeByEmail } from "@/lib/oneTimeCode.api";
-import { getPresignedUrl } from "@/lib/server/getPresignedUrl";
+import { getPolicyTemplateFileUrl } from "@/lib/policyTemplate.api";
 import LoadingCover from "../layout/LoadingCover";
 
 interface Props {
@@ -420,21 +420,38 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
   }, [otpCountdown]);
 
   useEffect(() => {
-    // Obtener la URL del archivo de la plantilla de política
+    // Obtener la URL del archivo de la plantilla de política usando el nuevo endpoint
     const fetchPolicyUrl = async () => {
-      if (data.policyTemplateFile?.key) {
-        try {
-          const presignedUrl = await getPresignedUrl(
-            data.policyTemplateFile.key,
-            data.policyTemplateFile.originalName
-          );
-          setPolicyUrl(presignedUrl);
-        } catch (error) {
-          console.error("Error al obtener URL de la política:", error);
-          toast.error("No se pudo cargar la política de tratamiento de datos");
+      if (!data?.policyTemplateId || !data?.companyId) {
+        console.warn("El formulario no tiene una plantilla de política asignada", {
+          hasPolicyTemplateId: !!data?.policyTemplateId,
+          hasCompanyId: !!data?.companyId,
+        });
+        return;
+      }
+
+      try {
+        const res = await getPolicyTemplateFileUrl(
+          data.companyId,
+          data.policyTemplateId
+        );
+
+        if (res.error) {
+          console.error("Error al obtener URL de la política:", res.error);
+          toast.error(parseApiError(res.error));
+          return;
         }
-      } else {
-        console.warn("El formulario no tiene un archivo de política asignado");
+
+        if (!res.data?.url) {
+          console.error("No se recibió URL en la respuesta:", res);
+          toast.error("Error al obtener la URL del archivo");
+          return;
+        }
+
+        setPolicyUrl(res.data.url);
+      } catch (error) {
+        console.error("Error al obtener URL de la política:", error);
+        toast.error("Error al obtener la URL del archivo");
       }
     };
 

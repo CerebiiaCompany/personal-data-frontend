@@ -15,12 +15,7 @@ import { useSessionStore } from "@/store/useSessionStore";
 import { toast } from "sonner";
 import CustomInput from "../forms/CustomInput";
 import { useState } from "react";
-import {
-  createUploadIntent,
-  finalizeUpload,
-  uploadWithPresignedUrl,
-} from "@/lib/uploadToS3";
-import { createCompanyFile } from "@/lib/file.api";
+import { uploadFile } from "@/lib/upload.api";
 import { parseApiError } from "@/utils/parseApiError";
 import { createCompanyPolicyTemplate } from "@/lib/policyTemplate.api";
 import LoadingCover from "../layout/LoadingCover";
@@ -74,6 +69,7 @@ const UploadTemplateDialog = ({ refresh }: Props) => {
     const companyId = user?.companyUserData?.companyId;
     if (!companyId) {
       console.error("❌ No companyId found");
+      toast.error("No se pudo obtener la información de la compañía");
       return;
     }
 
@@ -86,74 +82,59 @@ const UploadTemplateDialog = ({ refresh }: Props) => {
 
     try {
       setLoading(true);
-      const filePromise = new Promise<{ key: string }>((res, rej) => {
-        createUploadIntent({
-          mimeType: file.type || "application/octet-stream",
-          size: file.size,
-          purpose: "company-templates",
-        })
-          .then((intent) => {
-            uploadWithPresignedUrl(intent.url, file)
-              .then((_) => {
-                finalizeUpload({
-                  key: intent.key,
-                  expectedMime: file.type.split("/")[0],
-                }).then((e) => res({ key: intent.key }));
-              })
-              .catch((error) => {
-                setLoading(false);
-                rej(error);
-              });
-          })
-          .catch((error) => {
-            setLoading(false);
-            rej(error);
-          });
-      });
-
-      toast.promise(filePromise, {
-        loading: "Subiendo archivo...",
-        success: "Plantilla subida",
-        error: "Error al subir la plantilla",
-      });
-
-      const intent = await filePromise;
-
-      //? send file data to api to create File Model
-      const fileRes = await createCompanyFile(companyId, {
-        key: intent.key,
-        contentType: file.type, //? mimetype
+      console.log("🔄 Iniciando proceso de subida...");
+      console.log("📁 Archivo:", {
+        name: file.name,
         size: file.size,
-        originalName: file.name,
+        type: file.type,
       });
 
-      if (fileRes.error) {
+      // 1. Subir archivo directamente al backend (el backend maneja S3)
+      console.log("📤 Subiendo archivo al backend...");
+      const uploadRes = await uploadFile(companyId, file, "templates");
+
+      console.log("📥 Respuesta del upload:", uploadRes);
+
+      if (uploadRes.error) {
         setLoading(false);
-        return toast.error(parseApiError(fileRes.error));
+        const errorMessage = parseApiError(uploadRes.error);
+        console.error("❌ Error al subir archivo:", uploadRes.error);
+        return toast.error(errorMessage || "Error al subir el archivo");
       }
 
-      toast.success("Modelo de archivo creado");
+      const fileData = uploadRes.data;
+      if (!fileData) {
+        setLoading(false);
+        console.error("❌ No se recibió data en la respuesta del upload");
+        return toast.error("Error al subir el archivo: no se recibieron datos");
+      }
 
-      //? send template data to api to create PolicyTemplate
+      console.log("✅ Archivo subido correctamente:", fileData);
+
+      // 2. Crear la plantilla de política vinculada al archivo
+      console.log("📝 Creando plantilla de política...");
       const policyTemplateRes = await createCompanyPolicyTemplate(companyId, {
-        fileId: fileRes.data.id,
+        fileId: fileData.id,
         name: data.name,
       });
+
+      console.log("📥 Respuesta de createCompanyPolicyTemplate:", policyTemplateRes);
 
       if (policyTemplateRes.error) {
         setLoading(false);
         return toast.error(parseApiError(policyTemplateRes.error));
       }
 
+      console.log("✅ Plantilla creada exitosamente");
       toast.success("Plantilla de política creada");
       setLoading(false);
       refresh();
       reset();
       hideDialog(id);
-
-      // Now send `intent.key` as part of your real "create" flow, e.g. POST /api/things { fileKey: intent.key, ... }
     } catch (error: any) {
-      console.error(error);
+      console.error("❌ Error general en onSubmit:", error);
+      setLoading(false);
+      toast.error("Error inesperado: " + (error?.message || "Error desconocido"));
     }
   }
 
@@ -189,9 +170,24 @@ const UploadTemplateDialog = ({ refresh }: Props) => {
           {/* Modal body */}
           <form
             onSubmit={(e) => {
+              e.preventDefault();
               console.log("📋 Form submit event triggered");
-              console.log("📋 Errors:", errors);
-              handleSubmit(onSubmit)(e);
+              console.log("📋 Current form values:", watch());
+              console.log("📋 Form errors:", errors);
+              console.log("📋 Form validation state:", {
+                isValid: Object.keys(errors).length === 0,
+                errorsCount: Object.keys(errors).length,
+              });
+              handleSubmit(
+                (data) => {
+                  console.log("✅ Form validation passed, calling onSubmit");
+                  onSubmit(data);
+                },
+                (validationErrors) => {
+                  console.error("❌ Form validation failed:", validationErrors);
+                  toast.error("Por favor completa todos los campos correctamente");
+                }
+              )(e);
             }}
             className="flex flex-col gap-6"
           >

@@ -9,6 +9,7 @@ export interface CustomFile extends CreateCustomFile {
   _id: string;
   companyId: string;
   uploadedBy?: string;
+  url?: string; // URL pública del archivo en S3 (puede venir en respuestas del backend)
   createdAt: Date;
   updatedAt: Date;
 }
