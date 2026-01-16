@@ -1,6 +1,12 @@
 import { APIResponse, QueryParams } from "@/types/api.types";
-import { CreateCompany, CompanyCreditsCurrentMonth, PlanStatus } from "@/types/company.types";
+import {
+  CreateCompany,
+  CompanyCreditsCurrentMonth,
+  CompanyCreditsPricing,
+  PlanStatus,
+} from "@/types/company.types";
 import { customFetch } from "@/utils/customFetch";
+import { API_BASE_URL } from "@/utils/env.utils";
 
 export async function fetchOwnCompany(): Promise<APIResponse> {
   const res = await customFetch(`/companies/own`);
@@ -46,10 +52,53 @@ export async function updateCompanyPlan(
   return res;
 }
 
-export async function fetchCompanyCreditsCurrentMonth(): Promise<
-  APIResponse<CompanyCreditsCurrentMonth>
-> {
-  const res = await customFetch<CompanyCreditsCurrentMonth>(`/companies/credits/current-month`);
+export async function fetchCompanyCreditsByMonth(params: {
+  year: number;
+  month: number;
+}): Promise<APIResponse<CompanyCreditsCurrentMonth>> {
+  const res = await customFetch<CompanyCreditsCurrentMonth>(
+    `/companies/credits/by-month`,
+    {},
+    {
+      year: params.year,
+      month: params.month,
+    }
+  );
 
   return res;
+}
+
+// Nota: usamos fetch directo (no customFetch) para evitar redirecciones automáticas
+// en pantallas públicas (p.ej. /formularios/:id). Si falla, simplemente no mostramos tarifas.
+export async function fetchCompanyCreditsPricing(): Promise<
+  APIResponse<CompanyCreditsPricing>
+> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/companies/credits/pricing`, {
+      method: "GET",
+      credentials: "include",
+    });
+
+    const body = (await response.json()) as APIResponse<CompanyCreditsPricing>;
+
+    if (!response.ok) {
+      return {
+        error:
+          body.error ??
+          ({
+            code: "http/unknown-error",
+            message: "Error al consultar tarifas de créditos",
+          } as any),
+      };
+    }
+
+    return body;
+  } catch (error: any) {
+    return {
+      error: {
+        code: "http/unknown-error",
+        message: error?.message || "Error desconocido",
+      } as any,
+    };
+  }
 }

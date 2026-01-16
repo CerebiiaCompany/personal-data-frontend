@@ -17,13 +17,30 @@ import { getMonthRange, MONTH_KEY, monthsOptions } from "@/types/months.types";
 import { formatDateToString } from "@/utils/date.utils";
 import { Icon } from "@iconify/react";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 export default function Home() {
-const currentMonth = useMemo(() => monthsOptions[new Date().getMonth()], []);
+const currentDate = useMemo(() => new Date(), []);
+const currentYear = useMemo(() => currentDate.getFullYear(), [currentDate]);
+const currentMonth = useMemo(() => monthsOptions[currentDate.getMonth()], [currentDate]);
 
+const [year, setYear] = useState<string>(String(currentYear));
 const [month, setMonth] = useState<MONTH_KEY>(currentMonth.value);
-    const [dateRange, setDateRange] = useState<{ startDate: Date; endDate: Date; }>(getMonthRange(month));
+
+const yearOptions = useMemo<CustomSelectOption<string>[]>(() => {
+  const options: CustomSelectOption<string>[] = [];
+  // (año actual + 1) ... (año actual - 5)
+  for (let y = currentYear + 1; y >= currentYear - 5; y--) {
+    options.push({ title: String(y), value: String(y) });
+  }
+  return options;
+}, [currentYear]);
+
+const yearNumber = useMemo(() => Number(year), [year]);
+const dateRange = useMemo(
+  () => getMonthRange(month, Number.isFinite(yearNumber) ? yearNumber : currentYear),
+  [month, yearNumber, currentYear]
+);
         const user = useSessionStore((store) => store.user);
         const collectFormsClasifications = useCollectFormClasifications({
         companyId: user?.companyUserData?.companyId,
@@ -46,13 +63,10 @@ const [month, setMonth] = useState<MONTH_KEY>(currentMonth.value);
         pageSize: 3,
         });
 
-        const companyCredits = useCompanyCredits();
-
-        useEffect(() => {
-        const range = getMonthRange(month);
-
-        setDateRange(range);
-        }, [month]);
+        const companyCredits = useCompanyCredits({
+          year: dateRange.startDate.getFullYear(),
+          month: dateRange.startDate.getMonth() + 1,
+        });
 
         return (
         <div className="flex flex-col gap-2 sm:gap-3 md:gap-4 p-2 sm:p-4 md:p-6 lg:p-8 h-full max-h-full">
@@ -88,8 +102,11 @@ const [month, setMonth] = useState<MONTH_KEY>(currentMonth.value);
 
                     {/* Tools */}
                     <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 md:gap-3 sm:flex-1 sm:justify-end">
-                        {month != currentMonth.value && (
-                        <Button onClick={(_)=> setMonth(currentMonth.value)}
+                        {(month != currentMonth.value || year !== String(currentYear)) && (
+                        <Button onClick={(_)=> {
+                          setMonth(currentMonth.value);
+                          setYear(String(currentYear));
+                        }}
                             hierarchy="tertiary"
                             className="underline font-normal! text-sm"
                             >
@@ -99,6 +116,10 @@ const [month, setMonth] = useState<MONTH_KEY>(currentMonth.value);
                         <CustomSelect className="w-full sm:w-auto sm:max-w-[180px] md:max-w-[200px] flex-none"
                             value={month} onChange={(value)=> setMonth(value)}
                             options={monthsOptions}
+                            />
+                        <CustomSelect className="w-full sm:w-auto sm:max-w-[140px] md:max-w-[160px] flex-none"
+                            value={year} onChange={(value)=> setYear(value)}
+                            options={yearOptions}
                             />
 
                             <Button startContent={ <Icon icon={"lets-icons:export"} className="text-lg sm:text-xl" />
@@ -111,7 +132,7 @@ const [month, setMonth] = useState<MONTH_KEY>(currentMonth.value);
                 </div>
             </header>
 
-            {/* Créditos del mes actual */}
+            {/* Créditos del mes seleccionado */}
             <div className="w-full">
                 <CompanyCreditsCard data={companyCredits.data} loading={companyCredits.loading}
                     error={companyCredits.error} />

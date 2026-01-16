@@ -26,6 +26,8 @@ import { Icon } from "@iconify/react/dist/iconify.js";
 import { generateOtpCode, validateOtpCode, resendOtpCodeByEmail } from "@/lib/oneTimeCode.api";
 import { getPolicyTemplateFileUrl } from "@/lib/policyTemplate.api";
 import LoadingCover from "../layout/LoadingCover";
+import { CampaignDeliveryChannel } from "@/types/campaign.types";
+import { useCompanyCreditsPricing } from "@/hooks/useCompanyCreditsPricing";
 
 interface Props {
   data: CollectForm;
@@ -54,10 +56,11 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
   const [policyUrl, setPolicyUrl] = useState<string | null>(null);
   const [formKey, setFormKey] = useState<number>(0); // Para forzar el reseteo del formulario
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false); // Estado de loading para el botón
-  const [otpCountdown, setOtpCountdown] = useState<number>(0); // Contador de 15 segundos
-  const [canSendEmailOtp, setCanSendEmailOtp] = useState<boolean>(false); // Habilitar envío por email después de 15 segundos
   const [isSendingOtp, setIsSendingOtp] = useState<boolean>(false); // Estado de loading para envío de OTP
-  const [otpSentViaEmail, setOtpSentViaEmail] = useState<boolean>(false); // Si ya se envió por email
+  const [otpChannel, setOtpChannel] = useState<CampaignDeliveryChannel>("SMS");
+  const [otpLastSentChannel, setOtpLastSentChannel] =
+    useState<CampaignDeliveryChannel | null>(null);
+  const otpPricing = useCompanyCreditsPricing();
   const fields: {
     [key: string]: {
       type: AnswerType;
@@ -247,10 +250,9 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
     });
     // Resetear estados de OTP
     setPendingOtpId(null);
-    setOtpCountdown(0);
-    setCanSendEmailOtp(false);
-    setOtpSentViaEmail(false);
     setIsSendingOtp(false);
+    setOtpChannel("SMS");
+    setOtpLastSentChannel(null);
   };
 
   async function onSubmit(formData: any) {
@@ -317,7 +319,12 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
     }
   }
 
-  async function createOtpCode(channel: "SMS" | "EMAIL" = "SMS") {
+  const formatPricing = (value?: number) => {
+    if (typeof value !== "number" || Number.isNaN(value)) return "—";
+    return value.toFixed(4);
+  };
+
+  async function createOtpCode(channel: CampaignDeliveryChannel) {
     const phone = watch("user.phone");
     const phoneCountryCode = watch("user.phoneCountryCode") || "57";
     const email = watch("user.email");
@@ -350,7 +357,10 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
             const otpId = res.data.id;
             setPendingOtpId(otpId);
             setValue("otpCodeId", otpId);
-            startCountdown();
+            setOtpLastSentChannel("SMS");
+            toast.info("Ya hay un código OTP pendiente. Por favor ingrésalo.");
+            setIsSendingOtp(false);
+            return;
           }
           toast.error(parseApiError(res.error));
           setIsSendingOtp(false);
@@ -360,35 +370,66 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
         const otpId = res.data.id;
         setPendingOtpId(otpId);
         setValue("otpCodeId", otpId);
-        startCountdown();
+        setOtpLastSentChannel("SMS");
         toast.success("Código enviado por SMS");
       } else {
-        // Reenviar por EMAIL usando el endpoint de reenvío
+        // Enviar por EMAIL (generando OTP o reenviando si ya existe uno pendiente)
         if (!email || email.trim() === "") {
           toast.error("Por favor ingresa tu correo electrónico primero");
           setIsSendingOtp(false);
           return;
         }
 
-        // Validar que ya existe un OTP pendiente
-        if (!pendingOtpId) {
-          toast.error("Primero debes enviar el código por SMS");
+        // Si ya hay OTP pendiente, reenviar por email
+        if (pendingOtpId) {
+          const resend = await resendOtpCodeByEmail(pendingOtpId, email);
+          if (resend.error) {
+            toast.error(parseApiError(resend.error));
+            setIsSendingOtp(false);
+            return;
+          }
+          setOtpLastSentChannel("EMAIL");
+          toast.success("Código enviado por correo electrónico");
           setIsSendingOtp(false);
           return;
         }
 
-        // Reenviar el código OTP existente por email
-        const res = await resendOtpCodeByEmail(pendingOtpId, email);
+        // Si no hay OTP pendiente, generar uno nuevo por email
+        const res = await generateOtpCode({
+          collectFormId: data._id,
+          recipientData: {
+            address: email,
+            channel: "EMAIL",
+          },
+        });
 
         if (res.error) {
+          if (res.error.code === "otp/pending-code") {
+            const otpId = res.data.id;
+            setPendingOtpId(otpId);
+            setValue("otpCodeId", otpId);
+            // Con OTP pendiente, podemos reenviar por email explícitamente
+            const resend = await resendOtpCodeByEmail(otpId, email);
+            if (resend.error) {
+              toast.error(parseApiError(resend.error));
+              setIsSendingOtp(false);
+              return;
+            }
+            setOtpLastSentChannel("EMAIL");
+            toast.success("Código enviado por correo electrónico");
+            setIsSendingOtp(false);
+            return;
+          }
           toast.error(parseApiError(res.error));
           setIsSendingOtp(false);
           return;
         }
 
-        // El OTP ID ya existe, solo marcamos que se envió por email
-        setOtpSentViaEmail(true);
-        toast.success("Código reenviado por correo electrónico");
+        const otpId = res.data.id;
+        setPendingOtpId(otpId);
+        setValue("otpCodeId", otpId);
+        setOtpLastSentChannel("EMAIL");
+        toast.success("Código enviado por correo electrónico");
       }
     } catch (error) {
       console.error("Error al enviar OTP:", error);
@@ -397,27 +438,6 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
       setIsSendingOtp(false);
     }
   }
-
-  // Función para iniciar el contador de 15 segundos
-  const startCountdown = () => {
-    setOtpCountdown(15);
-    setCanSendEmailOtp(false);
-    setOtpSentViaEmail(false);
-  }
-
-  // Efecto para el contador
-  useEffect(() => {
-    if (otpCountdown > 0) {
-      const timer = setTimeout(() => {
-        setOtpCountdown(otpCountdown - 1);
-        if (otpCountdown === 1) {
-          setCanSendEmailOtp(true);
-        }
-      }, 1000);
-
-      return () => clearTimeout(timer);
-    }
-  }, [otpCountdown]);
 
   useEffect(() => {
     // Obtener la URL del archivo de la plantilla de política usando el nuevo endpoint
@@ -573,17 +593,53 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
                 Verificación por código OTP
               </h3>
               <p className="text-sm text-blue-800 leading-relaxed">
-                Para continuar, debe enviar un código de verificación obligatorio. Primero, haga clic en 
-                <strong> &quot;Enviar por SMS&quot;</strong> para que el cliente reciba el código por mensaje de texto. 
-                Si después de 15 segundos el cliente no ha recibido el código, podrá enviarlo por correo electrónico. 
-                Una vez recibido, ingrese el código en el campo correspondiente.
+                Para continuar, debes enviar un código de verificación obligatorio. Elige el método de envío
+                (SMS o correo electrónico), envía el código y luego ingrésalo en el campo correspondiente.
               </p>
             </div>
           </div>
         </div>
 
-        {/* Campo de código OTP y botón de envío */}
+        {/* Método + Campo de código OTP + botón de envío */}
         <div className="flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row gap-3 items-end">
+            <div className="w-full sm:max-w-[260px]">
+              <CustomSelect
+                label="Método de envío *"
+                options={[
+                  { value: "SMS", title: "SMS", icon: "mdi:message-text-outline" },
+                  { value: "EMAIL", title: "Correo", icon: "material-symbols:email-outline" },
+                ]}
+                value={otpChannel}
+                onChange={(value) => setOtpChannel(value as CampaignDeliveryChannel)}
+              />
+            </div>
+            <div className="flex-1 text-xs sm:text-sm text-stone-600 flex flex-col gap-1">
+              <div>
+                {otpChannel === "SMS"
+                  ? "Se enviará un código al teléfono ingresado."
+                  : "Se enviará un código al correo ingresado."}
+              </div>
+
+              {otpPricing.loading && (
+                <div className="relative w-20 h-4">
+                  <LoadingCover size="sm" />
+                </div>
+              )}
+
+              {!otpPricing.loading && otpPricing.data && (
+                <div className="text-xs text-stone-600">
+                  <span className={otpChannel === "SMS" ? "font-semibold text-primary-900" : ""}>
+                    SMS: USD {formatPricing(otpPricing.data.smsPricePerMessage)} / mensaje
+                  </span>
+                  <span className="mx-2 text-stone-400">·</span>
+                  <span className={otpChannel === "EMAIL" ? "font-semibold text-primary-900" : ""}>
+                    Correo: USD {formatPricing(otpPricing.data.emailPricePerMessage)} / mensaje
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
           <div className="flex items-end gap-3">
             <div className="flex-1">
               <CustomInput
@@ -596,61 +652,33 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
             </div>
             <Button
               type="button"
-              onClick={() => createOtpCode("SMS")}
+              onClick={() => createOtpCode(otpChannel)}
               className="h-fit min-w-[180px]"
               hierarchy="primary"
               loading={isSendingOtp}
-              disabled={isSendingOtp || otpCountdown > 0}
-              startContent={<Icon icon={"tabler:send"} className="text-xl" />}
+              disabled={isSendingOtp}
+              startContent={
+                otpChannel === "SMS" ? (
+                  <Icon icon={"tabler:send"} className="text-xl" />
+                ) : (
+                  <Icon icon={"material-symbols:email"} className="text-xl" />
+                )
+              }
             >
-              {otpCountdown > 0 ? `Esperar (${otpCountdown}s)` : "Enviar por SMS"}
+              {otpChannel === "SMS" ? "Enviar por SMS" : "Enviar por correo"}
             </Button>
           </div>
 
-          {/* Contador y opción de email */}
           {pendingOtpId && (
-            <div className="flex flex-col gap-3">
-              {otpCountdown > 0 ? (
-                <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-50 border border-blue-200 rounded-md p-3">
-                  <Icon icon={"material-symbols:schedule"} className="text-lg animate-pulse" />
-                  <span className="font-medium">
-                    Código enviado por SMS. Espera {otpCountdown} segundo{otpCountdown !== 1 ? 's' : ''} para poder enviarlo por correo electrónico.
-                  </span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md p-3">
-                  <Icon icon={"material-symbols:check-circle"} className="text-lg" />
-                  <span className="font-medium">
-                    {otpSentViaEmail 
-                      ? "Código enviado por correo electrónico. Revisa tu bandeja de entrada."
-                      : "Código enviado por SMS. Si no lo recibiste, puedes enviarlo por correo electrónico."}
-                  </span>
-                </div>
-              )}
-
-              {/* Botón para enviar por email (se habilita después de 15 segundos) */}
-              {canSendEmailOtp && !otpSentViaEmail && (
-                <Button
-                  type="button"
-                  onClick={() => createOtpCode("EMAIL")}
-                  className="w-full"
-                  hierarchy="secondary"
-                  loading={isSendingOtp}
-                  disabled={isSendingOtp}
-                  startContent={<Icon icon={"material-symbols:email"} className="text-xl" />}
-                >
-                  Enviar código por correo electrónico
-                </Button>
-              )}
-
-              {otpSentViaEmail && (
-                <div className="flex items-center gap-2 text-sm text-purple-600 bg-purple-50 border border-purple-200 rounded-md p-3">
-                  <Icon icon={"material-symbols:mark-email-read"} className="text-lg" />
-                  <span className="font-medium">
-                    Código enviado por correo electrónico. Revisa tu bandeja de entrada y spam.
-                  </span>
-                </div>
-              )}
+            <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-md p-3">
+              <Icon icon={"material-symbols:check-circle"} className="text-lg" />
+              <span className="font-medium">
+                {otpLastSentChannel === "EMAIL"
+                  ? "Código enviado por correo electrónico. Revisa tu bandeja de entrada y spam."
+                  : otpLastSentChannel === "SMS"
+                    ? "Código enviado por SMS. Verifica tu teléfono."
+                    : "Código OTP generado. Ingresa el código recibido."}
+              </span>
             </div>
           )}
 
@@ -659,7 +687,7 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
             <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-md p-3">
               <Icon icon={"material-symbols:info-outline"} className="text-lg" />
               <span className="font-medium">
-                Para continuar, primero debes enviar el código OTP por SMS.
+                Para continuar, primero debes enviar el código OTP (SMS o correo).
               </span>
             </div>
           )}

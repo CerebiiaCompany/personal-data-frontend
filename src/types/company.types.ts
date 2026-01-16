@@ -30,3 +30,8 @@ export interface CompanyCreditsCurrentMonth {
   year: number;
   period: string;
 }
+
+export interface CompanyCreditsPricing {
+  smsPricePerMessage: number;
+  emailPricePerMessage: number;
+}

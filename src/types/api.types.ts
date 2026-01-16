@@ -41,4 +41,8 @@ export interface QueryParams {
   minAge?: number;
   maxAge?: number;
   gender?: CampaignAudienceGender;
+
+  // for credits by month/year
+  year?: number;
+  month?: number;
 }
