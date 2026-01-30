@@ -216,7 +216,6 @@ const CreateCollectFormForm = ({ initialValues }: Props) => {
         <CustomCheckbox
           label="Email"
           {...register("marketingChannels.EMAIL")}
-          disabled
         />{" "}
         <CustomCheckbox
           label="WhatsApp"

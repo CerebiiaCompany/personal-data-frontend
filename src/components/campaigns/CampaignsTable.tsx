@@ -22,6 +22,12 @@ import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import { useConfirm } from "../dialogs/ConfirmProvider";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import clsx from "clsx";
+import {
+  asFiniteNumber,
+  getCreditsPerMessage,
+  getTotalCampaignCredits,
+} from "@/utils/campaignCredits.utils";
+import { creditsFormatter } from "@/utils/formatters";
 
 interface Props {
   items: Campaign[] | null;
@@ -88,7 +94,11 @@ const CampaignsTable = ({
     return toast.success("Campaña activada");
   }
 
-  const pricePerSMS = useAppSetting("SMS_PRICE_PER_MESSAGE");
+  const trmCopSetting = useAppSetting("TRM_COP");
+  const smsCampaignPriceSetting = useAppSetting(
+    "SMS_CAMPAIGN_PRICE_PER_MESSAGE_MASIVAPP"
+  );
+  const emailCampaignPriceSetting = useAppSetting("EMAIL_CAMPAIGN_PRICE_PER_MESSAGE");
 
   // Función helper para obtener la fecha de programación
   const getScheduledDate = (item: Campaign): string => {
@@ -174,9 +184,31 @@ const CampaignsTable = ({
                 const status = item.status || "DRAFT";
                 const audienceTotal = item.audience.total ?? item.audience.count ?? 0;
                 const audienceDelivered = item.audience.delivered ?? 0;
-                const credits = pricePerSMS.data 
-                  ? (pricePerSMS.data.value as number) * audienceTotal 
-                  : null;
+                const trmCop = asFiniteNumber(trmCopSetting.data?.value);
+                const smsCampaignPrice = asFiniteNumber(
+                  smsCampaignPriceSetting.data?.value
+                );
+                const emailCampaignPrice = asFiniteNumber(
+                  emailCampaignPriceSetting.data?.value
+                );
+
+                const creditsPerMessage = getCreditsPerMessage({
+                  deliveryChannel: item.deliveryChannel,
+                  trmCop,
+                  smsCampaignPricePerMessage: smsCampaignPrice,
+                  emailCampaignPricePerMessage: emailCampaignPrice,
+                });
+
+                const deliveriesCount =
+                  item.scheduling?.scheduledDateTime || item.scheduledFor
+                    ? 1
+                    : item.scheduling?.ocurrences ?? 1;
+
+                const credits = getTotalCampaignCredits({
+                  audienceCount: audienceTotal,
+                  deliveriesCount,
+                  creditsPerMessage,
+                });
 
                 return (
                   <tr
@@ -265,8 +297,10 @@ const CampaignsTable = ({
                       </div>
                     </td>
                     <td className="py-3 px-4 bg-white font-medium text-ellipsis">
-                      {credits !== null ? (
-                        <span className="font-semibold">{credits} Créditos</span>
+                      {credits != null ? (
+                        <span className="font-semibold">
+                          {creditsFormatter.format(credits)} Créditos
+                        </span>
                       ) : (
                         <p className="text-stone-400">...</p>
                       )}

@@ -18,8 +18,8 @@ export const createCollectFormValidationSchema = z.object({
       EMAIL: z.boolean(),
       WHATSAPP: z.boolean(),
     })
-    .refine((data) => data.SMS === true, {
-      message: "SMS debe estar seleccionado",
+    .refine((data) => data.SMS === true || data.EMAIL === true, {
+      message: "Selecciona al menos una ruta de envío (SMS o Email)",
       path: ["SMS"],
     }),
   questions: z.array(
@@ -242,12 +242,12 @@ export const createScheduledCampaignValidationSchema = z.object({
       (val) => {
         const selectedDate = new Date(val);
         const now = new Date();
-        // Agregar 2 minutos (120000 ms)
-        const minDateTime = new Date(now.getTime() + 2 * 60 * 1000);
+        // Agregar 10 minutos
+        const minDateTime = new Date(now.getTime() + 10 * 60 * 1000);
         return selectedDate >= minDateTime;
       },
       {
-        message: "La campaña debe programarse al menos 2 minutos en el futuro",
+        message: "La campaña debe programarse al menos 10 minutos en el futuro",
       }
     ), // "YYYY-MM-DDTHH:mm" - fecha y hora específica
   }),

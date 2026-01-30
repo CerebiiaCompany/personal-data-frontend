@@ -32,6 +32,12 @@ import {
 } from "@/utils/date.utils";
 import { useCampaignAudience } from "@/hooks/useCampaignAudience";
 import { useAppSetting } from "@/hooks/useAppSetting";
+import {
+  asFiniteNumber,
+  getCreditsPerMessage,
+  getTotalCampaignCredits,
+} from "@/utils/campaignCredits.utils";
+import { creditsFormatter } from "@/utils/formatters";
 
 interface Props {
   initialValues?: CreateCampaign;
@@ -39,7 +45,11 @@ interface Props {
 
 const CreateCampaignForm = ({ initialValues }: Props) => {
   const user = useSessionStore((store) => store.user);
-  const pricePerSMS = useAppSetting("SMS_PRICE_PER_MESSAGE");
+  const trmCopSetting = useAppSetting("TRM_COP");
+  const smsCampaignPriceSetting = useAppSetting(
+    "SMS_CAMPAIGN_PRICE_PER_MESSAGE_MASIVAPP"
+  );
+  const emailCampaignPriceSetting = useAppSetting("EMAIL_CAMPAIGN_PRICE_PER_MESSAGE");
 
   const [loading, setLoading] = useState<boolean>(false);
   const params = useParams();
@@ -68,6 +78,7 @@ const CreateCampaignForm = ({ initialValues }: Props) => {
     defaultValues: parsedInitialValues || {
       active: false,
       sourceFormIds: [],
+      deliveryChannel: "SMS",
       audience: {
         gender: "ALL",
       },
@@ -192,6 +203,46 @@ const CreateCampaignForm = ({ initialValues }: Props) => {
       setValue("audience.count", 0);
     }
   }, [campaignAudience.data]);
+
+  const trmCop = asFiniteNumber(trmCopSetting.data?.value);
+  const smsCampaignPrice = asFiniteNumber(smsCampaignPriceSetting.data?.value);
+  const emailCampaignPrice = asFiniteNumber(emailCampaignPriceSetting.data?.value);
+
+  const smsCreditsPerMessage = getCreditsPerMessage({
+    deliveryChannel: "SMS",
+    trmCop,
+    smsCampaignPricePerMessage: smsCampaignPrice,
+    emailCampaignPricePerMessage: emailCampaignPrice,
+  });
+
+  const emailCreditsPerMessage = getCreditsPerMessage({
+    deliveryChannel: "EMAIL",
+    trmCop,
+    smsCampaignPricePerMessage: smsCampaignPrice,
+    emailCampaignPricePerMessage: emailCampaignPrice,
+  });
+
+  const selectedDeliveryChannel =
+    (watch("deliveryChannel") ||
+      parsedInitialValues?.deliveryChannel ||
+      "SMS") as CampaignDeliveryChannel;
+
+  const selectedCreditsPerMessage = getCreditsPerMessage({
+    deliveryChannel: selectedDeliveryChannel,
+    trmCop,
+    smsCampaignPricePerMessage: smsCampaignPrice,
+    emailCampaignPricePerMessage: emailCampaignPrice,
+  });
+
+  const deliveriesCount = initialValues
+    ? parsedInitialValues?.scheduling?.ocurrences ?? 1
+    : Number(watch("scheduling.ocurrences")) || 1;
+
+  const totalCredits = getTotalCampaignCredits({
+    audienceCount: Number(watch("audience.count") ?? parsedInitialValues?.audience?.count ?? 0),
+    deliveriesCount,
+    creditsPerMessage: selectedCreditsPerMessage,
+  });
 
   return (
     <form
@@ -385,6 +436,31 @@ const CreateCampaignForm = ({ initialValues }: Props) => {
               />
             )}
           />
+
+          <div className="flex flex-col gap-1 text-sm text-stone-600">
+            <p className="font-medium text-primary-900">Costo por envío</p>
+            <p>
+              SMS:{" "}
+              <b>
+                {smsCreditsPerMessage != null
+                  ? `${creditsFormatter.format(smsCreditsPerMessage)} Créditos`
+                  : "..."}
+              </b>{" "}
+              por mensaje
+            </p>
+            <p>
+              Correo:{" "}
+              <b>
+                {emailCreditsPerMessage != null
+                  ? `${creditsFormatter.format(emailCreditsPerMessage)} Créditos`
+                  : "..."}
+              </b>{" "}
+              por mensaje
+            </p>
+            {trmCop != null && (
+              <p className="text-xs text-stone-500">TRM usada: {creditsFormatter.format(trmCop)}</p>
+            )}
+          </div>
         </div>
       )}
 
@@ -531,10 +607,8 @@ const CreateCampaignForm = ({ initialValues }: Props) => {
           y segmentación realizada.
         </p>
         <p className="font-bold text-xl text-primary-900 mt-3">
-          {pricePerSMS.data && watch("audience.count")
-            ? `${
-                (pricePerSMS.data.value as number) * watch("audience.count")
-              } Créditos`
+          {totalCredits != null
+            ? `${creditsFormatter.format(totalCredits)} Créditos`
             : "..."}
         </p>
         <span className="text-sm w-fit flex gap-1 items-start py-1 px-2 bg-primary-500/10 rounded-lg text-primary-500 mt-3 -ml-1">

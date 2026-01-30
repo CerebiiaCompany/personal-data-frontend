@@ -2,6 +2,7 @@ import { APIError } from "@/types/api.types";
 
 export const ERROR_DICTIONARY = {
   "http/bad-request": "Error en la petición",
+  "http/conflict": "Conflicto (registro duplicado)",
   "db/duplicate-key": "Este registro ya existe",
   "http/unknown-error": "Error desconocido",
   "http/not-found": "Recurso no encontrado",

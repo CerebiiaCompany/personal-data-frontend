@@ -44,13 +44,13 @@ export default function TemplatesPage() {
 
       const a = document.createElement("a");
       a.href = res.data.url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
       if (download) {
         a.download = download;
-        a.removeAttribute("target");
-      } else {
-        a.target = "_blank";
       }
 
+      document.body.appendChild(a);
       a.click();
       a.remove();
     } catch (error) {
@@ -108,7 +108,7 @@ export default function TemplatesPage() {
             data.length ? (
               data.map((policyTemplate) => (
                 <div
-                  className="w-full rounded-lg shadow-lg shadow-primary-shadows border flex-1 flex flex-col sm:flex-row items-center gap-4 sm:gap-6 md:gap-8 border-disabled p-4 sm:p-5 relative min-h-[200px] sm:min-h-[220px] md:min-h-0"
+                  className="w-full rounded-lg shadow-lg shadow-primary-shadows border flex-1 flex flex-col sm:flex-row items-center gap-4 sm:gap-6 md:gap-8 border-disabled p-4 sm:p-5 relative min-h-[200px] sm:min-h-[220px] md:min-h-0 overflow-hidden"
                   key={policyTemplate._id}
                 >
                   <div className="w-full rounded-lg z-0 h-full pointer-events-none border-l-4 border-primary-500 absolute left-0 top-0" />
@@ -117,46 +117,59 @@ export default function TemplatesPage() {
                     icon={"fa6-regular:file-pdf"}
                     className="text-6xl sm:text-7xl md:text-8xl text-primary-500 flex-shrink-0"
                   />
-                  <div className="flex flex-col justify-between gap-3 sm:gap-0 w-full h-full">
-                    <h6 className="w-full font-bold text-base sm:text-lg text-center sm:text-left">
+                  <div className="flex flex-col justify-between gap-3 sm:gap-0 w-full h-full min-w-0">
+                    <h6 className="w-full font-bold text-base sm:text-lg text-center sm:text-left truncate">
                       {policyTemplate.name}
                     </h6>
                     <span className="w-full h-[1px] bg-disabled" />
 
                     {/* Action buttons */}
-                    <div className="w-full mt-4 sm:mt-7 items-stretch sm:items-center gap-2 sm:gap-3 md:gap-4 justify-between flex flex-col sm:flex-row flex-1 h-full">
-                      <Button
-                        onClick={(_) => viewInWeb(policyTemplate._id)}
-                        className="text-xs sm:text-sm flex-1 w-full sm:w-auto"
-                        hierarchy="secondary"
-                      >
-                        Ver en la web
-                      </Button>
-                      <Button
-                        onClick={(_) =>
-                          viewInWeb(
-                            policyTemplate._id,
-                            `${
-                              policyTemplate.name
-                            }.${policyTemplate.file.originalName
-                              .split(".")
-                              .pop()}`
-                          )
-                        }
-                        className="text-xs sm:text-sm flex-1 w-full sm:w-auto"
-                        hierarchy="secondary"
-                      >
-                        Descargar
-                      </Button>
+                    <div className="w-full mt-4 sm:mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 md:gap-4 min-w-0">
+                      <div className="w-full flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3 md:gap-4 min-w-0">
+                        <Button
+                          onClick={(_) => viewInWeb(policyTemplate._id)}
+                          startContent={
+                            <Icon
+                              icon="tabler:external-link"
+                              className="text-base"
+                            />
+                          }
+                          className="text-xs sm:text-sm w-full sm:w-[170px] whitespace-nowrap !py-0 h-9 hover:bg-stone-50"
+                          hierarchy="secondary"
+                        >
+                          Ver en la web
+                        </Button>
+                        <Button
+                          onClick={(_) =>
+                            viewInWeb(
+                              policyTemplate._id,
+                              `${
+                                policyTemplate.name
+                              }.${policyTemplate.file.originalName
+                                .split(".")
+                                .pop()}`
+                            )
+                          }
+                          startContent={
+                            <Icon icon="tabler:download" className="text-base" />
+                          }
+                          className="text-xs sm:text-sm w-full sm:w-[170px] whitespace-nowrap !py-0 h-9 hover:bg-stone-50"
+                          hierarchy="secondary"
+                        >
+                          Descargar
+                        </Button>
+                      </div>
                       <Button
                         onClick={(_) => deleteTemplate(policyTemplate._id)}
-                        className="bg-red-400/20 border-red-400 p-2 sm:p-3 flex-shrink-0"
+                        className="bg-red-500/10 border-red-400 flex-shrink-0 sm:ml-auto self-end sm:self-auto !p-0 !h-9 !w-9 hover:bg-red-500/15"
                         aria-label="Eliminar plantilla"
                       >
-                        <Icon
-                          icon="bx:trash"
-                          className="text-lg sm:text-xl text-red-400"
-                        />
+                        <div className="flex items-center justify-center w-full h-9">
+                          <Icon
+                            icon="bx:trash"
+                            className="text-lg text-red-500"
+                          />
+                        </div>
                       </Button>
                     </div>
                   </div>

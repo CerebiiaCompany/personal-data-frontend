@@ -9,21 +9,25 @@ export function useOwnCompany() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  async function refresh() {
+    setLoading(true);
+    const fetchedData = await fetchOwnCompany();
+
+    if (fetchedData.error) {
+      const parsedError = parseApiError(fetchedData.error);
+      setError(parsedError);
+      setLoading(false);
+      toast.error(parsedError);
+      return;
+    }
+
+    setLoading(false);
+    setData(fetchedData.data);
+  }
+
   useEffect(() => {
     (async () => {
-      setLoading(true);
-      const fetchedData = await fetchOwnCompany();
-
-      if (fetchedData.error) {
-        let parsedError = parseApiError(fetchedData.error);
-        setError(parsedError);
-        setLoading(false);
-        toast.error(parsedError);
-        return;
-      }
-
-      setLoading(false);
-      setData(fetchedData.data);
+      await refresh();
     })();
   }, []);
 
@@ -31,5 +35,6 @@ export function useOwnCompany() {
     data,
     loading,
     error,
+    refresh,
   };
 }

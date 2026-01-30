@@ -94,7 +94,15 @@ const DashboardNavbar = () => {
             { "opacity-0 pointer-events-none": isCollapsed },
           ])}
         >
-          <p className={clsx(["pl-3 sm:pl-4 md:pl-6 font-semibold sticky top-0 mb-2 sm:mb-3 md:mb-4 text-xs sm:text-sm"])}>Menú</p>
+          <div className="sticky top-0 z-10 bg-primary-50 border-b border-disabled">
+            <p
+              className={clsx([
+                "pl-3 sm:pl-4 md:pl-6 font-semibold py-2 text-xs sm:text-sm",
+              ])}
+            >
+              Menú
+            </p>
+          </div>
           <ul className="flex flex-col items-stretch gap-1.5 sm:gap-2 w-full">
             {mainNavbarRoutes.map((e) => (
               <li key={e.title} className="w-full">

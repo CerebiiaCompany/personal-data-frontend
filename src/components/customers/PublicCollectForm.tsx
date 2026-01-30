@@ -321,7 +321,12 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
 
   const formatPricing = (value?: number) => {
     if (typeof value !== "number" || Number.isNaN(value)) return "—";
-    return value.toFixed(4);
+    // Importante: en es-CO el separador decimal es ",".
+    // Evitamos `toFixed` (que usa ".") porque visualmente parece miles (ej: 10.000).
+    return new Intl.NumberFormat("es-CO", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    }).format(value);
   };
 
   async function createOtpCode(channel: CampaignDeliveryChannel) {
@@ -630,11 +635,11 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
               {!otpPricing.loading && otpPricing.data && (
                 <div className="text-xs text-stone-600">
                   <span className={otpChannel === "SMS" ? "font-semibold text-primary-900" : ""}>
-                    SMS: USD {formatPricing(otpPricing.data.smsPricePerMessage)} / mensaje
+                    SMS: COP {formatPricing(otpPricing.data.smsPricePerMessage)} / mensaje
                   </span>
                   <span className="mx-2 text-stone-400">·</span>
                   <span className={otpChannel === "EMAIL" ? "font-semibold text-primary-900" : ""}>
-                    Correo: USD {formatPricing(otpPricing.data.emailPricePerMessage)} / mensaje
+                    Correo: COP {formatPricing(otpPricing.data.emailPricePerMessage)} / mensaje
                   </span>
                 </div>
               )}

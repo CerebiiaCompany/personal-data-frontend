@@ -22,10 +22,20 @@ import { CustomRadioGroup } from "../forms/CustomRadioGroup";
 import { useCollectForms } from "@/hooks/useCollectForms";
 import { useCampaignAudience } from "@/hooks/useCampaignAudience";
 import { useAppSetting } from "@/hooks/useAppSetting";
+import {
+  asFiniteNumber,
+  getCreditsPerMessage,
+  getTotalCampaignCredits,
+} from "@/utils/campaignCredits.utils";
+import { creditsFormatter } from "@/utils/formatters";
 
 const CreateScheduledCampaignForm = () => {
   const user = useSessionStore((store) => store.user);
-  const pricePerSMS = useAppSetting("SMS_PRICE_PER_MESSAGE");
+  const trmCopSetting = useAppSetting("TRM_COP");
+  const smsCampaignPriceSetting = useAppSetting(
+    "SMS_CAMPAIGN_PRICE_PER_MESSAGE_MASIVAPP"
+  );
+  const emailCampaignPriceSetting = useAppSetting("EMAIL_CAMPAIGN_PRICE_PER_MESSAGE");
 
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -61,7 +71,7 @@ const CreateScheduledCampaignForm = () => {
       scheduling: {
         scheduledDateTime: getCurrentDateTimeLocal(),
       },
-      deliveryChannel: "SMS", // Por defecto SMS ya que EMAIL está deshabilitado
+      deliveryChannel: "SMS",
     },
   });
 
@@ -186,6 +196,40 @@ const CreateScheduledCampaignForm = () => {
     }
   }, [campaignAudience.data, setValue]);
 
+  const trmCop = asFiniteNumber(trmCopSetting.data?.value);
+  const smsCampaignPrice = asFiniteNumber(smsCampaignPriceSetting.data?.value);
+  const emailCampaignPrice = asFiniteNumber(emailCampaignPriceSetting.data?.value);
+
+  const smsCreditsPerMessage = getCreditsPerMessage({
+    deliveryChannel: "SMS",
+    trmCop,
+    smsCampaignPricePerMessage: smsCampaignPrice,
+    emailCampaignPricePerMessage: emailCampaignPrice,
+  });
+
+  const emailCreditsPerMessage = getCreditsPerMessage({
+    deliveryChannel: "EMAIL",
+    trmCop,
+    smsCampaignPricePerMessage: smsCampaignPrice,
+    emailCampaignPricePerMessage: emailCampaignPrice,
+  });
+
+  const selectedDeliveryChannel = (watch("deliveryChannel") ||
+    "SMS") as CampaignDeliveryChannel;
+
+  const selectedCreditsPerMessage = getCreditsPerMessage({
+    deliveryChannel: selectedDeliveryChannel,
+    trmCop,
+    smsCampaignPricePerMessage: smsCampaignPrice,
+    emailCampaignPricePerMessage: emailCampaignPrice,
+  });
+
+  const totalCredits = getTotalCampaignCredits({
+    audienceCount: Number(watch("audience.count") ?? 0),
+    deliveriesCount: 1,
+    creditsPerMessage: selectedCreditsPerMessage,
+  });
+
   return (
     <form
       ref={formRef}
@@ -303,9 +347,9 @@ const CreateScheduledCampaignForm = () => {
           {...register("scheduling.scheduledDateTime")}
           error={errors.scheduling?.scheduledDateTime as FieldError}
           min={(() => {
-            // Calcular la fecha mínima (2 minutos en el futuro)
+            // Calcular la fecha mínima (10 minutos en el futuro)
             const now = new Date();
-            const minDateTime = new Date(now.getTime() + 2 * 60 * 1000);
+            const minDateTime = new Date(now.getTime() + 10 * 60 * 1000);
             // Formato para datetime-local: YYYY-MM-DDTHH:mm
             const year = minDateTime.getFullYear();
             const month = String(minDateTime.getMonth() + 1).padStart(2, "0");
@@ -317,7 +361,7 @@ const CreateScheduledCampaignForm = () => {
         />
         <span className="text-xs sm:text-sm text-stone-500 flex items-center gap-2">
           <Icon icon={"tabler:info-circle"} className="text-sm sm:text-base flex-shrink-0" />
-          La campaña debe programarse al menos 2 minutos en el futuro
+          La campaña debe programarse al menos 10 minutos en el futuro
         </span>
       </div>
 
@@ -342,7 +386,6 @@ const CreateScheduledCampaignForm = () => {
                   value: "EMAIL",
                   title: "Correo",
                   icon: "tabler:mail",
-                  disabled: true, // Deshabilitado
                 },
               ]}
               value={field.value as any}
@@ -352,6 +395,33 @@ const CreateScheduledCampaignForm = () => {
             />
           )}
         />
+
+        <div className="flex flex-col gap-1 text-xs sm:text-sm text-stone-600">
+          <p className="font-medium text-primary-900">Costo por envío</p>
+          <p>
+            SMS:{" "}
+            <b>
+              {smsCreditsPerMessage != null
+                ? `${creditsFormatter.format(smsCreditsPerMessage)} Créditos`
+                : "..."}
+            </b>{" "}
+            por mensaje
+          </p>
+          <p>
+            Correo:{" "}
+            <b>
+              {emailCreditsPerMessage != null
+                ? `${creditsFormatter.format(emailCreditsPerMessage)} Créditos`
+                : "..."}
+            </b>{" "}
+            por mensaje
+          </p>
+          {trmCop != null && (
+            <p className="text-[11px] sm:text-xs text-stone-500">
+              TRM usada: {creditsFormatter.format(trmCop)}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Source Form Ids */}
@@ -497,11 +567,7 @@ const CreateScheduledCampaignForm = () => {
           y segmentación realizada.
         </p>
         <p className="font-bold text-lg sm:text-xl text-primary-900 mt-3">
-          {pricePerSMS.data && watch("audience.count")
-            ? `${
-                (pricePerSMS.data.value as number) * watch("audience.count")
-              } Créditos`
-            : "..."}
+          {totalCredits != null ? `${creditsFormatter.format(totalCredits)} Créditos` : "..."}
         </p>
         <span className="text-xs sm:text-sm w-fit flex gap-1 items-start py-1 px-2 bg-primary-500/10 rounded-lg text-primary-500 mt-3 -ml-1">
           <Icon icon={"tabler:info-circle"} className="text-base sm:text-lg mt-0.5 flex-shrink-0" />

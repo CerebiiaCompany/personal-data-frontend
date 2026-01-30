@@ -6,4 +6,5 @@ export const HTML_IDS_DATA = {
   uploadExcelTemplateDialog: "uploadExcelTemplateDialog",
   collectFormResponseSavedModal: "collectFormResponseSavedModal",
   confirmCampaignActivationDialog: "confirmCampaignActivationDialog",
+  editOwnCompanyDialog: "editOwnCompanyDialog",
 };

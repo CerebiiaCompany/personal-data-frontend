@@ -14,6 +14,20 @@ export async function fetchOwnCompany(): Promise<APIResponse> {
   return res;
 }
 
+export async function updateOwnCompany(data: {
+  name: string;
+  nit: string;
+  email: string;
+  phone: string;
+}): Promise<APIResponse> {
+  const res = await customFetch(`/companies/own`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+
+  return res;
+}
+
 export async function fetchCompanies(
   params: QueryParams
 ): Promise<APIResponse> {

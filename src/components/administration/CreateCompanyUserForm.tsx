@@ -73,6 +73,7 @@ const CreateCompanyUserForm = ({
   const floatingActionNavbarRef = useRef<HTMLElement>(null);
   const [floatingNavbarToggle, setFloatingNavbarToggle] =
     useState<boolean>(false);
+  const [isPasswordVisible, setIsPasswordVisible] = useState<boolean>(false);
 
   useEffect(() => {
     const scrollContainer = document.getElementById("scrollContainer");
@@ -298,11 +299,53 @@ const CreateCompanyUserForm = ({
                 placeholder="j_doe1"
                 error={errors.username}
               />
-              <CustomInput
-                label="Clave"
-                {...register("password" as any)}
-                error={(errors as any).password}
-              />
+              <div className="flex flex-col items-start gap-1 text-left flex-1">
+                <label
+                  htmlFor="passwordField"
+                  className="font-medium w-full pl-2 text-stone-500 text-sm"
+                >
+                  Clave
+                </label>
+                <div className="w-full relative">
+                  <input
+                    id="passwordField"
+                    type={isPasswordVisible ? "text" : "password"}
+                    placeholder="••••••••"
+                    {...(register("password" as any) as any)}
+                    className="gap-2 w-full text-primary-900 flex-1 relative px-3 py-2 pr-12 border border-disabled rounded-lg"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setIsPasswordVisible((v) => !v)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-md text-stone-500 hover:bg-stone-100 transition-colors"
+                    aria-label={
+                      isPasswordVisible
+                        ? "Ocultar contraseña"
+                        : "Mostrar contraseña"
+                    }
+                    title={
+                      isPasswordVisible
+                        ? "Ocultar contraseña"
+                        : "Mostrar contraseña"
+                    }
+                  >
+                    <Icon
+                      icon={
+                        isPasswordVisible
+                          ? "tabler:eye-off"
+                          : "tabler:eye"
+                      }
+                      className="text-lg"
+                    />
+                  </button>
+                </div>
+
+                {(errors as any).password && (
+                  <span className="text-red-400 text-sm font-semibold">
+                    {(errors as any).password.message}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </>
