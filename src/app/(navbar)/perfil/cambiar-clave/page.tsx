@@ -33,6 +33,8 @@ const schema = z
 export default function ProfileUpdatePasswordPage() {
   const user = useSessionStore((store) => store.user);
   const [loading, setLoading] = useState<boolean>(false);
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
   const router = useRouter();
 
   const {
@@ -55,6 +57,7 @@ export default function ProfileUpdatePasswordPage() {
     const loginRes = await updatePassword(data.password);
 
     if (loginRes.error) {
+      setLoading(false);
       return toast.error(parseApiError(loginRes.error));
     }
 
@@ -80,19 +83,81 @@ export default function ProfileUpdatePasswordPage() {
             onSubmit={handleSubmit(onSubmit)}
             className="flex flex-col gap-6 w-full max-w-sm mt-10"
           >
-            <CustomInput
-              {...register("password")}
-              placeholder="Escribe tu nueva clave"
-              error={errors.password}
-            />
-            <CustomInput
-              {...register("confirmPassword")}
-              placeholder="Confirma tu nueva clave"
-              error={errors.confirmPassword}
-            />
+            <div className="flex flex-col items-start gap-1 text-left w-full">
+              <div className="w-full relative">
+                <input
+                  id="passwordField"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Escribe tu nueva clave"
+                  {...register("password")}
+                  className="gap-2 w-full text-primary-900 flex-1 relative px-3 py-2 pr-12 border border-disabled rounded-lg"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-md text-stone-500 hover:bg-stone-100 transition-colors"
+                  aria-label={
+                    showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+                  }
+                  title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                >
+                  <Icon
+                    icon={showPassword ? "tabler:eye-off" : "tabler:eye"}
+                    className="text-lg"
+                  />
+                </button>
+              </div>
+              {errors.password && (
+                <span className="text-red-400 text-sm font-semibold">
+                  {errors.password.message}
+                </span>
+              )}
+            </div>
+
+            <div className="flex flex-col items-start gap-1 text-left w-full">
+              <div className="w-full relative">
+                <input
+                  id="confirmPasswordField"
+                  type={showConfirmPassword ? "text" : "password"}
+                  placeholder="Confirma tu nueva clave"
+                  {...register("confirmPassword")}
+                  className="gap-2 w-full text-primary-900 flex-1 relative px-3 py-2 pr-12 border border-disabled rounded-lg"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-md text-stone-500 hover:bg-stone-100 transition-colors"
+                  aria-label={
+                    showConfirmPassword
+                      ? "Ocultar contraseña"
+                      : "Mostrar contraseña"
+                  }
+                  title={
+                    showConfirmPassword
+                      ? "Ocultar contraseña"
+                      : "Mostrar contraseña"
+                  }
+                >
+                  <Icon
+                    icon={showConfirmPassword ? "tabler:eye-off" : "tabler:eye"}
+                    className="text-lg"
+                  />
+                </button>
+              </div>
+              {errors.confirmPassword && (
+                <span className="text-red-400 text-sm font-semibold">
+                  {errors.confirmPassword.message}
+                </span>
+              )}
+            </div>
 
             <div className="flex justify-center gap-3 mt-5">
-              <Button hierarchy="primary" type="submit">
+              <Button
+                hierarchy="primary"
+                type="submit"
+                loading={loading}
+                disabled={loading}
+              >
                 Cambiar clave
               </Button>
             </div>

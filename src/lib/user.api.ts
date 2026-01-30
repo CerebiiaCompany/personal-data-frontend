@@ -57,3 +57,18 @@ export async function deleteCompanyUser(
 
   return res;
 }
+
+export async function updateMe(data: {
+  name: string;
+  companyUserData: {
+    phone: string;
+    personalEmail: string;
+  };
+}): Promise<APIResponse> {
+  const res = await customFetch(`/users/me`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+
+  return res;
+}

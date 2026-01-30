@@ -7,4 +7,5 @@ export const HTML_IDS_DATA = {
   collectFormResponseSavedModal: "collectFormResponseSavedModal",
   confirmCampaignActivationDialog: "confirmCampaignActivationDialog",
   editOwnCompanyDialog: "editOwnCompanyDialog",
+  editProfileDialog: "editProfileDialog",
 };

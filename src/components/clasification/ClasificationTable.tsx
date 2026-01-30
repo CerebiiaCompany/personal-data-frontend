@@ -42,36 +42,211 @@ const ClasificationTable = ({ items, loading, error }: Props) => {
     // Dynamic import to avoid SSR issues
     const ExcelJS = await import("exceljs");
 
-    // Normalize/flatten rows so nested fields become columns
-    const flatRows = responses.map((r) => flattenObject(r));
-
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Respuestas");
 
-    // Determine all unique keys across rows to build consistent columns
-    const allKeys = Array.from(
-      new Set(flatRows.flatMap((r) => Object.keys(r)))
+    // Helper para formatear fechas
+    const formatDateTime = (value?: string) => {
+      if (!value) return "";
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return "";
+      return d.toLocaleString("es-ES", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    };
+
+    // Helper para traducir gender
+    const parseGender = (gender: string) => {
+      if (gender === "MALE") return "Masculino";
+      if (gender === "FEMALE") return "Femenino";
+      if (gender === "OTHER") return "Otro";
+      return gender || "";
+    };
+
+    // Helper para traducir docType
+    const parseDocType = (docType: string) => {
+      if (docType === "CC") return "CC";
+      if (docType === "CE") return "CE";
+      if (docType === "TI") return "TI";
+      if (docType === "PEP") return "PEP";
+      if (docType === "PPT") return "PPT";
+      return docType || "";
+    };
+
+    // Recolectar todas las claves de "data" (respuestas personalizadas) para columnas dinámicas
+    const allDataKeys = Array.from(
+      new Set(
+        responses.flatMap((r: any) =>
+          r.data && typeof r.data === "object" ? Object.keys(r.data) : []
+        )
+      )
     );
 
-    worksheet.columns = allKeys.map((key) => ({ header: key, key }));
+    // Definir columnas fijas + columnas dinámicas para "data"
+    const fixedColumns = [
+      { header: "Tipo de documento", key: "docType", width: 18 },
+      { header: "Número de documento", key: "docNumber", width: 18 },
+      { header: "Nombre", key: "name", width: 20 },
+      { header: "Apellido", key: "lastName", width: 20 },
+      { header: "Edad", key: "age", width: 10 },
+      { header: "Género", key: "gender", width: 12 },
+      { header: "Email", key: "email", width: 30 },
+      { header: "Teléfono", key: "phone", width: 15 },
+      { header: "Registrado por", key: "createdByName", width: 25 },
+      { header: "Fecha y hora registro", key: "createdAt", width: 20 },
+      { header: "Usó OTP", key: "verifiedWithOTP", width: 12 },
+      { header: "Canal OTP", key: "otpChannel", width: 12 },
+      { header: "Destino OTP", key: "otpAddress", width: 30 },
+      { header: "Estado OTP", key: "otpStatus", width: 15 },
+      { header: "Provider OTP", key: "otpProvider", width: 15 },
+      { header: "OTP enviado", key: "otpSentAt", width: 20 },
+      { header: "OTP verificado", key: "otpVerifiedAt", width: 20 },
+      { header: "OTP expira", key: "otpExpiresAt", width: 20 },
+      { header: "Intentos OTP", key: "otpAttempts", width: 15 },
+      { header: "Fallos OTP", key: "otpFailedAttempts", width: 15 },
+      { header: "Obtenido vía", key: "obtainedVia", width: 15 },
+      { header: "Estado consentimiento", key: "consentStatus", width: 20 },
+      { header: "Fecha consentimiento", key: "consentAcceptedAt", width: 20 },
+      { header: "Política", key: "policyLabel", width: 30 },
+      { header: "URL política", key: "policyUrl", width: 40 },
+      { header: "IP", key: "ipAddress", width: 18 },
+      { header: "User-Agent", key: "userAgent", width: 50 },
+      { header: "Verificado", key: "dataProcessing", width: 12 },
+    ];
 
-    // Add rows (objects are fine since keys match column keys)
-    flatRows.forEach((row) => worksheet.addRow(row));
+    // Agregar columnas dinámicas para respuestas personalizadas (data)
+    const dataColumns = allDataKeys.map((key) => ({
+      header: `Pregunta: ${key}`,
+      key: `data_${key}`,
+      width: 25,
+    }));
 
-    // Auto-fit column widths with reasonable bounds
-    worksheet.columns?.forEach((col) => {
-      let max = (col.header ? String(col.header).length : 10) as number;
-      col.eachCell!({ includeEmpty: true }, (cell) => {
-        const v = cell.value as any;
-        const len = v == null ? 0 : String(v).length;
-        if (len > max) max = len;
-      });
-      col.width = Math.min(60, Math.max(10, max + 2));
+    worksheet.columns = [...fixedColumns, ...dataColumns];
+
+    // Mapear cada respuesta a una fila
+    responses.forEach((item: any) => {
+      const otp =
+        item.otpCodeId && typeof item.otpCodeId === "object"
+          ? item.otpCodeId
+          : null;
+      const otpChannel =
+        otp?.recipientData?.channel ?? item.consent?.otp?.channel ?? "";
+      const otpAddress =
+        otp?.recipientData?.address ?? item.consent?.otp?.address ?? "";
+      const otpStatus =
+        otp?.status ?? (item.consent?.otp?.verified ? "VERIFIED" : "");
+      const otpVerifiedAt = otp?.verifiedAt ?? item.consent?.otp?.verifiedAt;
+      const otpExpiresAt = otp?.expiresAt;
+      const otpAttempts =
+        otp?.delivery?.attempts ?? item.consent?.otp?.sendAttempts;
+      const otpFailedAttempts =
+        otp?.failedAttempts ?? item.consent?.otp?.failedVerifyAttempts;
+      const obtainedVia = item.consent?.obtainedVia ?? "";
+      const consentStatus = item.consent?.status ?? "";
+      const consentAcceptedAt = item.consent?.acceptedAt;
+      const policyLabel = item.consent?.policy?.policyVersionLabel || "";
+      const policyUrl =
+        otp?.policyUrl ?? item.consent?.otpMessage?.policyUrl ?? "";
+      const createdByName = item.createdBy?.name || item.createdBy?.lastName
+        ? `${item.createdBy?.name || ""}${
+            item.createdBy?.lastName ? ` ${item.createdBy.lastName}` : ""
+          }`
+        : item.createdBy?.username || item.createdBy?.email || "";
+
+      const rowData: any = {
+        docType: parseDocType(item.user?.docType),
+        docNumber: item.user?.docNumber || "",
+        name: item.user?.name || "",
+        lastName: item.user?.lastName || "",
+        age:
+          item.user?.age && item.user.age >= 18 ? item.user.age : "—",
+        gender: parseGender(item.user?.gender),
+        email: item.user?.email || "",
+        phone: item.user?.phone || "",
+        createdByName,
+        createdAt: formatDateTime(item.createdAt),
+        verifiedWithOTP: item.verifiedWithOTP ? "Sí" : "No",
+        otpChannel,
+        otpAddress,
+        otpStatus,
+        otpProvider: otp?.delivery?.provider || "",
+        otpSentAt: formatDateTime(otp?.delivery?.sentAt),
+        otpVerifiedAt: formatDateTime(otpVerifiedAt),
+        otpExpiresAt: formatDateTime(otpExpiresAt),
+        otpAttempts: typeof otpAttempts === "number" ? otpAttempts : "",
+        otpFailedAttempts:
+          typeof otpFailedAttempts === "number" ? otpFailedAttempts : "",
+        obtainedVia,
+        consentStatus,
+        consentAcceptedAt: formatDateTime(consentAcceptedAt),
+        policyLabel,
+        policyUrl,
+        ipAddress: item.consent?.ipAddress || "",
+        userAgent: item.consent?.userAgent || "",
+        dataProcessing: item.dataProcessing ? "Sí" : "No",
+      };
+
+      // Agregar respuestas personalizadas (data)
+      if (item.data && typeof item.data === "object") {
+        allDataKeys.forEach((key) => {
+          const val = item.data[key];
+          rowData[`data_${key}`] =
+            val === null || val === undefined
+              ? ""
+              : typeof val === "object"
+                ? JSON.stringify(val)
+                : String(val);
+        });
+      }
+
+      worksheet.addRow(rowData);
     });
 
+    // Estilizar encabezados: fondo azul, texto blanco, negrita
+    const headerRow = worksheet.getRow(1);
+    headerRow.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 11 };
+    headerRow.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF1E3A8A" }, // Azul oscuro
+    };
+    headerRow.alignment = { vertical: "middle", horizontal: "center" };
+    headerRow.height = 20;
+
+    // Aplicar bordes y alineación a todas las celdas de datos
+    worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = {
+          top: { style: "thin", color: { argb: "FFD1D5DB" } },
+          left: { style: "thin", color: { argb: "FFD1D5DB" } },
+          bottom: { style: "thin", color: { argb: "FFD1D5DB" } },
+          right: { style: "thin", color: { argb: "FFD1D5DB" } },
+        };
+        if (rowNumber > 1) {
+          // Solo para filas de datos
+          cell.alignment = { vertical: "middle", horizontal: "left", wrapText: true };
+        }
+      });
+    });
+
+    // Activar filtros automáticos
+    worksheet.autoFilter = {
+      from: { row: 1, column: 1 },
+      to: { row: 1, column: worksheet.columns?.length || 1 },
+    };
+
+    // Congelar la primera fila (encabezados)
+    worksheet.views = [{ state: "frozen", ySplit: 1 }];
+
     // Build a readable filename
-    const safeName =
-      res.data.name || "formulario".replace(/[^a-zA-Z0-9-_]/g, "_");
+    const safeName = (res.data.name || "formulario").replace(
+      /[^a-zA-Z0-9-_]/g,
+      "_"
+    );
     const now = new Date();
     const y = now.getFullYear();
     const m = String(now.getMonth() + 1).padStart(2, "0");

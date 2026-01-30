@@ -61,17 +61,32 @@ export default function ProfilePlansPage() {
   }
 
   const planData = company.plan;
-  const currentPlanCredits = planData.monthlyCredits;
+  const currentPlanCredits = planData?.monthlyCredits ?? 0;
 
   return (
     <div className="flex-1 flex h-full flex-col gap-4 max-h-full overflow-y-auto">
       <h6 className="font-bold text-xl text-primary-900 mb-2">Planes</h6>
 
+      {/* Mensaje de construcción */}
+      <div className="w-full bg-amber-50 border border-amber-200 rounded-lg p-6 flex flex-col items-center gap-4 text-center">
+        <div className="rounded-full bg-amber-100 p-4">
+          <Icon icon={"mdi:hammer-wrench"} className="text-5xl text-amber-600" />
+        </div>
+        <div className="flex flex-col gap-2">
+          <h3 className="font-bold text-lg text-amber-900">
+            Página en construcción
+          </h3>
+          <p className="text-sm text-amber-700">
+            Estamos trabajando en mejorar esta sección. Pronto podrás gestionar tus planes desde aquí.
+          </p>
+        </div>
+      </div>
+
       <article className="border border-disabled rounded-md py-5 px-10 flex items-center gap-1 text-center flex-col text-primary-900">
         <h6 className="font-bold leading-tight text-lg">Plan vigente</h6>
         <p className="text-stone-500">
-          <b>{planData?.name}</b> adquirido, total de créditos vigentes 500
-          créditos.
+          <b>{planData?.name ?? "Sin plan"}</b> adquirido, total de créditos vigentes{" "}
+          {currentPlanCredits} créditos.
         </p>
         <div className="flex justify-between w-full mt-4">
           <p className="font-bold text-lg text-left leading-none">
@@ -82,7 +97,7 @@ export default function ProfilePlansPage() {
             <span className="text-sm font-normal">Consumidos</span>
           </p>
           <p className="font-bold text-lg text-right leading-none">
-            {creditsConsumed != null
+            {creditsConsumed != null && currentPlanCredits > 0
               ? `${currentPlanCredits - creditsConsumed} Créditos`
               : "Calculando..."}
             <br />
@@ -94,7 +109,7 @@ export default function ProfilePlansPage() {
           className={`relative w-full bg-stone-200 h-3 overflow-hidden rounded-full mt-1`}
           role="progressbar"
         >
-          {creditsConsumed != null && (
+          {creditsConsumed != null && currentPlanCredits > 0 && (
             <div
               className={`h-full rounded-full transition-[width] duration-500 ease-out bg-primary-500`}
               style={{
@@ -126,7 +141,7 @@ export default function ProfilePlansPage() {
         {data ? (
           data.length ? (
             data.map((plan) => {
-              const isCurrentPlan = planData._id === plan._id;
+              const isCurrentPlan = planData?._id === plan._id;
 
               return (
                 <div

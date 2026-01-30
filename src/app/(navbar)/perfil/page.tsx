@@ -1,11 +1,9 @@
 "use client";
 
 import Button from "@/components/base/Button";
-import LoadingCover from "@/components/layout/LoadingCover";
+import EditProfileDialog from "@/components/dialogs/EditProfileDialog";
 import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
-import { useOwnCompanyStore } from "@/store/useOwnCompanyStore";
 import { useSessionStore } from "@/store/useSessionStore";
-import { parseCompanyAreaCountryToString } from "@/types/companyArea.types";
 import {
   parseDocTypeToString,
   parseUserRoleToString,
@@ -19,6 +17,7 @@ export default function ProfilePage() {
   return (
     <div className="flex-1 flex h-full flex-col gap-3 max-h-full overflow-y-auto">
       <h6 className="font-bold text-xl text-primary-900 mb-2">Mi Perfil</h6>
+      <EditProfileDialog />
 
       {user && (
         <>
@@ -41,8 +40,8 @@ export default function ProfilePage() {
 
             <div className="flex items-center gap-2">
               <Button
-                /* onClick={(_) => setEditMode(1)} */ //? implement if we don't run out of time
-                href="/perfil/editar"
+                type="button"
+                onClick={() => showDialog(HTML_IDS_DATA.editProfileDialog)}
                 hierarchy="secondary"
                 startContent={
                   <Icon
@@ -51,7 +50,7 @@ export default function ProfilePage() {
                   />
                 }
               >
-                Editar
+                Editar perfil
               </Button>
             </div>
           </article>
