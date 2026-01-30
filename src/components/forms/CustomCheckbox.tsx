@@ -10,10 +10,10 @@ interface Props extends React.ComponentProps<"input"> {
 
 const CustomCheckbox = ({ label, className, error, disabled, ...props }: Props) => {
   return (
-    <div className="flex flex-col items-start gap-2 w-fit">
+    <div className="flex flex-col items-start gap-2 w-full">
       <label 
         className={clsx([
-          "custom-checkbox",
+          "custom-checkbox w-full",
           {
             "cursor-pointer": !disabled,
             "cursor-not-allowed": disabled,
@@ -22,13 +22,13 @@ const CustomCheckbox = ({ label, className, error, disabled, ...props }: Props) 
         ])}
       >
         <input {...props} disabled={disabled} className="hidden" type="checkbox" />
-        <div className="checkbox-visual"></div>
-        <span className={clsx(["text-inherit", { "text-stone-400": disabled }])}>
+        <div className="checkbox-visual flex-shrink-0"></div>
+        <span className={clsx(["text-inherit text-sm leading-relaxed", { "text-stone-400": disabled }])}>
           {label}
         </span>
       </label>
       {error && (
-        <span className="text-red-400 text-sm font-semibold">
+        <span className="text-red-400 text-sm font-semibold ml-8">
           {error.message}
         </span>
       )}

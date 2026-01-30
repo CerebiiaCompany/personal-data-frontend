@@ -54,3 +54,27 @@ export async function deleteCollectFormResponse(
 
   return res;
 }
+
+export async function sendConsentInvitation(
+  companyId: string,
+  collectFormId: string,
+  data: {
+    channel: "SMS" | "EMAIL";
+    docType: string;
+    docNumber: number;
+    phone?: string;
+    email?: string;
+    link: string;
+    message?: string;
+  }
+): Promise<APIResponse> {
+  const res = await customFetch(
+    `/companies/${companyId}/collectForms/${collectFormId}/consent-invitations`,
+    {
+      method: "POST",
+      body: JSON.stringify(data),
+    }
+  );
+
+  return res;
+}

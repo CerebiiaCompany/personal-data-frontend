@@ -8,4 +8,5 @@ export const HTML_IDS_DATA = {
   confirmCampaignActivationDialog: "confirmCampaignActivationDialog",
   editOwnCompanyDialog: "editOwnCompanyDialog",
   editProfileDialog: "editProfileDialog",
+  sendConsentInvitationDialog: "sendConsentInvitationDialog",
 };

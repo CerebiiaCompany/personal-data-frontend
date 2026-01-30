@@ -14,6 +14,9 @@ import { parseApiError } from "@/utils/parseApiError";
 import { parseDocTypeToString } from "@/types/user.types";
 import clsx from "clsx";
 import Button from "../base/Button";
+import SendConsentInvitationDialog from "../dialogs/SendConsentInvitationDialog";
+import { showDialog } from "@/utils/dialogs.utils";
+import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 
 interface Props {
   items: CollectFormResponse[] | null;
@@ -26,6 +29,7 @@ const FormResponsesTable = ({ items, loading, error, refresh }: Props) => {
   const user = useSessionStore((store) => store.user);
   const formId = useParams().formId!.toString();
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
+  const [selectedResponse, setSelectedResponse] = React.useState<CollectFormResponse | null>(null);
 
   const getOtp = (item: CollectFormResponse): OneTimeCodePopulated | null => {
     if (!item.otpCodeId) return null;
@@ -103,9 +107,22 @@ const FormResponsesTable = ({ items, loading, error, refresh }: Props) => {
     refresh();
   }
 
+  function handleSendConsent(item: CollectFormResponse) {
+    setSelectedResponse(item);
+    showDialog(HTML_IDS_DATA.sendConsentInvitationDialog);
+  }
+
   return (
     <div className="w-full flex-1 relative min-h-0 flex flex-col">
       {loading && <LoadingCover />}
+
+      {/* Modal de envío de consentimiento */}
+      <SendConsentInvitationDialog
+        response={selectedResponse}
+        companyId={user?.companyUserData?.companyId || ""}
+        collectFormId={formId}
+        onSent={refresh}
+      />
 
       {!loading ? (
         items?.length ? (
@@ -235,7 +252,7 @@ const FormResponsesTable = ({ items, loading, error, refresh }: Props) => {
                   </th>
                   <th
                     scope="col"
-                    className="text-center font-medium text-stone-600 text-xs py-2 px-2 sm:px-3 whitespace-nowrap"
+                    className="text-center font-medium text-stone-600 text-xs py-2 px-2 sm:px-3 whitespace-nowrap min-w-[180px]"
                   >
                     Consentimiento
                   </th>
@@ -379,19 +396,45 @@ const FormResponsesTable = ({ items, loading, error, refresh }: Props) => {
                         <td className="py-2 sm:py-3 text-ellipsis px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm whitespace-nowrap">
                           {obtainedVia}
                         </td>
-                        <td className="py-2 sm:py-3 text-ellipsis px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm whitespace-nowrap">
-                          <span
-                            className={clsx([
-                              "inline-flex items-center gap-2",
-                              consentStatus === "ACTIVE"
-                                ? "text-green-700"
-                                : "text-stone-700",
-                            ])}
-                            title={item.consent?.policy?.policyVersionLabel || ""}
-                          >
-                            <span className="font-semibold">{consentStatus}</span>
-                            <span className="text-stone-500">{consentAcceptedAt}</span>
-                          </span>
+                        <td className="py-2 sm:py-3 text-ellipsis px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm">
+                          {consentStatus === "ACTIVE" ? (
+                            <span
+                              className="inline-flex items-center gap-2 text-green-700"
+                              title={item.consent?.policy?.policyVersionLabel || ""}
+                            >
+                              <span className="font-semibold">{consentStatus}</span>
+                              <span className="text-stone-500 whitespace-nowrap">
+                                {consentAcceptedAt}
+                              </span>
+                            </span>
+                          ) : (
+                            <div className="flex flex-col items-center gap-2">
+                              <span
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 border border-blue-200 rounded-full text-blue-700"
+                                title="Sin consentimiento activo"
+                              >
+                                <Icon
+                                  icon="tabler:alert-circle"
+                                  className="text-sm"
+                                />
+                                <span className="font-semibold text-[10px] whitespace-nowrap">
+                                  {consentStatus || "Pendiente"}
+                                </span>
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleSendConsent(item)}
+                                className="group inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500 text-white rounded-lg transition-all duration-200 shadow-sm hover:shadow-md text-[10px] font-semibold whitespace-nowrap"
+                                title="Enviar solicitud de consentimiento"
+                              >
+                                <Icon 
+                                  icon="tabler:send" 
+                                  className="text-xs group-hover:translate-x-0.5 transition-transform" 
+                                />
+                                Solicitar
+                              </button>
+                            </div>
+                          )}
                         </td>
                         <td className="py-2 sm:py-3 text-ellipsis px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm max-w-[260px] truncate">
                           <div className="flex items-center justify-center gap-2">
