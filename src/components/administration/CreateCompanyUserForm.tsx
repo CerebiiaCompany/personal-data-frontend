@@ -236,13 +236,19 @@ const CreateCompanyUserForm = ({
 
         {/* Memoizar las opciones para evitar recrearlas en cada render */}
         {/* Selector de Rol del Sistema (USER o COMPANY_ADMIN) */}
-        <CustomSelect
-          label="Rol del Sistema"
-          options={userRoleOptions.filter(opt => opt.value !== "SUPERADMIN")}
-          value={watch("role")}
-          onChange={(value) => setValue("role", value)}
-          error={errors.role}
-        />
+        <div className="flex flex-col gap-1">
+          <CustomSelect
+            label="Rol del Sistema"
+            options={userRoleOptions.filter(opt => opt.value !== "SUPERADMIN")}
+            value={watch("role")}
+            onChange={(value) => setValue("role", value)}
+          />
+          {errors.role && (
+            <span className="text-red-400 text-sm font-semibold">
+              {errors.role.message}
+            </span>
+          )}
+        </div>
 
         {useMemo(() => {
           if (!areas.data) return null;

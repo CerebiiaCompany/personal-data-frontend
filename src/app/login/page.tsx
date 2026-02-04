@@ -94,15 +94,16 @@ function LoginForm() {
 
     // Determinar URL de redirección según rol y callback
     let redirectUrl: string;
+    const userRole = session.data?.role || "USER";
     
     if (callbackUrl) {
       // Si hay callback, verificar que el usuario tenga permisos para acceder
       if (callbackUrl.includes("/superadmin")) {
         // Solo SUPERADMIN puede acceder a /superadmin
-        redirectUrl = session.data?.role === "SUPERADMIN" ? callbackUrl : "/admin";
+        redirectUrl = userRole === "SUPERADMIN" ? callbackUrl : "/admin";
       } else if (callbackUrl.includes("/admin")) {
         // SUPERADMIN y COMPANY_ADMIN pueden acceder a /admin
-        redirectUrl = ["SUPERADMIN", "COMPANY_ADMIN"].includes(session.data?.role)
+        redirectUrl = ["SUPERADMIN", "COMPANY_ADMIN"].includes(userRole)
           ? callbackUrl
           : "/admin";
       } else {
@@ -111,7 +112,7 @@ function LoginForm() {
       }
     } else {
       // Sin callback, redirigir según rol
-      redirectUrl = session.data?.role === "SUPERADMIN" ? "/superadmin" : "/admin";
+      redirectUrl = userRole === "SUPERADMIN" ? "/superadmin" : "/admin";
     }
     
     router.push(redirectUrl);

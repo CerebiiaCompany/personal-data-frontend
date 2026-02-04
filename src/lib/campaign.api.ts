@@ -1,5 +1,6 @@
 import { APIResponse, QueryParams } from "@/types/api.types";
 import { CreateCampaign } from "@/types/campaign.types";
+import { UpdatePartial } from "@/types/utils.types";
 import { customFetch } from "@/utils/customFetch";
 
 export async function fetchCampaigns(
