@@ -58,7 +58,6 @@ export function AuthHydrator() {
           console.log("[AuthHydrator] ✅ Permisos obtenidos exitosamente");
           console.log("[AuthHydrator]    - Rol:", permissionsRes.data?.role);
           console.log("[AuthHydrator]    - Es SuperAdmin:", permissionsRes.data?.isSuperAdmin);
-          console.log("[AuthHydrator]    - Es CompanyAdmin:", permissionsRes.data?.isCompanyAdmin);
           console.log("[AuthHydrator]    - Tiene permisos:", !!permissionsRes.data?.permissions);
           console.log("[AuthHydrator]    - Permisos:", permissionsRes.data?.permissions);
           setPermissions(permissionsRes.data);

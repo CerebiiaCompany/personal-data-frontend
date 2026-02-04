@@ -27,7 +27,6 @@ const DashboardNavbar = () => {
       role: session.user?.role,
       hasPermissions: !!session.permissions,
       isSuperAdmin: session.permissions?.isSuperAdmin,
-      isCompanyAdmin: session.permissions?.isCompanyAdmin,
       loading: session.loading
     });
   }, [session]);
