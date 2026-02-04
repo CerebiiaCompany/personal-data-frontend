@@ -20,8 +20,26 @@ const DashboardNavbar = () => {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
   
+  // Debug: Log del estado de sesión
+  useEffect(() => {
+    console.log("[Navbar] Estado de sesión actualizado:", {
+      user: session.user?.username,
+      role: session.user?.role,
+      hasPermissions: !!session.permissions,
+      isSuperAdmin: session.permissions?.isSuperAdmin,
+      isCompanyAdmin: session.permissions?.isCompanyAdmin,
+      loading: session.loading
+    });
+  }, [session]);
+  
   // Filtrar rutas basándose en rol y permisos del usuario
   const mainNavbarRoutes = useMemo(() => {
+    console.log("[Navbar] Recalculando rutas del navbar...");
+    console.log("[Navbar] Estado para filtrado:", {
+      role: session.user?.role,
+      hasPermissions: !!session.permissions,
+      loading: session.loading
+    });
     const routes = session.user?.role === "SUPERADMIN" 
       ? SUPERADMIN_NAVBAR_DATA 
       : NAVBAR_DATA;
@@ -39,12 +57,43 @@ const DashboardNavbar = () => {
           }
         }
         
-        // Si no requiere permiso específico, mostrar la ruta (ya pasó verificación de rol)
+        // Si es SUPERADMIN o COMPANY_ADMIN, mostrar todas las rutas (no esperar permisos)
+        if (session.user?.role === "SUPERADMIN" || session.user?.role === "COMPANY_ADMIN") {
+          return true;
+        }
+        
+        // Para usuarios USER, si los permisos aún no están cargados, no mostrar
+        if (!session.permissions) {
+          return false;
+        }
+        
+        // Si no requiere permiso específico, mostrar la ruta
         if (!route.requiredPermission) return true;
         
         // Verificar si el usuario tiene el permiso requerido
-        return hasPermissionByPath(session.permissions, route.requiredPermission);
+        const hasPermission = hasPermissionByPath(session.permissions, route.requiredPermission);
+        console.log(`[Navbar] Ruta "${route.title}" (${route.requiredPermission}): ${hasPermission ? '✅ PERMITIDA' : '❌ DENEGADA'}`);
+        return hasPermission;
       });
+    
+    console.log(`[Navbar] Total de rutas visibles: ${routes.filter((route) => {
+      if (!route.icon) return false;
+      if (route.minRole === "COMPANY_ADMIN") {
+        if (session.user?.role !== "COMPANY_ADMIN" && session.user?.role !== "SUPERADMIN") {
+          return false;
+        }
+      }
+      if (session.user?.role === "SUPERADMIN" || session.user?.role === "COMPANY_ADMIN") {
+        return true;
+      }
+      if (!session.permissions) {
+        return false;
+      }
+      if (!route.requiredPermission) return true;
+      return hasPermissionByPath(session.permissions, route.requiredPermission);
+    }).length}`);
+    
+    return routes;
   }, [session.user?.role, session.permissions]);
   const router = useRouter();
 
@@ -129,6 +178,14 @@ const DashboardNavbar = () => {
             </p>
           </div>
           <ul className="flex flex-col items-stretch gap-1.5 sm:gap-2 w-full">
+            {/* Mostrar loading si es USER y los permisos no están cargados */}
+            {session.user?.role === "USER" && !session.permissions && session.loading && (
+              <li className="w-full px-3 py-4 text-center text-stone-500 text-xs">
+                <Icon icon="tabler:loader-2" className="animate-spin text-2xl mx-auto mb-2" />
+                Cargando permisos...
+              </li>
+            )}
+            
             {mainNavbarRoutes.map((e) => (
               <li key={e.title} className="w-full">
                 <Link
@@ -165,6 +222,13 @@ const DashboardNavbar = () => {
             { "opacity-0 pointer-events-none": !isCollapsed },
           ])}
         >
+          {/* Mostrar loading si es USER y los permisos no están cargados */}
+          {session.user?.role === "USER" && !session.permissions && session.loading && (
+            <li className="w-full aspect-square grid place-content-center">
+              <Icon icon="tabler:loader-2" className="animate-spin text-2xl text-stone-500" />
+            </li>
+          )}
+          
           {mainNavbarRoutes.map((e) => (
             <li key={e.title} className="w-full">
               <Link

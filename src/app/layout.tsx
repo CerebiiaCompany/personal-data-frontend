@@ -5,6 +5,7 @@ import GridWrapper from "@/components/layout/GridWrapper";
 import { Toaster } from "sonner";
 import CheckActiveSession from "@/components/checkers/CheckActiveSession";
 import { ConfirmProvider } from "@/components/dialogs/ConfirmProvider";
+import { AuthHydrator } from "@/providers/AuthHydrator";
 
 const interFont = Inter({
   variable: "--font-sans",
@@ -34,6 +35,7 @@ export default function RootLayout({
         className={`${interFont.variable} antialiased font-sans bg-white h-dvh`}
       >
         <Toaster />
+        <AuthHydrator />
         <GridWrapper>
           <CheckActiveSession />
           <ConfirmProvider>{children}</ConfirmProvider>
