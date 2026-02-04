@@ -5,6 +5,7 @@ import SectionHeader from "@/components/base/SectionHeader";
 import UploadTemplateDialog from "@/components/dialogs/UploadTemplateDialog";
 import CustomCheckbox from "@/components/forms/CustomCheckbox";
 import LoadingCover from "@/components/layout/LoadingCover";
+import CheckPermission from "@/components/checkers/CheckPermission";
 import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import { usePolicyTemplates } from "@/hooks/usePolicyTemplates";
 import { deletePolicyTemplate } from "@/lib/policyTemplate.api";
@@ -17,9 +18,11 @@ import { parseApiError } from "@/utils/parseApiError";
 import { showDialog } from "@/utils/dialogs.utils";
 import { Icon } from "@iconify/react";
 import { toast } from "sonner";
+import { usePermissionCheck } from "@/hooks/usePermissionCheck";
 
 export default function TemplatesPage() {
   const user = useSessionStore((store) => store.user);
+  const { can } = usePermissionCheck();
   const { data, loading, error, refresh } = usePolicyTemplates({
     companyId: user?.companyUserData?.companyId,
   });
@@ -82,23 +85,31 @@ export default function TemplatesPage() {
         <UploadTemplateDialog refresh={refresh} />
 
         {/* Grid view */}
-        <div className="w-full grid grid-cols-1 sm:grid-cols-[repeat(auto-fit,_minmax(300px,_1fr))] md:grid-cols-[repeat(auto-fit,_minmax(350px,_1fr))] gap-4 sm:gap-6 md:gap-8 justify-center">
-          {!loading && (
-            <button
-              onClick={() => showDialog(HTML_IDS_DATA.uploadTemplateDialog)}
-              className="w-full rounded-lg bg-primary-50 relative flex flex-col items-center gap-2 sm:gap-3 justify-center hover:brightness-90 transition-[filter_.3s] min-h-[180px] sm:min-h-[200px] md:min-h-[220px]"
-            >
-              <div className="w-full rounded-lg z-0 h-full pointer-events-none border-l-4 border-primary-500 absolute left-0 top-0" />
+        <div 
+          className={`w-full grid gap-4 sm:gap-6 md:gap-8 ${
+            can('templates.create') 
+              ? 'grid-cols-1 sm:grid-cols-[repeat(auto-fit,_minmax(300px,_1fr))] md:grid-cols-[repeat(auto-fit,_minmax(350px,_1fr))] justify-center'
+              : 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 justify-items-center'
+          }`}
+        >
+          <CheckPermission group="templates" permission="create">
+            {!loading && (
+              <button
+                onClick={() => showDialog(HTML_IDS_DATA.uploadTemplateDialog)}
+                className="w-full rounded-lg bg-primary-50 relative flex flex-col items-center gap-2 sm:gap-3 justify-center hover:brightness-90 transition-[filter_.3s] min-h-[180px] sm:min-h-[200px] md:min-h-[220px]"
+              >
+                <div className="w-full rounded-lg z-0 h-full pointer-events-none border-l-4 border-primary-500 absolute left-0 top-0" />
 
-              <Icon
-                icon={"tabler:plus"}
-                className="text-5xl sm:text-6xl md:text-7xl text-primary-300"
-              />
-              <div className="flex flex-col items-center border-t-2 border-disabled font-bold text-primary-900 w-full max-w-[85%] text-sm sm:text-base md:text-lg px-4 py-2">
-                Cargar nueva plantilla
-              </div>
-            </button>
-          )}
+                <Icon
+                  icon={"tabler:plus"}
+                  className="text-5xl sm:text-6xl md:text-7xl text-primary-300"
+                />
+                <div className="flex flex-col items-center border-t-2 border-disabled font-bold text-primary-900 w-full max-w-[85%] text-sm sm:text-base md:text-lg px-4 py-2">
+                  Cargar nueva plantilla
+                </div>
+              </button>
+            )}
+          </CheckPermission>
           {loading && (
             <div className="w-full relative h-20">
               <LoadingCover />
@@ -108,7 +119,9 @@ export default function TemplatesPage() {
             data.length ? (
               data.map((policyTemplate) => (
                 <div
-                  className="w-full rounded-lg shadow-lg shadow-primary-shadows border flex-1 flex flex-col sm:flex-row items-center gap-4 sm:gap-6 md:gap-8 border-disabled p-4 sm:p-5 relative min-h-[200px] sm:min-h-[220px] md:min-h-0 overflow-hidden"
+                  className={`rounded-lg shadow-lg shadow-primary-shadows border flex-1 flex flex-col sm:flex-row items-center gap-4 sm:gap-6 md:gap-8 border-disabled p-4 sm:p-5 relative min-h-[200px] sm:min-h-[220px] md:min-h-0 overflow-hidden ${
+                    can('templates.create') ? 'w-full' : 'w-full max-w-2xl'
+                  }`}
                   key={policyTemplate._id}
                 >
                   <div className="w-full rounded-lg z-0 h-full pointer-events-none border-l-4 border-primary-500 absolute left-0 top-0" />
@@ -159,18 +172,20 @@ export default function TemplatesPage() {
                           Descargar
                         </Button>
                       </div>
-                      <Button
-                        onClick={(_) => deleteTemplate(policyTemplate._id)}
-                        className="bg-red-500/10 border-red-400 flex-shrink-0 sm:ml-auto self-end sm:self-auto !p-0 !h-9 !w-9 hover:bg-red-500/15"
-                        aria-label="Eliminar plantilla"
-                      >
-                        <div className="flex items-center justify-center w-full h-9">
-                          <Icon
-                            icon="bx:trash"
-                            className="text-lg text-red-500"
-                          />
-                        </div>
-                      </Button>
+                      <CheckPermission group="templates" permission="delete">
+                        <Button
+                          onClick={(_) => deleteTemplate(policyTemplate._id)}
+                          className="bg-red-500/10 border-red-400 flex-shrink-0 sm:ml-auto self-end sm:self-auto !p-0 !h-9 !w-9 hover:bg-red-500/15"
+                          aria-label="Eliminar plantilla"
+                        >
+                          <div className="flex items-center justify-center w-full h-9">
+                            <Icon
+                              icon="bx:trash"
+                              className="text-lg text-red-500"
+                            />
+                          </div>
+                        </Button>
+                      </CheckPermission>
                     </div>
                   </div>
                 </div>

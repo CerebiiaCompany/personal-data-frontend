@@ -17,6 +17,7 @@ import Button from "../base/Button";
 import SendConsentInvitationDialog from "../dialogs/SendConsentInvitationDialog";
 import { showDialog } from "@/utils/dialogs.utils";
 import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
+import { usePermissionCheck } from "@/hooks/usePermissionCheck";
 
 interface Props {
   items: CollectFormResponse[] | null;
@@ -27,6 +28,7 @@ interface Props {
 
 const FormResponsesTable = ({ items, loading, error, refresh }: Props) => {
   const user = useSessionStore((store) => store.user);
+  const { can } = usePermissionCheck();
   const formId = useParams().formId!.toString();
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
   const [selectedResponse, setSelectedResponse] = React.useState<CollectFormResponse | null>(null);
@@ -482,13 +484,21 @@ const FormResponsesTable = ({ items, loading, error, refresh }: Props) => {
                         <td className="py-2 sm:py-3 text-ellipsis px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm rounded-r-xl whitespace-nowrap">
                           <div className="flex items-center justify-center gap-1.5 h-full">
                             <button
-                              onClick={() => deleteResponse(item._id)}
-                              className="h-full rounded-lg hover:bg-red-400/10 transition-colors p-1 sm:p-1.5 aspect-square"
+                              onClick={() => can('classification.edit') && deleteResponse(item._id)}
+                              disabled={!can('classification.edit')}
+                              className={`h-full rounded-lg transition-colors p-1 sm:p-1.5 aspect-square ${
+                                can('classification.edit')
+                                  ? 'hover:bg-red-400/10 cursor-pointer'
+                                  : 'opacity-40 cursor-not-allowed'
+                              }`}
                               aria-label="Eliminar"
+                              title={can('classification.edit') ? 'Eliminar registro' : 'No tienes permiso para eliminar'}
                             >
                               <Icon
                                 icon="bx:trash"
-                                className="text-lg sm:text-xl text-red-400"
+                                className={`text-lg sm:text-xl ${
+                                  can('classification.edit') ? 'text-red-400' : 'text-stone-400'
+                                }`}
                               />
                             </button>
                           </div>

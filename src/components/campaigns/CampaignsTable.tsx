@@ -28,6 +28,7 @@ import {
   getTotalCampaignCredits,
 } from "@/utils/campaignCredits.utils";
 import { creditsFormatter } from "@/utils/formatters";
+import { usePermissionCheck } from "@/hooks/usePermissionCheck";
 
 interface Props {
   items: Campaign[] | null;
@@ -45,6 +46,7 @@ const CampaignsTable = ({
   selectedIds,
 }: Props) => {
   const confirm = useConfirm();
+  const { can } = usePermissionCheck();
   const [localItems, setLocalItems] = useState<Campaign[] | null>(null);
 
   const user = useSessionStore((store) => store.user);
@@ -229,9 +231,11 @@ const CampaignsTable = ({
                         <CustomToggle
                           readOnly
                           onClick={(_) =>
-                            updateCampaignStatus(item._id, !item.active)
+                            can('campaigns.send') && updateCampaignStatus(item._id, !item.active)
                           }
                           checked={item.active}
+                          className={!can('campaigns.send') ? 'opacity-40 cursor-not-allowed' : ''}
+                          title={can('campaigns.send') ? 'Activar/Desactivar campaña' : 'No tienes permiso para enviar campañas'}
                         />
                       </div>
                     </td>

@@ -23,6 +23,7 @@ const actionLabels: Record<string, string> = {
   view: "Ver",
   create: "Crear",
   edit: "Editar",
+  delete: "Eliminar",
   send: "Enviar",
 };
 

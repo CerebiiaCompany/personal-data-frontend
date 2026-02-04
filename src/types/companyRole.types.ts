@@ -6,10 +6,12 @@ export type CompanyRolePermissions = {
     create: boolean;
     view: boolean;
     edit: boolean;
+    delete: boolean;
   };
   templates: {
     create: boolean;
     view: boolean;
+    delete: boolean;
   };
   classification: {
     create: boolean;
@@ -19,6 +21,8 @@ export type CompanyRolePermissions = {
   campaigns: {
     create: boolean;
     view: boolean;
+    edit: boolean;
+    delete: boolean;
     send: boolean;
   };
 };

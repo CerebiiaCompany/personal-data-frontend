@@ -71,6 +71,7 @@ const permissionsGroup = [
       { title: "Crear Formularios", name: "create" },
       { title: "Ver Formularios", name: "view" },
       { title: "Editar Formularios", name: "edit" },
+      { title: "Eliminar Formularios", name: "delete" },
     ],
   }),
   definePermissionGroup({
@@ -79,6 +80,7 @@ const permissionsGroup = [
     permissions: [
       { title: "Cargar Plantillas", name: "create" },
       { title: "Visualizar Plantillas", name: "view" },
+      { title: "Eliminar Plantillas", name: "delete" },
     ],
   }),
   definePermissionGroup({
@@ -96,6 +98,8 @@ const permissionsGroup = [
     permissions: [
       { title: "Crear Campañas", name: "create" },
       { title: "Ver Campañas", name: "view" },
+      { title: "Editar Campañas", name: "edit" },
+      { title: "Eliminar Campañas", name: "delete" },
       { title: "Enviar Campaña", name: "send" },
     ],
   }),
@@ -115,7 +119,7 @@ const CreateCompanyRoleForm = ({ initialValues }: Props) => {
     formState: { errors },
     setValue,
     watch,
-  } = useForm({
+  } = useForm<CreateCompanyRole>({
     resolver: zodResolver(createCompanyRoleValidationSchema),
     defaultValues: initialValues || {
       position: "",

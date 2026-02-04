@@ -92,10 +92,12 @@ export const createCompanyRoleValidationSchema = z.object({
       create: z.boolean(),
       view: z.boolean(),
       edit: z.boolean(),
+      delete: z.boolean(),
     }),
     templates: z.object({
       create: z.boolean(),
       view: z.boolean(),
+      delete: z.boolean(),
     }),
     classification: z.object({
       create: z.boolean(),
@@ -105,6 +107,8 @@ export const createCompanyRoleValidationSchema = z.object({
     campaigns: z.object({
       create: z.boolean(),
       view: z.boolean(),
+      edit: z.boolean(),
+      delete: z.boolean(),
       send: z.boolean(),
     }),
   }),

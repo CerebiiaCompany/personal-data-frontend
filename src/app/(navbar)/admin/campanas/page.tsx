@@ -97,23 +97,30 @@ const hasEditPermission = useMemo(() => canEdit("campaigns"), [canEdit]);
                         </Button>
                     </CheckPermission>
                     
-                    {/* Ejemplo 2: Usando el hook directamente */}
-                    {selectedIds.length > 0 && hasEditPermission && (
-                    <Button href={`/admin/campanas/${selectedIds[0]}/editar`} disabled={selectedIds.length> 1}
-                        onClick={(e) => console.log("first")}
-                        hierarchy="secondary"
-                        startContent={
-                        <Icon icon={"material-symbols:edit-outline"} className="text-xl" />
-                        }
+                    {/* Botón de Editar - Requiere campaigns.edit */}
+                    <CheckPermission group="campaigns" permission="edit">
+                      {selectedIds.length > 0 && (
+                        <Button 
+                          href={`/admin/campanas/${selectedIds[0]}/editar`} 
+                          disabled={selectedIds.length > 1}
+                          hierarchy="secondary"
+                          startContent={
+                            <Icon icon={"material-symbols:edit-outline"} className="text-xl" />
+                          }
                         >
-                        Editar
-                    </Button>
-                    )}
-                    {selectedIds.length > 0 && hasEditPermission && (
-                    <Button onClick={deleteSelectedCampaigns} hierarchy="secondary">
-                        <Icon icon={"bx:trash"} className="text-2xl" />
-                    </Button>
-                    )}
+                          Editar
+                        </Button>
+                      )}
+                    </CheckPermission>
+
+                    {/* Botón de Eliminar - Requiere campaigns.delete */}
+                    <CheckPermission group="campaigns" permission="delete">
+                      {selectedIds.length > 0 && (
+                        <Button onClick={deleteSelectedCampaigns} hierarchy="secondary">
+                          <Icon icon={"bx:trash"} className="text-2xl" />
+                        </Button>
+                      )}
+                    </CheckPermission>
                 </div>
             </header>
 

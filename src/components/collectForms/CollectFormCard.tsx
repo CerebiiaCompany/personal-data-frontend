@@ -4,6 +4,7 @@ import React, { useMemo, useCallback } from "react";
 import Button from "../base/Button";
 import { copyToClipboard } from "@/utils/clipboard.utils";
 import { Icon } from "@iconify/react/dist/iconify.js";
+import CheckPermission from "../checkers/CheckPermission";
 
 interface Props {
   data: CollectForm;
@@ -90,15 +91,21 @@ const CollectFormCard = ({ data, deleteHandler }: Props) => {
           <Button hierarchy="secondary" onClick={handleCopyLink} className="p-2 sm:p-3">
             <Icon icon={"tabler:link"} className="text-lg sm:text-xl" />
           </Button>
-          <Button hierarchy="secondary" href={`/admin/recoleccion/${data._id}`} className="p-2 sm:p-3">
-            <Icon icon={"material-symbols:edit-outline"} className="text-lg sm:text-xl" />
-          </Button>
-          <Button
-            className="bg-red-400/20 border-red-400 p-2 sm:p-3"
-            onClick={handleDelete}
-          >
-            <Icon icon={"bx:trash"} className="text-lg sm:text-xl text-red-400" />
-          </Button>
+
+          <CheckPermission group="collect" permission="edit">
+            <Button hierarchy="secondary" href={`/admin/recoleccion/${data._id}`} className="p-2 sm:p-3">
+              <Icon icon={"material-symbols:edit-outline"} className="text-lg sm:text-xl" />
+            </Button>
+          </CheckPermission>
+
+          <CheckPermission group="collect" permission="delete">
+            <Button
+              className="bg-red-400/20 border-red-400 p-2 sm:p-3"
+              onClick={handleDelete}
+            >
+              <Icon icon={"bx:trash"} className="text-lg sm:text-xl text-red-400" />
+            </Button>
+          </CheckPermission>
         </div>
       </div>
     </div>
