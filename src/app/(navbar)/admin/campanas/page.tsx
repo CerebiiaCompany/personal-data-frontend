@@ -7,6 +7,7 @@ import CheckPermission from "@/components/checkers/CheckPermission";
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import { usePermissions } from "@/hooks/usePermissions";
+import { usePermissionCheck } from "@/hooks/usePermissionCheck";
 import { deleteCampaign } from "@/lib/campaign.api";
 import { useSessionStore } from "@/store/useSessionStore";
 import { parseApiError } from "@/utils/parseApiError";
@@ -17,10 +18,12 @@ import { toast } from "sonner";
 export default function CampaignsPage() {
 const user = useSessionStore((store) => store.user);
 const { canCreate, canEdit, canView } = usePermissions();
+const { shouldFetch } = usePermissionCheck();
 const { search, debouncedValue, setSearch } = useDebouncedSearch();
 const { data, loading, error, refresh } = useCampaigns({
 companyId: user?.companyUserData?.companyId,
 search: debouncedValue,
+enabled: shouldFetch('campaigns.view'),
 });
 const [selectedIds, setSelectedIds] = useState<string[]>([]);
 

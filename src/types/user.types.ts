@@ -1,8 +1,19 @@
 import { CompanyArea } from "./companyArea.types";
-import { CompanyRole } from "./companyRole.types";
+import { CompanyRole, CompanyRolePermissions } from "./companyRole.types";
 import { CustomSelectOption } from "./forms.types";
 
 export type UserRole = "USER" | "COMPANY_ADMIN" | "SUPERADMIN";
+
+/**
+ * Respuesta del endpoint /api/v1/auth/permissions
+ */
+export interface UserPermissionsResponse {
+  role: UserRole;
+  isSuperAdmin: boolean;
+  companyRoleId?: string;
+  companyRoleName?: string;
+  permissions: CompanyRolePermissions;
+}
 export const userRoleOptions: CustomSelectOption<UserRole>[] = [
   {
     value: "USER",

@@ -6,10 +6,19 @@ import Pagination from "@/components/base/Pagination";
 import { useCompanyRoles } from "@/hooks/useCompanyRoles";
 import { useSessionStore } from "@/store/useSessionStore";
 import { Icon } from "@iconify/react";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function AdministrationRolesPage() {
   const user = useSessionStore((store) => store.user);
+  const router = useRouter();
+
+  // Solo COMPANY_ADMIN y SUPERADMIN pueden gestionar roles
+  useEffect(() => {
+    if (user && user.role !== "COMPANY_ADMIN" && user.role !== "SUPERADMIN") {
+      router.push("/sin-acceso");
+    }
+  }, [user, router]);
   const [page, setPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
 

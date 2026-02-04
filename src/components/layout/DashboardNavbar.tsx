@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import LogoCerebiia from "@public/logo.svg";
 import LogoCerebiiaCollapsed from "@public/logo-collapsed.svg";
 import Link from "next/link";
@@ -13,14 +13,39 @@ import { toast } from "sonner";
 import { useSessionStore } from "@/store/useSessionStore";
 import { logoutUser } from "@/lib/auth.api";
 import { SUPERADMIN_NAVBAR_DATA } from "@/constants/superadminNavbarData";
+import { hasPermissionByPath } from "@/utils/permissions.utils";
 
 const DashboardNavbar = () => {
   const session = useSessionStore();
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
-  const mainNavbarRoutes = (
-    session.user?.role === "SUPERADMIN" ? SUPERADMIN_NAVBAR_DATA : NAVBAR_DATA
-  ).filter((e) => e.icon);
+  
+  // Filtrar rutas basándose en rol y permisos del usuario
+  const mainNavbarRoutes = useMemo(() => {
+    const routes = session.user?.role === "SUPERADMIN" 
+      ? SUPERADMIN_NAVBAR_DATA 
+      : NAVBAR_DATA;
+    
+    return routes
+      .filter((route) => {
+        // Solo mostrar rutas con icono
+        if (!route.icon) return false;
+        
+        // ⭐ Verificar minRole primero
+        if (route.minRole === "COMPANY_ADMIN") {
+          // Solo COMPANY_ADMIN y SUPERADMIN pueden ver estas rutas
+          if (session.user?.role !== "COMPANY_ADMIN" && session.user?.role !== "SUPERADMIN") {
+            return false;
+          }
+        }
+        
+        // Si no requiere permiso específico, mostrar la ruta (ya pasó verificación de rol)
+        if (!route.requiredPermission) return true;
+        
+        // Verificar si el usuario tiene el permiso requerido
+        return hasPermissionByPath(session.permissions, route.requiredPermission);
+      });
+  }, [session.user?.role, session.permissions]);
   const router = useRouter();
 
   useEffect(() => {

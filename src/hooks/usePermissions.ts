@@ -24,17 +24,28 @@ import { useCallback, useMemo } from "react";
  */
 export function usePermissions() {
   const user = useSessionStore((store) => store.user);
+  const userPermissions = useSessionStore((store) => store.permissions);
 
   // Obtener permisos del usuario (memoizado)
+  // Prioridad: permisos del store > permisos del usuario > null
   const permissions: CompanyRolePermissions | null = useMemo(
-    () => user?.companyUserData?.companyRole?.permissions || null,
-    [user?.companyUserData?.companyRole?.permissions]
+    () => 
+      userPermissions?.permissions || 
+      user?.companyUserData?.companyRole?.permissions || 
+      null,
+    [userPermissions?.permissions, user?.companyUserData?.companyRole?.permissions]
   );
 
-  // Memoizar el estado de admin
+  // Verificar si es superadmin desde los permisos del store o desde el rol del usuario
+  const isSuperAdmin = useMemo(
+    () => userPermissions?.isSuperAdmin || user?.role === "SUPERADMIN",
+    [userPermissions?.isSuperAdmin, user?.role]
+  );
+
+  // Memoizar el estado de admin (COMPANY_ADMIN también tiene todos los permisos)
   const isAdmin = useMemo(
-    () => user?.role === "COMPANY_ADMIN" || user?.role === "SUPERADMIN",
-    [user?.role]
+    () => user?.role === "COMPANY_ADMIN" || isSuperAdmin,
+    [user?.role, isSuperAdmin]
   );
 
   /**
@@ -53,9 +64,12 @@ export function usePermissions() {
       group: keyof CompanyRolePermissions,
       permission: string
     ): boolean => {
+      // Si es superadmin, tiene todos los permisos
+      if (isSuperAdmin) return true;
+
       // Si no hay permisos definidos, verificar por rol
       if (!permissions) {
-        // Los COMPANY_ADMIN y SUPERADMIN tienen todos los permisos por defecto
+        // Los COMPANY_ADMIN tienen todos los permisos por defecto
         return isAdmin;
       }
 
@@ -65,7 +79,7 @@ export function usePermissions() {
       // Verificar el permiso específico
       return (groupPermissions as Record<string, boolean>)[permission] === true;
     },
-    [permissions, isAdmin]
+    [permissions, isAdmin, isSuperAdmin]
   );
 
   /**
@@ -144,6 +158,7 @@ export function usePermissions() {
 
   return {
     permissions,
+    userPermissions, // Objeto completo con role, isSuperAdmin, etc.
     hasPermission,
     canView,
     canCreate,
@@ -152,6 +167,7 @@ export function usePermissions() {
     hasAnyPermission,
     hasAllPermissions,
     isAdmin,
+    isSuperAdmin,
   };
 }
 

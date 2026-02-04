@@ -1,5 +1,6 @@
 import { APIResponse, QueryParams } from "@/types/api.types";
 import { CreateCompanyRole } from "@/types/companyRole.types";
+import { UpdatePartial } from "@/types/utils.types";
 import { customFetch } from "@/utils/customFetch";
 
 export async function fetchCompanyRoles(

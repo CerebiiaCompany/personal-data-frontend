@@ -7,6 +7,7 @@ import { deleteCompanyRole } from "@/lib/companyRole.api";
 import { parseApiError } from "@/utils/parseApiError";
 import { toast } from "sonner";
 import Link from "next/link";
+import PermissionsBadges from "./PermissionsBadges";
 
 interface Props {
   items: CompanyRole[] | null;
@@ -75,8 +76,8 @@ const CompanyRolesTable = ({ items, loading, error, refresh }: Props) => {
                   <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm truncate max-w-[180px]">
                     {item.description}
                   </td>
-                  <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm truncate max-w-[220px]">
-                    {JSON.stringify(item.permissions)}
+                  <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm max-w-[250px]">
+                    <PermissionsBadges permissions={item.permissions} mode="compact" />
                   </td>
 
                   <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm rounded-r-xl whitespace-nowrap">

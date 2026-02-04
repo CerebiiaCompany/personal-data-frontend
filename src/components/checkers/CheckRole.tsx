@@ -44,30 +44,28 @@ const CheckRole = () => {
 
     // Verificar permisos de rol solo si hay usuario
     if (!loading && user) {
-      //? Check for superadmin role
-      if (pathname.includes("/superadmin") && user.role != "SUPERADMIN") {
-        if (user.role === "COMPANY_ADMIN") {
-          router.push("/admin");
-          return;
-        }
+      //? Check for superadmin role - Solo SUPERADMIN puede acceder a /superadmin
+      if (pathname.includes("/superadmin") && user.role !== "SUPERADMIN") {
         if (!hasRedirectedRef.current) {
           hasRedirectedRef.current = true;
-          window.location.href = `/login?callback_url=${encodeURIComponent(
-            pathname
-          )}`;
+          // Redirigir a su página correspondiente según rol
+          if (user.role === "COMPANY_ADMIN" || user.role === "USER") {
+            router.push("/admin");
+          } else {
+            router.push("/sin-acceso");
+          }
         }
         return;
       }
 
+      //? Check for admin role - COMPANY_ADMIN, USER y SUPERADMIN pueden acceder a /admin
       if (
         pathname.includes("/admin") &&
-        !["COMPANY_ADMIN", "SUPERADMIN"].includes(user.role)
+        !["COMPANY_ADMIN", "SUPERADMIN", "USER"].includes(user.role)
       ) {
         if (!hasRedirectedRef.current) {
           hasRedirectedRef.current = true;
-          window.location.href = `/login?callback_url=${encodeURIComponent(
-            pathname
-          )}`;
+          router.push("/sin-acceso");
         }
         return;
       }

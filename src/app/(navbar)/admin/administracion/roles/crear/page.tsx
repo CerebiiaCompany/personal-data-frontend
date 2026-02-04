@@ -7,10 +7,18 @@ import { useSessionStore } from "@/store/useSessionStore";
 import { Icon } from "@iconify/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function AdministrationCreateRolePage() {
   const user = useSessionStore((store) => store.user);
   const router = useRouter();
+
+  // Solo COMPANY_ADMIN y SUPERADMIN pueden crear roles
+  useEffect(() => {
+    if (user && user.role !== "COMPANY_ADMIN" && user.role !== "SUPERADMIN") {
+      router.push("/sin-acceso");
+    }
+  }, [user, router]);
 
   return (
     <div className="w-full p-3 sm:p-4 md:p-5 rounded-md border border-disabled flex flex-col gap-6 sm:gap-8 md:gap-10 items-center">

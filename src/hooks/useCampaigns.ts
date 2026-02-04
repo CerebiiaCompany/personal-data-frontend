@@ -5,15 +5,24 @@ import { parseApiError } from "@/utils/parseApiError";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { toast } from "sonner";
 
-export function useCampaigns<T = Campaign[]>(params: QueryParams) {
+interface UseCampaignsParams extends QueryParams {
+  /**
+   * Si es false, no hará el fetch automático
+   * Útil para verificar permisos antes de cargar datos
+   */
+  enabled?: boolean;
+}
+
+export function useCampaigns<T = Campaign[]>(params: UseCampaignsParams) {
+  const { enabled = true, ...queryParams } = params;
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const paramsRef = useRef(params);
+  const paramsRef = useRef(queryParams);
 
   useEffect(() => {
-    paramsRef.current = params;
-  }, [params]);
+    paramsRef.current = queryParams;
+  }, [queryParams]);
 
   const fetch = useCallback(async () => {
     const currentParams = paramsRef.current;
@@ -28,7 +37,11 @@ export function useCampaigns<T = Campaign[]>(params: QueryParams) {
       const parsedError = parseApiError(fetchedData.error);
       setError(parsedError);
       setLoading(false);
-      toast.error(parsedError);
+      
+      // Solo mostrar error si NO es 403 (sin permisos)
+      if (fetchedData.error.code !== "auth/unauthorized") {
+        toast.error(parsedError);
+      }
       return;
     }
 
@@ -37,10 +50,11 @@ export function useCampaigns<T = Campaign[]>(params: QueryParams) {
   }, []);
 
   useEffect(() => {
-    if (!params.companyId) return;
+    // No hacer fetch si está deshabilitado o no hay companyId
+    if (!enabled || !queryParams.companyId) return;
 
     fetch();
-  }, [params.companyId, params.search, params.startDate, params.endDate, fetch]);
+  }, [enabled, queryParams.companyId, queryParams.search, queryParams.startDate, queryParams.endDate, fetch]);
 
   return {
     data,

@@ -9,6 +9,7 @@ import CustomSelect from "@/components/forms/CustomSelect";
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { useCollectFormClasifications } from "@/hooks/useCollectFormClasifications";
 import { useCompanyActionLogs } from "@/hooks/useCompanyActionLogs";
+import { usePermissionCheck } from "@/hooks/usePermissionCheck";
 import { useSessionStore } from "@/store/useSessionStore";
 import { getMonthRange, MONTH_KEY, monthsOptions } from "@/types/months.types";
 import { formatDateToString } from "@/utils/date.utils";
@@ -25,11 +26,14 @@ export default function Home() {
     endDate: Date;
   }>(getMonthRange(month));
   const user = useSessionStore((store) => store.user);
+  const { shouldFetch, isCompanyAdmin, isSuperAdmin } = usePermissionCheck();
+  
   const collectFormsClasifications = useCollectFormClasifications({
     companyId: user?.companyUserData?.companyId,
     pageSize: 6,
     startDate: dateRange.startDate.toISOString(),
     endDate: dateRange.endDate.toISOString(),
+    enabled: shouldFetch('classification.view'),
   });
   const campaigns = useCampaigns({
     companyId: user?.companyUserData?.companyId,
@@ -37,13 +41,16 @@ export default function Home() {
     active: true,
     startDate: dateRange.startDate.toISOString(),
     endDate: dateRange.endDate.toISOString(),
+    enabled: shouldFetch('campaigns.view'),
   });
 
+  // ⭐ IMPORTANTE: Solo cargar actionLogs si es COMPANY_ADMIN o SUPERADMIN
   const userActionLogs = useCompanyActionLogs({
     companyId: user?.companyUserData?.companyId,
     startDate: dateRange.startDate.toISOString(),
     endDate: dateRange.endDate.toISOString(),
     pageSize: 3,
+    enabled: isCompanyAdmin || isSuperAdmin,
   });
 
   useEffect(() => {

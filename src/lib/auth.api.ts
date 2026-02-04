@@ -1,9 +1,21 @@
 import { APIResponse } from "@/types/api.types";
-import { SessionUser } from "@/types/user.types";
+import { SessionUser, UserPermissionsResponse } from "@/types/user.types";
 import { customFetch } from "@/utils/customFetch";
 
 export async function getSession(): Promise<APIResponse<SessionUser>> {
   const res = await customFetch<SessionUser>("/auth", { method: "GET" });
+
+  return res;
+}
+
+/**
+ * Obtiene los permisos del usuario actual desde el backend
+ * Debe llamarse después del login o al cargar la aplicación si hay sesión activa
+ */
+export async function getPermissions(): Promise<APIResponse<UserPermissionsResponse>> {
+  const res = await customFetch<UserPermissionsResponse>("/auth/permissions", { 
+    method: "GET" 
+  });
 
   return res;
 }

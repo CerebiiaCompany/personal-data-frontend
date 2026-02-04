@@ -1,5 +1,39 @@
 import { CompanyRolePermissions } from "@/types/companyRole.types";
-import { SessionUser } from "@/types/user.types";
+import { SessionUser, UserPermissionsResponse } from "@/types/user.types";
+
+/**
+ * Verifica si un usuario tiene un permiso específico usando el formato 'modulo.accion'
+ * 
+ * @param permissions - Objeto de permisos del usuario (desde el store)
+ * @param permissionPath - Ruta del permiso en formato 'modulo.accion' (ej: 'campaigns.create', 'collect.edit')
+ * @returns true si el usuario tiene el permiso, false en caso contrario
+ * 
+ * @example
+ * ```tsx
+ * const permissions = useSessionStore((store) => store.permissions);
+ * if (hasPermission(permissions, 'campaigns.create')) {
+ *   // Usuario puede crear campañas
+ * }
+ * ```
+ */
+export function hasPermissionByPath(
+  permissions: UserPermissionsResponse | undefined,
+  permissionPath: string
+): boolean {
+  if (!permissions) return false;
+  
+  // Si es superadmin, tiene todos los permisos
+  if (permissions.isSuperAdmin) return true;
+  
+  const [module, action] = permissionPath.split('.');
+  
+  if (!module || !action) return false;
+  
+  const modulePermissions = permissions.permissions[module as keyof CompanyRolePermissions];
+  if (!modulePermissions) return false;
+  
+  return (modulePermissions as Record<string, boolean>)[action] === true;
+}
 
 /**
  * Verifica si un usuario tiene un permiso específico

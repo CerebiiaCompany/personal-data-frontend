@@ -25,6 +25,13 @@ export default function AdministrationUpdateRolePage() {
   const router = useRouter();
   const roleId = useParams().roleId?.toString();
 
+  // Solo COMPANY_ADMIN y SUPERADMIN pueden editar roles
+  useEffect(() => {
+    if (user && user.role !== "COMPANY_ADMIN" && user.role !== "SUPERADMIN") {
+      router.push("/sin-acceso");
+    }
+  }, [user, router]);
+
   const { data, loading, error } = useCompanyRoles<CompanyRole>({
     companyId: user?.companyUserData?.companyId,
     id: roleId,

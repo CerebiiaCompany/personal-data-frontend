@@ -1,11 +1,18 @@
 import { UserRole } from "@/types/user.types";
 
-export type NavbarData = {
+export type NavbarItem = {
   title: string;
   path: string;
   icon?: string;
   minRole: UserRole;
-}[];
+  /**
+   * Permiso requerido en formato 'modulo.accion' (ej: 'campaigns.view', 'collect.create')
+   * Si no se especifica, solo se verifica el rol mínimo
+   */
+  requiredPermission?: string;
+};
+
+export type NavbarData = NavbarItem[];
 
 export const NAVBAR_DATA: NavbarData = [
   { title: "Perfil", path: "/perfil", minRole: "USER" },
@@ -17,41 +24,48 @@ export const NAVBAR_DATA: NavbarData = [
     title: "Inicio",
     path: "/admin",
     icon: "heroicons:home",
-    minRole: "COMPANY_ADMIN",
+    minRole: "USER",
+    requiredPermission: "dashboard.view",
   },
   {
     title: "Recolección",
     path: "/admin/recoleccion",
     icon: "tabler:clipboard-list",
-    minRole: "COMPANY_ADMIN",
+    minRole: "USER",
+    requiredPermission: "collect.view",
   },
   {
     title: "Crear formulario nuevo",
     path: "/admin/recoleccion/crear-formulario",
-    minRole: "COMPANY_ADMIN",
+    minRole: "USER",
+    requiredPermission: "collect.create",
   },
   {
     title: "Plantillas",
     path: "/admin/plantillas",
     icon: "radix-icons:file-text",
-    minRole: "COMPANY_ADMIN",
+    minRole: "USER",
+    requiredPermission: "templates.view",
   },
   {
     title: "Clasificación",
     path: "/admin/clasificacion",
     icon: "material-symbols:view-column-outline",
-    minRole: "COMPANY_ADMIN",
+    minRole: "USER",
+    requiredPermission: "classification.view",
   },
   {
     title: "Campañas",
     path: "/admin/campanas",
     icon: "flowbite:grid-plus-outline",
-    minRole: "COMPANY_ADMIN",
+    minRole: "USER",
+    requiredPermission: "campaigns.view",
   },
   {
     title: "Crear Campaña",
     path: "/admin/campanas/crear",
-    minRole: "COMPANY_ADMIN",
+    minRole: "USER",
+    requiredPermission: "campaigns.create",
   },
   {
     title: "Administración",

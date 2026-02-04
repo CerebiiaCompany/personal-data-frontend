@@ -13,7 +13,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSessionStore } from "@/store/useSessionStore";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { getSession, loginUser } from "@/lib/auth.api";
+import { getSession, loginUser, getPermissions } from "@/lib/auth.api";
 import { parseApiError } from "@/utils/parseApiError";
 
 const schema = z.object({
@@ -29,7 +29,7 @@ function LoginForm() {
   const callbackUrl = searchParams.get("callback_url");
 
   const router = useRouter();
-  const { user, loading, error, setUser, setError, setLoading } =
+  const { user, loading, error, setUser, setError, setLoading, setPermissions } =
     useSessionStore();
   const [shownPassword, setShownPassword] = useState<boolean>(false);
 
@@ -66,18 +66,55 @@ function LoginForm() {
       return toast.error(parsedError);
     }
 
+    // Obtener sesión del usuario
     const session = await getSession();
 
+    if (session.error) {
+      const parsedError = parseApiError(session.error);
+      setError(parsedError);
+      setLoading(false);
+      return toast.error(parsedError);
+    }
+
     setUser(session.data);
+
+    // Obtener permisos del usuario
+    const permissionsRes = await getPermissions();
+
+    if (permissionsRes.error) {
+      // Si falla obtener permisos, mostrar advertencia pero continuar
+      console.error("Error al obtener permisos:", permissionsRes.error);
+      toast.warning("No se pudieron cargar los permisos del usuario");
+    } else {
+      setPermissions(permissionsRes.data);
+    }
+
     setLoading(false); // ✅ Importante: desactivar loading después del login exitoso
     toast.success(`Bienvenid@ ${session.data?.name}`);
 
-    // Redirigir solo después de login exitoso
-    router.push(
-      callbackUrl || session.data?.role === "SUPERADMIN"
-        ? "/superadmin"
-        : "/admin"
-    );
+    // Determinar URL de redirección según rol y callback
+    let redirectUrl: string;
+    
+    if (callbackUrl) {
+      // Si hay callback, verificar que el usuario tenga permisos para acceder
+      if (callbackUrl.includes("/superadmin")) {
+        // Solo SUPERADMIN puede acceder a /superadmin
+        redirectUrl = session.data?.role === "SUPERADMIN" ? callbackUrl : "/admin";
+      } else if (callbackUrl.includes("/admin")) {
+        // SUPERADMIN y COMPANY_ADMIN pueden acceder a /admin
+        redirectUrl = ["SUPERADMIN", "COMPANY_ADMIN"].includes(session.data?.role)
+          ? callbackUrl
+          : "/admin";
+      } else {
+        // Otras rutas, usar callback
+        redirectUrl = callbackUrl;
+      }
+    } else {
+      // Sin callback, redirigir según rol
+      redirectUrl = session.data?.role === "SUPERADMIN" ? "/superadmin" : "/admin";
+    }
+    
+    router.push(redirectUrl);
   }
 
   return (

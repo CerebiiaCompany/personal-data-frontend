@@ -25,7 +25,7 @@ import {
   createUserValidationSchema,
   updateUserValidationSchema,
 } from "@/validations/main.validations";
-import { CreateUser, docTypesOptions, UpdateUser } from "@/types/user.types";
+import { CreateUser, docTypesOptions, UpdateUser, userRoleOptions } from "@/types/user.types";
 import { createCompanyUser, updateCompanyUser } from "@/lib/user.api";
 import { useCompanyAreas } from "@/hooks/useCompanyAreas";
 import { useCompanyRoles } from "@/hooks/useCompanyRoles";
@@ -62,7 +62,7 @@ const CreateCompanyUserForm = ({
       initialValues ? updateUserValidationSchema : createUserValidationSchema
     ),
     defaultValues: initialValues || {
-      role: "COMPANY_ADMIN",
+      role: "USER", // Por defecto crear usuarios regulares
       companyUserData: {
         docType: "CC",
       },
@@ -235,6 +235,15 @@ const CreateCompanyUserForm = ({
         </div>
 
         {/* Memoizar las opciones para evitar recrearlas en cada render */}
+        {/* Selector de Rol del Sistema (USER o COMPANY_ADMIN) */}
+        <CustomSelect
+          label="Rol del Sistema"
+          options={userRoleOptions.filter(opt => opt.value !== "SUPERADMIN")}
+          value={watch("role")}
+          onChange={(value) => setValue("role", value)}
+          error={errors.role}
+        />
+
         {useMemo(() => {
           if (!areas.data) return null;
           
@@ -256,7 +265,10 @@ const CreateCompanyUserForm = ({
           );
         }, [areas.data, setValue, watch])}
 
+        {/* Solo mostrar selector de rol personalizado si es USER */}
         {useMemo(() => {
+          // ✅ Condición DENTRO del useMemo (no fuera)
+          if (watch("role") !== "USER") return null;
           if (!roles.data) return null;
           
           const roleOptions = roles.data.map((role) => ({
@@ -270,7 +282,7 @@ const CreateCompanyUserForm = ({
                 setValue("companyUserData.companyRoleId", value)
               }
               options={roleOptions}
-              label="Asignar Rol"
+              label="Asignar Rol Personalizado"
               unselectedText="Seleccionar rol"
               value={watch("companyUserData.companyRoleId")}
             />
