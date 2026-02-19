@@ -29,6 +29,7 @@ import { CreateUser, docTypesOptions, UpdateUser, userRoleOptions } from "@/type
 import { createCompanyUser, updateCompanyUser } from "@/lib/user.api";
 import { useCompanyAreas } from "@/hooks/useCompanyAreas";
 import { useCompanyRoles } from "@/hooks/useCompanyRoles";
+import { usePermissionCheck } from "@/hooks/usePermissionCheck";
 
 interface Props {
   initialValues?: CreateUser | UpdateUser;
@@ -42,6 +43,7 @@ const CreateCompanyUserForm = ({
   callbackUrl,
 }: Props) => {
   const { user, setUser } = useSessionStore();
+  const { isCompanyAdmin, isSuperAdmin } = usePermissionCheck();
   const areas = useCompanyAreas({
     companyId: user?.companyUserData?.companyId,
   });
@@ -112,10 +114,19 @@ const CreateCompanyUserForm = ({
 
     if (initialValues) {
       //? handle updating
+      // Remover campos vacíos de username y password si no fueron modificados
+      const updateData = { ...data };
+      if (!updateData.username || updateData.username.trim() === '') {
+        delete updateData.username;
+      }
+      if (!updateData.password || updateData.password.trim() === '') {
+        delete updateData.password;
+      }
+      
       res = await updateCompanyUser(
         user?.companyUserData?.companyId,
         userId || (params.userId as string),
-        data
+        updateData
       );
     } else {
       //? handle creating
@@ -304,17 +315,26 @@ const CreateCompanyUserForm = ({
         />
       </div>
 
-      {!initialValues && (
+      {(!initialValues || isCompanyAdmin || isSuperAdmin) && (
         <>
           {/* Separator */}
           <div role="separator" className="w-full h-[1px] bg-disabled"></div>
 
           <div className="p-4 flex flex-col items-stretch gap-5">
+            {initialValues && isCompanyAdmin && !isSuperAdmin && (
+              <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <Icon icon="tabler:info-circle" className="text-blue-600 text-xl flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-blue-800">
+                  Como <strong>Administrador de Compañía</strong>, puedes actualizar las credenciales de acceso de este usuario. Los campos son opcionales.
+                </p>
+              </div>
+            )}
+            
             <div className="flex gap-5">
               <CustomInput
-                label="Usuario"
+                label={initialValues ? "Nuevo Usuario (opcional)" : "Usuario"}
                 {...register("username")}
-                placeholder="j_doe1"
+                placeholder={initialValues ? "Dejar vacío para mantener el actual" : "j_doe1"}
                 error={errors.username}
               />
               <div className="flex flex-col items-start gap-1 text-left flex-1">
@@ -322,13 +342,13 @@ const CreateCompanyUserForm = ({
                   htmlFor="passwordField"
                   className="font-medium w-full pl-2 text-stone-500 text-sm"
                 >
-                  Clave
+                  {initialValues ? "Nueva Clave (opcional)" : "Clave"}
                 </label>
                 <div className="w-full relative">
                   <input
                     id="passwordField"
                     type={isPasswordVisible ? "text" : "password"}
-                    placeholder="••••••••"
+                    placeholder={initialValues ? "Dejar vacío para mantener la actual" : "••••••••"}
                     {...(register("password" as any) as any)}
                     className="gap-2 w-full text-primary-900 flex-1 relative px-3 py-2 pr-12 border border-disabled rounded-lg"
                   />

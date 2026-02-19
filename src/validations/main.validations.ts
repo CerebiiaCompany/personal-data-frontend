@@ -35,7 +35,8 @@ export const createCollectFormValidationSchema = z.object({
 export const updateUserValidationSchema = z.object({
   name: z.string().min(1, "Este campo es obligatorio"),
   lastName: z.string().min(1, "Este campo es obligatorio"),
-  username: z.string().min(1, "Este campo es obligatorio"),
+  username: z.string().optional(),
+  password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres").optional().or(z.literal("")),
   role: z.string<UserRole>(),
   companyUserData: z.object({
     position: z.string().min(1, "Este campo es obligatorio"),
@@ -49,10 +50,37 @@ export const updateUserValidationSchema = z.object({
     docNumber: z.coerce.number("Este campo es obligatorio"),
     docType: z.string<DocType>(),
   }),
-});
+}).refine(
+  (data) => {
+    if (data.password && data.password.length > 0 && data.password.length < 8) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: "La contraseña debe tener al menos 8 caracteres",
+    path: ["password"],
+  }
+);
 
-export const createUserValidationSchema = updateUserValidationSchema.extend({
+export const createUserValidationSchema = z.object({
+  name: z.string().min(1, "Este campo es obligatorio"),
+  lastName: z.string().min(1, "Este campo es obligatorio"),
+  username: z.string().min(1, "Este campo es obligatorio"),
   password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres"),
+  role: z.string<UserRole>(),
+  companyUserData: z.object({
+    position: z.string().min(1, "Este campo es obligatorio"),
+    phone: z.string().min(1, "Este campo es obligatorio"),
+    personalEmail: z
+      .email("Correo inválido")
+      .min(1, "Este campo es obligatorio"),
+    companyAreaId: z.string().optional(),
+    companyRoleId: z.string().optional(),
+    note: z.string().optional(),
+    docNumber: z.coerce.number("Este campo es obligatorio"),
+    docType: z.string<DocType>(),
+  }),
 });
 
 export const createCompanyAreaValidationSchema = z.object({
