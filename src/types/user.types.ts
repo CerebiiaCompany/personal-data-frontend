@@ -70,7 +70,23 @@ export interface CreateUser {
   };
 }
 
-export type UpdateUser = Omit<CreateUser, "password">;
+export interface UpdateUser {
+  name: string;
+  lastName: string;
+  username?: string;
+  role: UserRole;
+  password?: string;
+  companyUserData: {
+    position: string;
+    phone: string;
+    personalEmail: string;
+    companyAreaId?: string;
+    companyRoleId?: string;
+    note?: string;
+    docNumber: number;
+    docType: DocType;
+  };
+}
 
 export interface SessionUser {
   _id: string;
