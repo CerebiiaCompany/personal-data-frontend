@@ -6,6 +6,7 @@ import { Toaster } from "sonner";
 import CheckActiveSession from "@/components/checkers/CheckActiveSession";
 import { ConfirmProvider } from "@/components/dialogs/ConfirmProvider";
 import { AuthHydrator } from "@/providers/AuthHydrator";
+import ErrorBoundary from "@/components/errors/ErrorBoundary";
 
 const interFont = Inter({
   variable: "--font-sans",
@@ -34,12 +35,14 @@ export default function RootLayout({
       <body
         className={`${interFont.variable} antialiased font-sans bg-white h-dvh`}
       >
-        <Toaster />
-        <AuthHydrator />
-        <GridWrapper>
-          <CheckActiveSession />
-          <ConfirmProvider>{children}</ConfirmProvider>
-        </GridWrapper>
+        <ErrorBoundary>
+          <Toaster />
+          <AuthHydrator />
+          <GridWrapper>
+            <CheckActiveSession />
+            <ConfirmProvider>{children}</ConfirmProvider>
+          </GridWrapper>
+        </ErrorBoundary>
       </body>
     </html>
   );

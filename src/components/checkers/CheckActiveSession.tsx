@@ -26,6 +26,7 @@ const CheckActiveSession = () => {
   const hasCheckedRef = useRef(false);
   const isCheckingRef = useRef(false);
   const currentPathnameRef = useRef(pathname);
+  const initialLoadCompleteRef = useRef(false);
 
   const checkSession = useCallback(async () => {
     const currentPath = currentPathnameRef.current;
@@ -33,6 +34,12 @@ const CheckActiveSession = () => {
     // Skip if already checking
     if (isCheckingRef.current) return;
     if (currentPath === "/login") return;
+
+    // Esperar a que termine la carga inicial del AuthHydrator
+    if (!initialLoadCompleteRef.current && loading) {
+      console.log("[CheckActiveSession] Esperando carga inicial...");
+      return;
+    }
 
     isCheckingRef.current = true;
 
@@ -71,6 +78,7 @@ const CheckActiveSession = () => {
       setLoading(false);
       isCheckingRef.current = false;
     } catch (error) {
+      console.error("[CheckActiveSession] Error inesperado:", error);
       setUser(undefined);
       setLoading(false);
       setError((error as Error).message || "Unknown error");
@@ -81,10 +89,16 @@ const CheckActiveSession = () => {
         router.push(`/login?callback_url=${encodeURIComponent(currentPath)}`);
       }
     }
-  }, [setUser, setError, setLoading, setCompany, setCompanyError, router]);
+  }, [setUser, setError, setLoading, setCompany, setCompanyError, router, loading]);
 
   // Efecto que maneja cambios de pathname y verificación inicial
   useEffect(() => {
+    // Marcar que la carga inicial terminó cuando deje de estar loading
+    if (!loading && !initialLoadCompleteRef.current) {
+      initialLoadCompleteRef.current = true;
+      console.log("[CheckActiveSession] Carga inicial completada");
+    }
+
     const pathnameChanged = currentPathnameRef.current !== pathname;
     
     // Actualizar ref del pathname
@@ -109,15 +123,19 @@ const CheckActiveSession = () => {
       return;
     }
 
-    // Verificar sesión cuando no hay usuario y no se ha verificado aún
-    // O cuando cambió la ruta
-    const shouldCheck = !user && !isCheckingRef.current && (!hasCheckedRef.current || pathnameChanged);
+    // Solo verificar si la carga inicial terminó y cambió la ruta
+    const shouldCheck = 
+      initialLoadCompleteRef.current &&
+      !user && 
+      !isCheckingRef.current && 
+      pathnameChanged &&
+      !hasCheckedRef.current;
     
     if (shouldCheck) {
       hasCheckedRef.current = true;
       checkSession();
     }
-  }, [pathname, user, error, checkSession]);
+  }, [pathname, user, error, loading, checkSession, setLoading]);
 
   return null;
 };
