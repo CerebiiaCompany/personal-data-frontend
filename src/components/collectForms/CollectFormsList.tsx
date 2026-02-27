@@ -6,6 +6,7 @@ import { deleteCollectForm } from "@/lib/collectForm.api";
 import { useSessionStore } from "@/store/useSessionStore";
 import { toast } from "sonner";
 import { parseApiError } from "@/utils/parseApiError";
+import { useConfirm } from "@/components/dialogs/ConfirmProvider";
 
 interface Props {
   items: CollectForm[] | null;
@@ -16,17 +17,47 @@ interface Props {
 
 const CollectFormsList = ({ items, loading, error, refresh }: Props) => {
   const user = useSessionStore((store) => store.user);
+  const confirm = useConfirm();
 
   async function deleteForm(id: string) {
+    const confirmed = await confirm({
+      title: "⚠️ Eliminar Formulario de Recolección",
+      description: (
+        <div className="space-y-3">
+          <p className="font-semibold text-primary-900">
+            Esta acción es irreversible y puede causar pérdida de datos.
+          </p>
+          <p className="text-stone-600">
+            Al eliminar este formulario:
+          </p>
+          <ul className="list-disc list-inside text-sm text-stone-600 space-y-1 ml-2">
+            <li>Se eliminarán todas las respuestas asociadas</li>
+            <li>Las campañas que lo usan se verán afectadas</li>
+            <li>Los datos de clasificación se perderán</li>
+            <li>No podrás recuperar esta información</li>
+          </ul>
+          <p className="text-sm font-medium text-red-600 mt-3">
+            ¿Estás seguro de que deseas continuar?
+          </p>
+        </div>
+      ),
+      confirmText: "Sí, eliminar formulario",
+      cancelText: "Cancelar",
+      danger: true,
+    });
+
+    if (!confirmed) return;
+
     const companyId = user?.companyUserData?.companyId;
     if (!companyId) return;
+    
     const res = await deleteCollectForm(companyId, id);
 
     if (res.error) {
       return toast.error(parseApiError(res.error));
     }
 
-    toast.success("Fomrulario eliminado");
+    toast.success("Formulario eliminado");
     refresh();
   }
 

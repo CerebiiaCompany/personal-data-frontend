@@ -19,10 +19,12 @@ import { showDialog } from "@/utils/dialogs.utils";
 import { Icon } from "@iconify/react";
 import { toast } from "sonner";
 import { usePermissionCheck } from "@/hooks/usePermissionCheck";
+import { useConfirm } from "@/components/dialogs/ConfirmProvider";
 
 export default function TemplatesPage() {
   const user = useSessionStore((store) => store.user);
   const { can } = usePermissionCheck();
+  const confirm = useConfirm();
   const { data, loading, error, refresh } = usePolicyTemplates({
     companyId: user?.companyUserData?.companyId,
   });
@@ -63,6 +65,33 @@ export default function TemplatesPage() {
   }
 
   async function deleteTemplate(policyId: string) {
+    const confirmed = await confirm({
+      title: "⚠️ Eliminar Plantilla",
+      description: (
+        <div className="space-y-3">
+          <p className="font-semibold text-primary-900">
+            Esta acción es irreversible y puede causar pérdida de datos.
+          </p>
+          <p className="text-stone-600">
+            Al eliminar esta plantilla:
+          </p>
+          <ul className="list-disc list-inside text-sm text-stone-600 space-y-1 ml-2">
+            <li>Se eliminará permanentemente del sistema</li>
+            <li>Los formularios que la usan podrían verse afectados</li>
+            <li>No podrás recuperar esta información</li>
+          </ul>
+          <p className="text-sm font-medium text-red-600 mt-3">
+            ¿Estás seguro de que deseas continuar?
+          </p>
+        </div>
+      ),
+      confirmText: "Sí, eliminar plantilla",
+      cancelText: "Cancelar",
+      danger: true,
+    });
+
+    if (!confirmed) return;
+
     const companyId = user?.companyUserData?.companyId;
     if (!companyId) return;
 

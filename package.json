@@ -9,14 +9,14 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.901.0",
-    "@aws-sdk/s3-request-presigner": "^3.901.0",
+    "@aws-sdk/client-s3": "^3.999.0",
+    "@aws-sdk/s3-request-presigner": "^3.999.0",
     "@hookform/resolvers": "^5.2.1",
     "audit": "^0.0.6",
     "clsx": "^2.1.1",
     "exceljs": "^4.4.0",
-    "fix": "^0.0.6",
-    "next": "15.5.9",
+    "fast-xml-parser": "^5.4.1",
+    "next": "^16.1.6",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-hook-form": "^7.62.0",
@@ -35,5 +35,8 @@
     "eslint-config-next": "15.5.9",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "overrides": {
+    "fast-xml-parser": "^5.4.1"
   }
 }
