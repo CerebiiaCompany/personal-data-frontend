@@ -18,14 +18,14 @@ import SendConsentInvitationDialog from "../dialogs/SendConsentInvitationDialog"
 import { showDialog } from "@/utils/dialogs.utils";
 import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import { usePermissionCheck } from "@/hooks/usePermissionCheck";
-import { APIMetadata } from "@/types/api.types";
+import { APIResponse } from "@/types/api.types";
 
 interface Props {
   items: CollectFormResponse[] | null;
   loading: boolean;
   error: string | null;
   refresh: () => void;
-  meta: APIMetadata | null;
+  meta: APIResponse["meta"] | null;
   currentPage: number;
   pageSize: number;
   onPageChange: (page: number) => void;
@@ -667,7 +667,6 @@ const FormResponsesTable = ({ items, loading, error, refresh, meta, currentPage,
                       onClick={() => onPageChange(1)}
                       disabled={currentPage === 1}
                       className="px-2 py-1 text-xs sm:text-sm"
-                      title="Primera página"
                     >
                       <Icon icon="tabler:chevrons-left" className="text-base sm:text-lg" />
                     </Button>
@@ -677,7 +676,6 @@ const FormResponsesTable = ({ items, loading, error, refresh, meta, currentPage,
                       onClick={() => onPageChange(currentPage - 1)}
                       disabled={currentPage === 1}
                       className="px-2 py-1 text-xs sm:text-sm"
-                      title="Página anterior"
                     >
                       <Icon icon="tabler:chevron-left" className="text-base sm:text-lg" />
                     </Button>
@@ -760,7 +758,6 @@ const FormResponsesTable = ({ items, loading, error, refresh, meta, currentPage,
                       onClick={() => onPageChange(currentPage + 1)}
                       disabled={!hasMoreData && currentPage >= totalPages}
                       className="px-2 py-1 text-xs sm:text-sm"
-                      title="Página siguiente"
                     >
                       <Icon icon="tabler:chevron-right" className="text-base sm:text-lg" />
                     </Button>
@@ -770,7 +767,6 @@ const FormResponsesTable = ({ items, loading, error, refresh, meta, currentPage,
                       onClick={() => onPageChange(totalPages)}
                       disabled={currentPage >= totalPages}
                       className="px-2 py-1 text-xs sm:text-sm"
-                      title="Última página"
                     >
                       <Icon icon="tabler:chevrons-right" className="text-base sm:text-lg" />
                     </Button>

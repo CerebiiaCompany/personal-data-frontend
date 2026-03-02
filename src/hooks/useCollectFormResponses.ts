@@ -1,6 +1,6 @@
 import { fetchCollectForms } from "@/lib/collectForm.api";
 import { fetchCollectFormResponses } from "@/lib/collectFormResponse.api";
-import { APIMetadata, QueryParams } from "@/types/api.types";
+import { APIResponse, QueryParams } from "@/types/api.types";
 import {
   CollectForm,
   CollectFormWithResponses,
@@ -15,7 +15,7 @@ export function useCollectFormResponses<T = CollectFormWithResponses>(
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [meta, setMeta] = useState<APIMetadata | null>(null);
+  const [meta, setMeta] = useState<APIResponse["meta"] | null>(null);
 
   async function fetch() {
     setLoading(true);
@@ -38,7 +38,7 @@ export function useCollectFormResponses<T = CollectFormWithResponses>(
     if (!params.companyId) return;
 
     fetch();
-  }, [params.companyId, params.search, params.page, params.limit]);
+  }, [params.companyId, params.search, params.page, params.pageSize]);
 
   return {
     data,

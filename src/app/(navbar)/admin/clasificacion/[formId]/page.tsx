@@ -23,7 +23,7 @@ export default function FormClassificationPage() {
     id: formId,
     search: debouncedValue,
     page: currentPage,
-    limit: pageSize,
+    pageSize: pageSize,
   });
 
   const handlePageChange = (newPage: number) => {
