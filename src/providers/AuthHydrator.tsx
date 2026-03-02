@@ -4,6 +4,14 @@ import { useSessionStore } from "@/store/useSessionStore";
 import { parseApiError } from "@/utils/parseApiError";
 import { getSession, getPermissions } from "@/lib/auth.api";
 
+// Función auxiliar para validar si un error es válido y no vacío
+function isValidError(error: any): boolean {
+  if (!error) return false;
+  if (typeof error !== 'object') return false;
+  // Un objeto de error vacío {} no es válido
+  return Object.keys(error).length > 0;
+}
+
 export function AuthHydrator() {
   const setUser = useSessionStore((store) => store.setUser);
   const setPermissions = useSessionStore((store) => store.setPermissions);
@@ -77,17 +85,30 @@ export function AuthHydrator() {
           return;
         }
 
-        if (session.error) {
+        // Verificar si hay un error VÁLIDO (no vacío)
+        if (session.error && isValidError(session.error)) {
           console.error("[AuthHydrator] ❌ Error al obtener sesión:", session.error);
           const parsedError = parseApiError(session.error);
+          
+          // Si el error es de autenticación (no hay sesión), no es un error crítico
+          if (session.error.code === 'auth/unauthenticated') {
+            console.log("[AuthHydrator] ℹ️ Usuario no autenticado (esperado si no ha iniciado sesión)");
+            setError(parsedError);
+            setLoading(false);
+            isLoadingRef.current = false;
+            return;
+          }
+          
+          // Para otros errores, sí es problemático
           setError(parsedError);
           setLoading(false);
           isLoadingRef.current = false;
           return;
         }
 
+        // Si el error es vacío pero no hay data, considerar como no autenticado
         if (!session.data) {
-          console.error("[AuthHydrator] ❌ No hay datos de sesión");
+          console.log("[AuthHydrator] ℹ️ No hay datos de sesión (usuario no autenticado)");
           setError("No hay sesión activa");
           setLoading(false);
           isLoadingRef.current = false;
@@ -114,7 +135,7 @@ export function AuthHydrator() {
         try {
           const permissionsRes = await getPermissions();
 
-          if (permissionsRes.error) {
+          if (permissionsRes.error && isValidError(permissionsRes.error)) {
             console.error("[AuthHydrator] ⚠️ Error al obtener permisos:", permissionsRes.error);
             console.log("[AuthHydrator] Continuando sin permisos (admins pueden funcionar sin ellos)");
             // No bloquear la app si fallan los permisos

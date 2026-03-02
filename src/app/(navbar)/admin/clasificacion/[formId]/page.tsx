@@ -9,16 +9,32 @@ import { useSessionStore } from "@/store/useSessionStore";
 import { Icon } from "@iconify/react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { useState } from "react";
 
 export default function FormClassificationPage() {
   const user = useSessionStore((store) => store.user);
   const formId = useParams().formId?.toString();
   const { debouncedValue, search, setSearch } = useDebouncedSearch();
-  const { data, loading, error, refresh } = useCollectFormResponses({
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  
+  const { data, loading, error, meta, refresh } = useCollectFormResponses({
     companyId: user?.companyUserData?.companyId,
     id: formId,
     search: debouncedValue,
+    page: currentPage,
+    limit: pageSize,
   });
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize);
+    setCurrentPage(1);
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -51,6 +67,11 @@ export default function FormClassificationPage() {
           items={data ? data.responses : null}
           loading={loading}
           error={error}
+          meta={meta}
+          currentPage={currentPage}
+          pageSize={pageSize}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
         />
       </div>
     </div>

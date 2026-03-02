@@ -18,15 +18,21 @@ import SendConsentInvitationDialog from "../dialogs/SendConsentInvitationDialog"
 import { showDialog } from "@/utils/dialogs.utils";
 import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import { usePermissionCheck } from "@/hooks/usePermissionCheck";
+import { APIMetadata } from "@/types/api.types";
 
 interface Props {
   items: CollectFormResponse[] | null;
   loading: boolean;
   error: string | null;
   refresh: () => void;
+  meta: APIMetadata | null;
+  currentPage: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
 }
 
-const FormResponsesTable = ({ items, loading, error, refresh }: Props) => {
+const FormResponsesTable = ({ items, loading, error, refresh, meta, currentPage, pageSize, onPageChange, onPageSizeChange }: Props) => {
   const user = useSessionStore((store) => store.user);
   const { can } = usePermissionCheck();
   const formId = useParams().formId!.toString();
@@ -128,8 +134,9 @@ const FormResponsesTable = ({ items, loading, error, refresh }: Props) => {
 
       {!loading ? (
         items?.length ? (
-          <div className="w-full overflow-x-auto overflow-y-auto flex-1 min-h-0">
-            <table className="w-full min-w-[1900px] table-auto border-separate border-spacing-y-2">
+          <>
+            <div className="w-full overflow-x-auto overflow-y-auto flex-1 min-h-0">
+              <table className="w-full min-w-[1900px] table-auto border-separate border-spacing-y-2">
               <thead className="sticky top-0 bg-white z-10">
                 <tr>
                   <th
@@ -596,6 +603,183 @@ const FormResponsesTable = ({ items, loading, error, refresh }: Props) => {
               </tbody>
             </table>
           </div>
+          
+          {/* Controles de paginación */}
+          {(() => {
+            // Calcular totalPages del lado del cliente si el backend no lo proporciona
+            const totalCount = meta?.totalCount || 0;
+            const calculatedTotalPages = totalCount > 0 ? Math.ceil(totalCount / pageSize) : 1;
+            const totalPages = meta?.totalPages || calculatedTotalPages;
+            const hasMoreData = items && items.length === pageSize; // Si hay exactamente pageSize items, probablemente hay más
+            const showPagination = totalCount > pageSize || hasMoreData || currentPage > 1;
+
+            if (!showPagination) return null;
+
+            return (
+              <div className="flex-shrink-0 w-full border-t border-disabled pt-4 pb-2 bg-white">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                  {/* Información de registros */}
+                  <div className="flex items-center gap-3 text-xs sm:text-sm text-stone-600">
+                    <span>
+                      Mostrando{" "}
+                      <span className="font-semibold text-primary-900">
+                        {((currentPage - 1) * pageSize) + 1}
+                      </span>{" "}
+                      a{" "}
+                      <span className="font-semibold text-primary-900">
+                        {Math.min(currentPage * pageSize, totalCount > 0 ? totalCount : (items?.length || 0) + ((currentPage - 1) * pageSize))}
+                      </span>
+                      {totalCount > 0 && (
+                        <>
+                          {" "}de{" "}
+                          <span className="font-semibold text-primary-900">
+                            {totalCount}
+                          </span>{" "}
+                          registros
+                        </>
+                      )}
+                    </span>
+                    
+                    {/* Selector de tamaño de página */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-stone-500">|</span>
+                      <label htmlFor="pageSize" className="text-stone-600">
+                        Por página:
+                      </label>
+                      <select
+                        id="pageSize"
+                        value={pageSize}
+                        onChange={(e) => onPageSizeChange(Number(e.target.value))}
+                        className="px-2 py-1 border border-disabled rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      >
+                        <option value={10}>10</option>
+                        <option value={20}>20</option>
+                        <option value={50}>50</option>
+                        <option value={100}>100</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Controles de navegación */}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      hierarchy="secondary"
+                      onClick={() => onPageChange(1)}
+                      disabled={currentPage === 1}
+                      className="px-2 py-1 text-xs sm:text-sm"
+                      title="Primera página"
+                    >
+                      <Icon icon="tabler:chevrons-left" className="text-base sm:text-lg" />
+                    </Button>
+                    
+                    <Button
+                      hierarchy="secondary"
+                      onClick={() => onPageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="px-2 py-1 text-xs sm:text-sm"
+                      title="Página anterior"
+                    >
+                      <Icon icon="tabler:chevron-left" className="text-base sm:text-lg" />
+                    </Button>
+
+                    {/* Números de página */}
+                    <div className="flex items-center gap-1">
+                      {(() => {
+                        const maxVisible = 5;
+                        let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+                        let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+                        
+                        if (endPage - startPage < maxVisible - 1) {
+                          startPage = Math.max(1, endPage - maxVisible + 1);
+                        }
+
+                        const pages = [];
+                        
+                        if (startPage > 1) {
+                          pages.push(
+                            <Button
+                              key={1}
+                              hierarchy="secondary"
+                              onClick={() => onPageChange(1)}
+                              className="px-3 py-1 text-xs sm:text-sm min-w-[32px]"
+                            >
+                              1
+                            </Button>
+                          );
+                          if (startPage > 2) {
+                            pages.push(
+                              <span key="ellipsis-start" className="px-2 text-stone-400">
+                                ...
+                              </span>
+                            );
+                          }
+                        }
+
+                        for (let i = startPage; i <= endPage; i++) {
+                          pages.push(
+                            <Button
+                              key={i}
+                              hierarchy={i === currentPage ? "primary" : "secondary"}
+                              onClick={() => onPageChange(i)}
+                              className={clsx([
+                                "px-3 py-1 text-xs sm:text-sm min-w-[32px]",
+                                i === currentPage && "!bg-primary-700 !text-white"
+                              ])}
+                            >
+                              {i}
+                            </Button>
+                          );
+                        }
+
+                        if (endPage < totalPages) {
+                          if (endPage < totalPages - 1) {
+                            pages.push(
+                              <span key="ellipsis-end" className="px-2 text-stone-400">
+                                ...
+                              </span>
+                            );
+                          }
+                          pages.push(
+                            <Button
+                              key={totalPages}
+                              hierarchy="secondary"
+                              onClick={() => onPageChange(totalPages)}
+                              className="px-3 py-1 text-xs sm:text-sm min-w-[32px]"
+                            >
+                              {totalPages}
+                            </Button>
+                          );
+                        }
+
+                        return pages;
+                      })()}
+                    </div>
+
+                    <Button
+                      hierarchy="secondary"
+                      onClick={() => onPageChange(currentPage + 1)}
+                      disabled={!hasMoreData && currentPage >= totalPages}
+                      className="px-2 py-1 text-xs sm:text-sm"
+                      title="Página siguiente"
+                    >
+                      <Icon icon="tabler:chevron-right" className="text-base sm:text-lg" />
+                    </Button>
+                    
+                    <Button
+                      hierarchy="secondary"
+                      onClick={() => onPageChange(totalPages)}
+                      disabled={currentPage >= totalPages}
+                      className="px-2 py-1 text-xs sm:text-sm"
+                      title="Última página"
+                    >
+                      <Icon icon="tabler:chevrons-right" className="text-base sm:text-lg" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </>
         ) : (
           <div className="flex flex-col items-center justify-center py-8 px-4">
             <p className="text-center text-stone-500 text-sm sm:text-base">Este formulario aún no tiene registros</p>

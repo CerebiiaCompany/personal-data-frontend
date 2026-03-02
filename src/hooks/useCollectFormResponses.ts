@@ -1,6 +1,6 @@
 import { fetchCollectForms } from "@/lib/collectForm.api";
 import { fetchCollectFormResponses } from "@/lib/collectFormResponse.api";
-import { QueryParams } from "@/types/api.types";
+import { APIMetadata, QueryParams } from "@/types/api.types";
 import {
   CollectForm,
   CollectFormWithResponses,
@@ -15,6 +15,7 @@ export function useCollectFormResponses<T = CollectFormWithResponses>(
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [meta, setMeta] = useState<APIMetadata | null>(null);
 
   async function fetch() {
     setLoading(true);
@@ -30,18 +31,20 @@ export function useCollectFormResponses<T = CollectFormWithResponses>(
 
     setLoading(false);
     setData(fetchedData.data);
+    setMeta(fetchedData.meta || null);
   }
 
   useEffect(() => {
     if (!params.companyId) return;
 
     fetch();
-  }, [params.companyId, params.search]);
+  }, [params.companyId, params.search, params.page, params.limit]);
 
   return {
     data,
     loading,
     error,
+    meta,
     refresh: fetch,
   };
 }

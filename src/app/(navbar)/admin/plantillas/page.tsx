@@ -160,7 +160,7 @@ export default function TemplatesPage() {
                     className="text-6xl sm:text-7xl md:text-8xl text-primary-500 flex-shrink-0"
                   />
                   <div className="flex flex-col justify-between gap-3 sm:gap-0 w-full h-full min-w-0">
-                    <h6 className="w-full font-bold text-base sm:text-lg text-center sm:text-left truncate">
+                    <h6 className="w-full font-bold text-base sm:text-lg text-center sm:text-left line-clamp-2 break-words">
                       {policyTemplate.name}
                     </h6>
                     <span className="w-full h-[1px] bg-disabled" />
