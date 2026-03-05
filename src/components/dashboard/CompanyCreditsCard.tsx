@@ -60,7 +60,7 @@ const CompanyCreditsCard = ({ data, loading, error }: Props) => {
             <>
               <div className="flex items-baseline gap-1.5 sm:gap-2">
                 <span className="text-2xl sm:text-3xl md:text-4xl font-bold leading-none">{data.creditsUsed}</span>
-                <span className="text-xs sm:text-sm text-white/90">créditos</span>
+                <span className="text-xs sm:text-sm text-white/90">pésos</span>
               </div>
               <p className="text-white/90 text-xs sm:text-sm">
                 {getMonthName(data.month)} {data.year}
