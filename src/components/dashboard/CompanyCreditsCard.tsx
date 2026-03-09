@@ -30,7 +30,6 @@ const CompanyCreditsCard = ({ data, loading, error }: Props) => {
 
   return (
     <div className="bg-gradient-to-br from-blue-500 to-indigo-700 rounded-lg px-3 sm:px-4 md:px-5 py-3 sm:py-3.5 text-white relative flex items-center justify-between overflow-hidden shadow-lg">
-      {/* Decoración de fondo */}
       <div className="w-20 sm:w-24 md:w-32 aspect-square absolute right-[-12px] sm:right-[-15px] md:right-[-20px] top-[-12px] sm:top-[-15px] md:top-[-20px] rounded-full border-white/20 border border-dashed" />
 
       {/* Contenido */}
