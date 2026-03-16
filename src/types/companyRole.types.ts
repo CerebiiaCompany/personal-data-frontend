@@ -25,6 +25,9 @@ export type CompanyRolePermissions = {
     delete: boolean;
     send: boolean;
   };
+  audit: {
+    view: boolean;
+  };
 };
 
 export interface CreateCompanyRole {

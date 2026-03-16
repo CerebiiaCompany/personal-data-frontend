@@ -49,3 +49,13 @@ export async function deleteCompanyRole(
 
   return res;
 }
+
+export async function restoreCompanyRole(
+  companyId: string,
+  roleId: string
+): Promise<APIResponse<{ message: string }>> {
+  return customFetch<{ message: string }>(
+    `/companies/${companyId}/roles/${roleId}/restore`,
+    { method: "PATCH" }
+  );
+}

@@ -58,6 +58,16 @@ export async function deleteCompanyUser(
   return res;
 }
 
+export async function restoreCompanyUser(
+  companyId: string,
+  userId: string
+): Promise<APIResponse<{ message: string }>> {
+  return customFetch<{ message: string }>(
+    `/companies/${companyId}/users/${userId}/restore`,
+    { method: "PATCH" }
+  );
+}
+
 export async function updateMe(data: {
   name: string;
   companyUserData: {

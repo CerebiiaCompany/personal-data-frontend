@@ -62,6 +62,13 @@ export const NAVBAR_DATA: NavbarData = [
     requiredPermission: "campaigns.view",
   },
   {
+    title: "Auditoría",
+    path: "/admin/auditoria",
+    icon: "heroicons:clipboard-document-list",
+    minRole: "USER",
+    requiredPermission: "audit.view",
+  },
+  {
     title: "Crear Campaña",
     path: "/admin/campanas/crear",
     minRole: "USER",

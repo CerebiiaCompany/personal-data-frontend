@@ -20,6 +20,7 @@ const CollectFormsList = ({ items, loading, error, refresh }: Props) => {
   const confirm = useConfirm();
 
   async function deleteForm(id: string) {
+    let reason = "";
     const confirmed = await confirm({
       title: "⚠️ Eliminar Formulario de Recolección",
       description: (
@@ -41,6 +42,12 @@ const CollectFormsList = ({ items, loading, error, refresh }: Props) => {
           </p>
         </div>
       ),
+      withReasonField: true,
+      reasonLabel: "Razón de eliminación (opcional)",
+      reasonPlaceholder: "Ej. Datos cargados por error, formulario de prueba, etc.",
+      onReasonChange: (value) => {
+        reason = value;
+      },
       confirmText: "Sí, eliminar formulario",
       cancelText: "Cancelar",
       danger: true,
@@ -51,7 +58,7 @@ const CollectFormsList = ({ items, loading, error, refresh }: Props) => {
     const companyId = user?.companyUserData?.companyId;
     if (!companyId) return;
     
-    const res = await deleteCollectForm(companyId, id);
+    const res = await deleteCollectForm(companyId, id, reason || undefined);
 
     if (res.error) {
       return toast.error(parseApiError(res.error));

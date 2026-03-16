@@ -79,13 +79,28 @@ export async function updateCollectForm(
   return res;
 }
 
-export async function deleteCollectForm(companyId: string, formId: string) {
+export async function deleteCollectForm(
+  companyId: string,
+  formId: string,
+  reason?: string
+) {
   const res = await customFetch(
     `/companies/${companyId}/collectForms/${formId}`,
     {
       method: "DELETE",
+      body: reason ? JSON.stringify({ reason }) : undefined,
     }
   );
 
   return res;
+}
+
+export async function restoreCollectForm(
+  companyId: string,
+  collectFormId: string
+): Promise<APIResponse<{ message: string }>> {
+  return customFetch<{ message: string }>(
+    `/companies/${companyId}/collectForms/${collectFormId}/restore`,
+    { method: "PATCH" }
+  );
 }

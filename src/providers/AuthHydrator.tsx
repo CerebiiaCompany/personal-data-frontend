@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import { useSessionStore } from "@/store/useSessionStore";
 import { parseApiError } from "@/utils/parseApiError";
 import { getSession, getPermissions } from "@/lib/auth.api";
+import { UserPermissionsResponse } from "@/types/user.types";
 
 // Función auxiliar para validar si un error es válido y no vacío
 function isValidError(error: any): boolean {
@@ -143,8 +144,32 @@ export function AuthHydrator() {
             console.log("[AuthHydrator] ✅ Permisos obtenidos exitosamente");
             console.log("[AuthHydrator]    - Rol:", permissionsRes.data?.role);
             console.log("[AuthHydrator]    - Es SuperAdmin:", permissionsRes.data?.isSuperAdmin);
-            console.log("[AuthHydrator]    - Tiene permisos:", !!permissionsRes.data?.permissions);
-            setPermissions(permissionsRes.data);
+            console.log("[AuthHydrator]    - Tiene permisos (raw):", !!permissionsRes.data?.permissions);
+
+            // Normalizar estructura de permisos por si viene envuelta en metadatos de Mongoose
+            const normalizedPermissions = (() => {
+              const raw = (permissionsRes.data as UserPermissionsResponse).permissions as any;
+              if (!raw) return permissionsRes.data.permissions;
+
+              // Preferir siempre estructuras internas si existen
+              if (raw._doc) {
+                return raw._doc;
+              }
+
+              if (raw.$__parent?.permissions) {
+                return raw.$__parent.permissions;
+              }
+
+              // Si no hay envoltorios de Mongoose, asumir que ya viene plano
+              return raw;
+            })();
+
+            console.log("[AuthHydrator]    - Permisos normalizados:", normalizedPermissions);
+
+            setPermissions({
+              ...(permissionsRes.data as UserPermissionsResponse),
+              permissions: normalizedPermissions,
+            });
           }
         } catch (permError) {
           console.error("[AuthHydrator] ⚠️ Excepción al obtener permisos (no crítico):", permError);

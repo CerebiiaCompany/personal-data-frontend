@@ -19,6 +19,7 @@ import { showDialog } from "@/utils/dialogs.utils";
 import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import { usePermissionCheck } from "@/hooks/usePermissionCheck";
 import { APIResponse } from "@/types/api.types";
+import { useConfirm } from "@/components/dialogs/ConfirmProvider";
 
 interface Props {
   items: CollectFormResponse[] | null;
@@ -35,6 +36,7 @@ interface Props {
 const FormResponsesTable = ({ items, loading, error, refresh, meta, currentPage, pageSize, onPageChange, onPageSizeChange }: Props) => {
   const user = useSessionStore((store) => store.user);
   const { can } = usePermissionCheck();
+  const confirm = useConfirm();
   const formId = useParams().formId!.toString();
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
   const [selectedResponse, setSelectedResponse] = React.useState<CollectFormResponse | null>(null);
@@ -105,8 +107,29 @@ const FormResponsesTable = ({ items, loading, error, refresh, meta, currentPage,
 
     if (!companyId) return;
 
-    const res = await deleteCollectFormResponse(companyId, formId, id);
-    console.log(res);
+    let reason = "";
+    const confirmed = await confirm({
+      title: "¿Eliminar este registro?",
+      description: (
+        <>
+          ¿Estás seguro de que deseas eliminar este registro? Esta acción puede ser{" "}
+          <strong>irreversible</strong> y se puede perder información asociada.
+        </>
+      ),
+      withReasonField: true,
+      reasonLabel: "Razón de eliminación (opcional)",
+      reasonPlaceholder: "Ej. Registro duplicado, evaluación inválida, etc.",
+      onReasonChange: (value) => {
+        reason = value;
+      },
+      confirmText: "Sí, eliminar",
+      cancelText: "Cancelar",
+      danger: true,
+    });
+
+    if (!confirmed) return;
+
+    const res = await deleteCollectFormResponse(companyId, formId, id, reason || undefined);
     if (res.error) {
       return toast.error(parseApiError(res.error));
     }

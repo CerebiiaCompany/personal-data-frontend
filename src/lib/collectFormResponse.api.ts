@@ -43,16 +43,29 @@ export async function fetchAllCollectFormResponses(
 export async function deleteCollectFormResponse(
   companyId: string,
   formId: string,
-  responseId: string
+  responseId: string,
+  reason?: string
 ) {
   const res = await customFetch(
     `/companies/${companyId}/collectForms/${formId}/responses/${responseId}`,
     {
       method: "DELETE",
+      body: reason ? JSON.stringify({ reason }) : undefined,
     }
   );
 
   return res;
+}
+
+export async function restoreCollectFormResponse(
+  companyId: string,
+  collectFormId: string,
+  responseId: string
+): Promise<APIResponse<{ message: string }>> {
+  return customFetch<{ message: string }>(
+    `/companies/${companyId}/collectForms/${collectFormId}/responses/${responseId}/restore`,
+    { method: "PATCH" }
+  );
 }
 
 export async function sendConsentInvitation(

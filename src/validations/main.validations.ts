@@ -139,6 +139,9 @@ export const createCompanyRoleValidationSchema = z.object({
       delete: z.boolean(),
       send: z.boolean(),
     }),
+    audit: z.object({
+      view: z.boolean(),
+    }),
   }),
 });
 

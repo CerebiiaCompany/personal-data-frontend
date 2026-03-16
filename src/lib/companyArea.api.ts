@@ -62,3 +62,13 @@ export async function deleteCompanyArea(
 
   return res;
 }
+
+export async function restoreCompanyArea(
+  companyId: string,
+  areaId: string
+): Promise<APIResponse<{ message: string }>> {
+  return customFetch<{ message: string }>(
+    `/companies/${companyId}/areas/${areaId}/restore`,
+    { method: "PATCH" }
+  );
+}

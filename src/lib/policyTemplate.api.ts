@@ -40,6 +40,16 @@ export async function deletePolicyTemplate(
   return res;
 }
 
+export async function restorePolicyTemplate(
+  companyId: string,
+  policyId: string
+): Promise<APIResponse<{ message: string }>> {
+  return customFetch<{ message: string }>(
+    `/companies/${companyId}/policyTemplates/${policyId}/restore`,
+    { method: "PATCH" }
+  );
+}
+
 export interface PolicyTemplateFileUrlResponse {
   url: string;
   expiresIn: number;

@@ -1,54 +1,70 @@
-import { fetchCampaigns } from "@/lib/campaign.api";
-import { fetchCompanyUsersActionLogs } from "@/lib/userActionLogs.api";
-import { QueryParams } from "@/types/api.types";
-import { Campaign } from "@/types/campaign.types";
+import { fetchCompanyActionLogs } from "@/lib/userActionLogs.api";
+import { APIResponse, QueryParams } from "@/types/api.types";
 import { UserActionLog } from "@/types/userActionLogs.types";
 import { parseApiError } from "@/utils/parseApiError";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 interface UseCompanyActionLogsParams extends QueryParams {
-  /**
-   * Si es false, no hará el fetch automático
-   */
+  companyId: string | undefined;
   enabled?: boolean;
 }
 
-export function useCompanyActionLogs<T = UserActionLog[]>(params: UseCompanyActionLogsParams) {
-  const { enabled = true, ...queryParams } = params;
-  const [data, setData] = useState<T | null>(null);
+export function useCompanyActionLogs(params: UseCompanyActionLogsParams) {
+  const { enabled = true, companyId, ...queryParams } = params;
+  const [data, setData] = useState<UserActionLog[] | null>(null);
+  const [meta, setMeta] = useState<APIResponse["meta"] | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function fetch() {
-    setLoading(true);
-    const fetchedData = await fetchCompanyUsersActionLogs(queryParams);
+  const fetch = useCallback(async () => {
+    if (!companyId) return;
 
-    if (fetchedData.error) {
-      let parsedError = parseApiError(fetchedData.error);
+    setLoading(true);
+    setError(null);
+    const result = await fetchCompanyActionLogs({
+      companyId,
+      page: queryParams.page,
+      pageSize: queryParams.pageSize,
+      startDate: queryParams.startDate,
+      endDate: queryParams.endDate,
+      type: queryParams.type,
+      targetModel: queryParams.targetModel,
+      searchUser: queryParams.searchUser,
+    });
+
+    if (result.error) {
+      const parsedError = parseApiError(result.error);
       setError(parsedError);
       setLoading(false);
-      
-      // Solo mostrar error si NO es 403 (sin permisos)
-      if (fetchedData.error.code !== "auth/unauthorized") {
+      if (result.error.code !== "auth/unauthorized") {
         toast.error(parsedError);
       }
       return;
     }
 
+    setData(result.data ?? null);
+    setMeta(result.meta ?? null);
     setLoading(false);
-    setData(fetchedData.data);
-  }
+  }, [
+    companyId,
+    queryParams.page,
+    queryParams.pageSize,
+    queryParams.startDate,
+    queryParams.endDate,
+    queryParams.type,
+    queryParams.targetModel,
+    queryParams.searchUser,
+  ]);
 
   useEffect(() => {
-    // No hacer fetch si está deshabilitado o no hay companyId
-    if (!enabled || !queryParams.companyId) return;
-
+    if (!enabled || !companyId) return;
     fetch();
-  }, [enabled, queryParams.companyId, queryParams.search, queryParams.startDate, queryParams.endDate]);
+  }, [enabled, companyId, fetch]);
 
   return {
     data,
+    meta,
     loading,
     error,
     refresh: fetch,

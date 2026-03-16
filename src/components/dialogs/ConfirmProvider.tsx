@@ -16,6 +16,12 @@ export interface ConfirmDialogOptions {
   cancelText?: string;
   danger?: boolean;
   loading?: boolean; // optional: you can toggle this externally if needed
+  /** Mostrar campo de texto para razón de la acción (por ejemplo, motivo de eliminación) */
+  withReasonField?: boolean;
+  reasonLabel?: string;
+  reasonPlaceholder?: string;
+  /** Callback opcional para recibir el valor del campo de razón */
+  onReasonChange?: (reason: string) => void;
 }
 
 type ConfirmFn = (opts?: ConfirmDialogOptions) => Promise<boolean>;
@@ -47,12 +53,8 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
       {children}
 
       <ConfirmDialog
+        {...opts}
         open={open}
-        title={opts?.title}
-        description={opts?.description}
-        confirmText={opts?.confirmText}
-        cancelText={opts?.cancelText}
-        danger={opts?.danger}
         loading={opts?.loading ?? internalLoading}
         onCancel={() => handleClose(false)}
         onConfirm={() => handleClose(true)}

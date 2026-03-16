@@ -66,6 +66,16 @@ export async function deleteCampaign(
   return res;
 }
 
+export async function restoreCampaign(
+  companyId: string,
+  campaignId: string
+): Promise<APIResponse<{ message: string }>> {
+  return customFetch<{ message: string }>(
+    `/companies/${companyId}/campaigns/${campaignId}/restore`,
+    { method: "PATCH" }
+  );
+}
+
 export async function createScheduledCampaign(
   companyId: string,
   data: any

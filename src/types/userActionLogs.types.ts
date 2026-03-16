@@ -4,7 +4,14 @@ import { SessionUser } from "./user.types";
 const userActionLogKeys = [] as const;
 export type UserActionLogKey = (typeof userActionLogKeys)[number];
 
-export type UserActionLogType = "CREATE" | "UPDATE" | "DELETE";
+export type UserActionLogType = "CREATE" | "UPDATE" | "DELETE" | "RESTORE";
+
+export const userActionLogTypeOptions: CustomSelectOption<UserActionLogType>[] = [
+  { title: "Crear", value: "CREATE" },
+  { title: "Editar", value: "UPDATE" },
+  { title: "Eliminar", value: "DELETE" },
+  { title: "Restaurar", value: "RESTORE" },
+];
 
 export type UserActionLogTargetModel =
   | "USER"
@@ -13,8 +20,10 @@ export type UserActionLogTargetModel =
   | "COMPANY_AREA"
   | "CAMPAIGN"
   | "COLLECT_FORM"
+  | "COLLECT_FORM_RESPONSE"
   | "POLICY_TEMPLATE"
-  | "FILE";
+  | "FILE"
+  | "EVALUATION";
 
 export const userActionLogTargetModelOptions: CustomSelectOption<UserActionLogTargetModel>[] =
   [
@@ -43,12 +52,20 @@ export const userActionLogTargetModelOptions: CustomSelectOption<UserActionLogTa
       value: "COLLECT_FORM",
     },
     {
+      title: "Respuesta de formulario",
+      value: "COLLECT_FORM_RESPONSE",
+    },
+    {
       title: "Plantilla",
       value: "POLICY_TEMPLATE",
     },
     {
       title: "Archivo",
       value: "FILE",
+    },
+    {
+      title: "Evaluación",
+      value: "EVALUATION",
     },
   ];
 export const parseActionLogTargetModelToString = (
@@ -65,12 +82,13 @@ export interface UserActionLog {
   // action details
   type: UserActionLogType;
   targetModel: UserActionLogTargetModel;
-  actionKey: string;
-  summary?: string; //? short description to show in activity (Eg. "Campaign creation")
+  /** Ruta del API que generó la acción */
+  endpoint: string;
+  summary?: string;
 
   // virtual field
   user?: Pick<SessionUser, "name" | "lastName">;
 
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
 }

@@ -45,4 +45,9 @@ export interface QueryParams {
   // for credits by month/year
   year?: number;
   month?: number;
+
+  // for audit / actionLogs
+  type?: string;
+  targetModel?: string;
+  searchUser?: string;
 }

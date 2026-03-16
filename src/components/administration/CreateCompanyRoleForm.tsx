@@ -103,6 +103,11 @@ const permissionsGroup = [
       { title: "Enviar Campaña", name: "send" },
     ],
   }),
+  definePermissionGroup({
+    title: "Auditoría",
+    groupName: "audit",
+    permissions: [{ title: "Ver auditoría", name: "view" }],
+  }),
 ];
 
 const defaultPermissions: CompanyRolePermissions =
