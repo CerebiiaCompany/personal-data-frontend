@@ -14,6 +14,7 @@ import { useSessionStore } from "@/store/useSessionStore";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { getSession, loginUser, getPermissions } from "@/lib/auth.api";
+import { UserPermissionsResponse } from "@/types/user.types";
 import { parseApiError } from "@/utils/parseApiError";
 
 const schema = z.object({
@@ -85,8 +86,31 @@ function LoginForm() {
       // Si falla obtener permisos, mostrar advertencia pero continuar
       console.error("Error al obtener permisos:", permissionsRes.error);
       toast.warning("No se pudieron cargar los permisos del usuario");
-    } else {
-      setPermissions(permissionsRes.data);
+    } else if (permissionsRes.data) {
+      // Normalizar estructura de permisos (por si viene envuelta en metadatos de Mongoose)
+      const raw = (permissionsRes.data as UserPermissionsResponse).permissions as any;
+
+      const normalizedPermissions = (() => {
+        if (!raw) return permissionsRes.data.permissions;
+
+        // 1) Preferir _doc si existe
+        if (raw._doc) {
+          return raw._doc;
+        }
+
+        // 2) O $__parent.permissions
+        if (raw.$__parent?.permissions) {
+          return raw.$__parent.permissions;
+        }
+
+        // 3) En caso contrario, asumir que ya viene plano
+        return raw;
+      })();
+
+      setPermissions({
+        ...(permissionsRes.data as UserPermissionsResponse),
+        permissions: normalizedPermissions,
+      });
     }
 
     setLoading(false); // ✅ Importante: desactivar loading después del login exitoso
