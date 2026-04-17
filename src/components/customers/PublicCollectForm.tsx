@@ -528,12 +528,31 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
         </div>
 
         <div className="flex gap-5">
-          <CustomSelect
-            label="Género"
-            options={userGendersOptions}
-            value={watch("user.gender")}
-            onChange={(value) => setValue("user.gender", value)}
-          />
+          <div className="flex flex-col items-start gap-1 text-left flex-1 relative h-fit">
+            <label className="font-medium w-full text-ellipsis pl-2 text-stone-500 text-sm">
+              Género
+            </label>
+            <select
+              value={watch("user.gender") || ""}
+              onChange={(e) =>
+                setValue("user.gender", e.target.value as UserGender, {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                  shouldTouch: true,
+                })
+              }
+              className="rounded-lg gap-2 w-full text-primary-900 border border-primary-900 flex-1 relative px-3 py-2 bg-primary-50"
+            >
+              <option value="" disabled>
+                Seleccionar opción
+              </option>
+              {userGendersOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.title}
+                </option>
+              ))}
+            </select>
+          </div>
           <CustomInput
             type="number"
             label="Edad"
