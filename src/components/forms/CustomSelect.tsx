@@ -1,7 +1,7 @@
 import { CustomSelectOption } from "@/types/forms.types";
 import { Icon } from "@iconify/react";
 import clsx from "clsx";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 interface Props<T extends string> {
   label?: string;
@@ -22,15 +22,13 @@ const CustomSelect = <T extends string>({
 }: Props<T>) => {
   const [dialogToggle, setDialogToggle] = useState<boolean>(false);
   const [dialogDown, setDialogDown] = useState<boolean>(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
 
   const selectedOption = options.find((e) => e.value === value);
 
   function toggleDialog() {
-    if (!dialogToggle) {
-      calcDialogAnchor();
-    }
-    setDialogToggle(!dialogToggle);
+    setDialogToggle((prev) => !prev);
   }
 
   function calcDialogAnchor() {
@@ -48,8 +46,30 @@ const CustomSelect = <T extends string>({
     }
   }
 
+  useEffect(() => {
+    if (!dialogToggle) return;
+    calcDialogAnchor();
+  }, [dialogToggle, options.length]);
+
+  useEffect(() => {
+    function handleOutsideClick(event: MouseEvent) {
+      if (!containerRef.current) return;
+      if (containerRef.current.contains(event.target as Node)) return;
+      setDialogToggle(false);
+    }
+
+    if (dialogToggle) {
+      document.addEventListener("mousedown", handleOutsideClick);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, [dialogToggle]);
+
   return (
     <div
+      ref={containerRef}
       className={clsx([
         "flex flex-col items-start gap-1 text-left flex-1 relative h-fit",
         className,
@@ -59,12 +79,6 @@ const CustomSelect = <T extends string>({
         <label className="font-medium w-full text-ellipsis pl-2 text-stone-500 text-sm">
           {label}
         </label>
-      )}
-      {dialogToggle && (
-        <div
-          onClick={toggleDialog}
-          className="z-10 fixed left-0 top-0 w-full h-screen"
-        ></div>
       )}
       <select className="hidden"></select>
       <button
