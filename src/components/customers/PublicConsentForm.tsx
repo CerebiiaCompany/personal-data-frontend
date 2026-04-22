@@ -20,6 +20,8 @@ import { fetchCollectFormResponses, registerCollectFormResponse } from "@/lib/co
 import { fetchCompanies } from "@/lib/company.api";
 import { Company } from "@/types/company.types";
 import { CreateCollectFormResponse } from "@/types/collectFormResponse.types";
+import { checkActiveSession } from "@/lib/auth.api";
+import ReauthSessionModal from "../dialogs/ReauthSessionModal";
 
 interface Props {
   data: CollectForm;
@@ -57,6 +59,17 @@ const PublicConsentForm = ({ data }: Props) => {
   const [otpLastSentChannel, setOtpLastSentChannel] =
     useState<CampaignDeliveryChannel | null>(null);
   const [companyData, setCompanyData] = useState<Company | null>(null);
+  const [showReauthModal, setShowReauthModal] = useState(false);
+
+  async function ensureActiveSession() {
+    const sessionCheck = await checkActiveSession();
+    if (sessionCheck.error) {
+      setShowReauthModal(true);
+      toast.error("Tu sesion expiro, inicia sesion de nuevo");
+      return false;
+    }
+    return true;
+  }
 
   // Formulario de búsqueda
   const {
@@ -110,6 +123,9 @@ const PublicConsentForm = ({ data }: Props) => {
   }, [data.policyTemplateId, data.companyId]);
 
   async function onSearchSubmit(formData: SearchFormValues) {
+    const hasSession = await ensureActiveSession();
+    if (!hasSession) return;
+
     setIsSubmitting(true);
 
     try {
@@ -182,6 +198,8 @@ const PublicConsentForm = ({ data }: Props) => {
 
   async function handleSendOtp() {
     if (!userData) return;
+    const hasSession = await ensureActiveSession();
+    if (!hasSession) return;
 
     setIsSendingOtp(true);
 
@@ -239,6 +257,9 @@ const PublicConsentForm = ({ data }: Props) => {
   }
 
   async function onConsentSubmit(formData: ConsentFormValues) {
+    const hasSession = await ensureActiveSession();
+    if (!hasSession) return;
+
     // Validar que se haya solicitado el código OTP
     if (!pendingOtpId || !userData) {
       toast.error("Por favor, solicita el código de verificación primero");
@@ -330,39 +351,44 @@ const PublicConsentForm = ({ data }: Props) => {
 
   if (step === "success") {
     return (
-      <div className="max-w-2xl w-full px-4">
-        <div className="bg-white rounded-2xl shadow-lg border border-stone-200 p-6 sm:p-8">
-          <div className="flex flex-col items-center gap-4 text-center">
-            <div className="p-4 bg-green-100 rounded-full">
-              <Icon icon="tabler:check" className="text-5xl text-green-600" />
-            </div>
-            <h2 className="text-xl sm:text-2xl font-bold text-primary-900">
-              ¡Consentimiento aceptado!
-            </h2>
-            <p className="text-stone-600">
-              Gracias por aceptar la política de tratamiento de datos personales.
-              Tu información está protegida y será utilizada de acuerdo con la
-              normativa vigente.
-            </p>
-            <div className="w-full pt-4 border-t border-stone-200">
-              <p className="text-sm text-stone-500">
-                Puedes cerrar esta ventana de forma segura.
+      <>
+        <ReauthSessionModal isOpen={showReauthModal} />
+        <div className="max-w-2xl w-full px-4">
+          <div className="bg-white rounded-2xl shadow-lg border border-stone-200 p-6 sm:p-8">
+            <div className="flex flex-col items-center gap-4 text-center">
+              <div className="p-4 bg-green-100 rounded-full">
+                <Icon icon="tabler:check" className="text-5xl text-green-600" />
+              </div>
+              <h2 className="text-xl sm:text-2xl font-bold text-primary-900">
+                ¡Consentimiento aceptado!
+              </h2>
+              <p className="text-stone-600">
+                Gracias por aceptar la política de tratamiento de datos personales.
+                Tu información está protegida y será utilizada de acuerdo con la
+                normativa vigente.
               </p>
+              <div className="w-full pt-4 border-t border-stone-200">
+                <p className="text-sm text-stone-500">
+                  Puedes cerrar esta ventana de forma segura.
+                </p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </>
     );
   }
 
   if (step === "consent") {
     return (
-      <form
-        onSubmit={handleSubmitConsent(onConsentSubmit)}
-        className="max-w-2xl w-full px-4"
-      >
-        <div className="bg-white rounded-2xl shadow-lg border border-stone-200 p-6 sm:p-8">
-          {isSubmitting && <LoadingCover />}
+      <>
+        <ReauthSessionModal isOpen={showReauthModal} />
+        <form
+          onSubmit={handleSubmitConsent(onConsentSubmit)}
+          className="max-w-2xl w-full px-4"
+        >
+          <div className="bg-white rounded-2xl shadow-lg border border-stone-200 p-6 sm:p-8">
+            {isSubmitting && <LoadingCover />}
 
           <div className="flex flex-col gap-6">
             {/* Header */}
@@ -581,18 +607,21 @@ const PublicConsentForm = ({ data }: Props) => {
               </Button>
             </div>
           </div>
-        </div>
-      </form>
+          </div>
+        </form>
+      </>
     );
   }
 
   // Step: search
   return (
-    <form
-      onSubmit={handleSubmitSearch(onSearchSubmit as any)}
-      className="max-w-2xl w-full px-4"
-    >
-      <div className="bg-white rounded-2xl shadow-lg border border-stone-200 p-6 sm:p-8">
+    <>
+      <ReauthSessionModal isOpen={showReauthModal} />
+      <form
+        onSubmit={handleSubmitSearch(onSearchSubmit as any)}
+        className="max-w-2xl w-full px-4"
+      >
+        <div className="bg-white rounded-2xl shadow-lg border border-stone-200 p-6 sm:p-8">
         {isSubmitting && <LoadingCover />}
 
         <div className="flex flex-col gap-6">
@@ -688,8 +717,9 @@ const PublicConsentForm = ({ data }: Props) => {
             Continuar
           </Button>
         </div>
-      </div>
-    </form>
+        </div>
+      </form>
+    </>
   );
 };
 

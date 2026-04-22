@@ -1,6 +1,7 @@
 import { APIResponse } from "@/types/api.types";
 import { SessionUser, UserPermissionsResponse } from "@/types/user.types";
 import { customFetch } from "@/utils/customFetch";
+import { API_BASE_URL } from "@/utils/env.utils";
 
 type AuthSessionPayload = {
 user: SessionUser;
@@ -71,3 +72,41 @@ export async function getSession(): Promise<APIResponse<SessionUser>> {
                                     });
                                     return res;
                                     }
+
+export async function checkActiveSession(): Promise<
+  APIResponse<{ authenticated: boolean }>
+> {
+  try {
+    const req = await fetch(`${API_BASE_URL}/auth`, {
+      method: "GET",
+      credentials: "include",
+    });
+
+    if (req.status === 401) {
+      return {
+        error: {
+          code: "auth/unauthenticated",
+          message: "Tu sesión expiró, inicia sesión de nuevo",
+        },
+      };
+    }
+
+    if (!req.ok) {
+      return {
+        error: {
+          code: "http/unknown-error",
+          message: "No se pudo validar la sesión",
+        },
+      };
+    }
+
+    return { data: { authenticated: true } };
+  } catch {
+    return {
+      error: {
+        code: "http/network-error",
+        message: "No se pudo validar la sesión por un error de red",
+      },
+    };
+  }
+}

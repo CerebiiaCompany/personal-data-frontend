@@ -28,6 +28,8 @@ import { getPolicyTemplateFileUrl } from "@/lib/policyTemplate.api";
 import LoadingCover from "../layout/LoadingCover";
 import { CampaignDeliveryChannel } from "@/types/campaign.types";
 import { useCompanyCreditsPricing } from "@/hooks/useCompanyCreditsPricing";
+import { checkActiveSession } from "@/lib/auth.api";
+import ReauthSessionModal from "../dialogs/ReauthSessionModal";
 
 interface Props {
   data: CollectForm;
@@ -60,6 +62,7 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
   const [otpChannel, setOtpChannel] = useState<CampaignDeliveryChannel>("SMS");
   const [otpLastSentChannel, setOtpLastSentChannel] =
     useState<CampaignDeliveryChannel | null>(null);
+  const [showReauthModal, setShowReauthModal] = useState(false);
   const otpPricing = useCompanyCreditsPricing();
   const fields: {
     [key: string]: {
@@ -255,9 +258,21 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
     setOtpLastSentChannel(null);
   };
 
+  async function ensureActiveSession() {
+    const sessionCheck = await checkActiveSession();
+    if (sessionCheck.error) {
+      setShowReauthModal(true);
+      toast.error("Tu sesion expiro, inicia sesion de nuevo");
+      return false;
+    }
+    return true;
+  }
+
   async function onSubmit(formData: any) {
     // Prevenir múltiples envíos
     if (isSubmitting) return;
+    const hasSession = await ensureActiveSession();
+    if (!hasSession) return;
     
     // Validar que se haya enviado el OTP
     if (!pendingOtpId) {
@@ -330,6 +345,9 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
   };
 
   async function createOtpCode(channel: CampaignDeliveryChannel) {
+    const hasSession = await ensureActiveSession();
+    if (!hasSession) return;
+
     const phone = watch("user.phone");
     const phoneCountryCode = watch("user.phoneCountryCode") || "57";
     const email = watch("user.email");
@@ -486,10 +504,12 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
   }, [data]);
 
   return (
-    <form
-      onSubmit={handleSubmit(onSubmit)}
-      className="flex flex-col gap-3 max-w-2xl items-stretch w-full"
-    >
+    <>
+      <ReauthSessionModal isOpen={showReauthModal} />
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className="flex flex-col gap-3 max-w-2xl items-stretch w-full"
+      >
       <CollectFormResponseSavedModal 
         fullName={fullName} 
         onNewRegistration={resetForm}
@@ -769,7 +789,8 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
           </span>
         </div>
       )}
-    </form>
+      </form>
+    </>
   );
 };
 
