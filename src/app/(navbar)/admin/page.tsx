@@ -43,6 +43,9 @@ const dateRange = useMemo(
   [month, yearNumber, currentYear]
 );
         const user = useSessionStore((store) => store.user);
+        const companyPlanName = user?.company?.plan?.name || "Plan actual";
+        const companyPlanDescription =
+          user?.company?.plan?.description || "Consulta los beneficios de tu plan vigente";
         const { shouldFetch, isCompanyAdmin, isSuperAdmin } = usePermissionCheck();
         
         // Solo cargar datos si tiene permisos
@@ -207,9 +210,9 @@ const dateRange = useMemo(
             <div
                 className="w-[50%] aspect-square absolute right-[-10%] bottom-[-40%] rounded-full border-primary-50/50 border border-dashed" />
 
-            <h4 className="font-bold text-lg sm:text-xl md:text-2xl">Plan PRO</h4>
+            <h4 className="font-bold text-lg sm:text-xl md:text-2xl">{companyPlanName}</h4>
             <p className="text-sm sm:text-base md:text-lg font-medium max-w-sm leading-snug">
-                Mejora tu plan o adquiere más beneficios
+                {companyPlanDescription}
             </p>
 
             <span className="flex-1" />

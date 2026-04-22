@@ -2,10 +2,32 @@ import { APIResponse } from "@/types/api.types";
 import { SessionUser, UserPermissionsResponse } from "@/types/user.types";
 import { customFetch } from "@/utils/customFetch";
 
-export async function getSession(): Promise<APIResponse<SessionUser>> {
-  const res = await customFetch<SessionUser>("/auth", { method: "GET" });
+type AuthSessionPayload = {
+  user: SessionUser;
+  company?: SessionUser["company"];
+};
 
-  return res;
+export async function getSession(): Promise<APIResponse<SessionUser>> {
+  const res = await customFetch<SessionUser | AuthSessionPayload>("/auth", {
+    method: "GET",
+  });
+
+  if (!res.data) return res as APIResponse<SessionUser>;
+
+  // Compatibilidad: backend nuevo retorna { data: { user, company } }
+  const payload = res.data as AuthSessionPayload;
+  if ("user" in payload && payload.user) {
+    return {
+      ...res,
+      data: {
+        ...payload.user,
+        company: payload.company,
+      },
+    };
+  }
+
+  // Compatibilidad con formato anterior (data = SessionUser)
+  return res as APIResponse<SessionUser>;
 }
 
 /**

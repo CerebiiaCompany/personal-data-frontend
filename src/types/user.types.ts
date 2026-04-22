@@ -94,6 +94,20 @@ export interface SessionUser {
   lastName: string;
   username: string;
   role: UserRole;
+  company?: {
+    _id: string;
+    name: string;
+    nit: string;
+    email: string;
+    phone: string;
+    planId: string;
+    plan?: {
+      _id: string;
+      name: string;
+      description?: string;
+      monthlyCredits: number;
+    };
+  };
   companyUserData?: {
     companyId: string;
     position: string;
