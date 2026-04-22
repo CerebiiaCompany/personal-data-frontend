@@ -43,7 +43,7 @@ const dateRange = useMemo(
   [month, yearNumber, currentYear]
 );
         const user = useSessionStore((store) => store.user);
-        const companyPlanName = user?.company?.plan?.name || "Plan actual";
+        const companyPlanName = (user?.company?.plan?.name || "Plan actual").toLocaleUpperCase("es-CO");
         const companyPlanDescription =
           user?.company?.plan?.description || "Consulta los beneficios de tu plan vigente";
         const { shouldFetch, isCompanyAdmin, isSuperAdmin } = usePermissionCheck();
