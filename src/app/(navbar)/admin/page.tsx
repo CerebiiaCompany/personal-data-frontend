@@ -11,7 +11,6 @@ import { useCollectFormClasifications } from "@/hooks/useCollectFormClasificatio
 import { useCompanyActionLogs } from "@/hooks/useCompanyActionLogs";
 import { useCompanyCredits } from "@/hooks/useCompanyCredits";
 import {
-  useAcceptedPoliciesByMonth,
   useCompanyCollectFormsCount,
 } from "@/hooks/useCollectFormMetrics";
 import { usePermissionCheck } from "@/hooks/usePermissionCheck";
@@ -63,6 +62,12 @@ const dateRange = useMemo(
         endDate: dateRange.endDate.toISOString(),
         enabled: shouldFetch('classification.view'),
         });
+        // Query global para acumulados históricos (sin filtro de mes)
+        const collectFormsTotals = useCollectFormClasifications({
+        companyId: user?.companyUserData?.companyId,
+        pageSize: 200,
+        enabled: shouldFetch('classification.view'),
+        });
         const campaigns = useCampaigns({
         companyId: user?.companyUserData?.companyId,
         pageSize: 5,
@@ -88,23 +93,22 @@ const dateRange = useMemo(
         const companyCollectFormsCount = useCompanyCollectFormsCount({
           enabled: shouldFetch("collect.view"),
         });
-        const acceptedPoliciesByMonth = useAcceptedPoliciesByMonth({
-          year: dateRange.startDate.getFullYear(),
-          month: dateRange.startDate.getMonth() + 1,
-          enabled: shouldFetch("collect.view"),
-        });
-
         const activeFormsCount = useMemo(
           () => companyCollectFormsCount.data?.totalForms ?? 0,
           [companyCollectFormsCount.data]
         );
         const totalRecords = useMemo(
-          () =>
-            collectFormsClasifications.data?.reduce(
-              (acc, item) => acc + (item.totalResponses ?? 0),
-              0
-            ) ?? 0,
-          [collectFormsClasifications.data]
+          () => {
+            const fromSummary = collectFormsTotals.summary?.totalResponses;
+            if (typeof fromSummary === "number") return fromSummary;
+            return (
+              collectFormsTotals.data?.reduce(
+                (acc, item) => acc + (item.totalResponses ?? 0),
+                0
+              ) ?? 0
+            );
+          },
+          [collectFormsTotals.data, collectFormsTotals.summary?.totalResponses]
         );
         const pendingApprovalsCount = useMemo(
           () =>
@@ -214,7 +218,7 @@ const dateRange = useMemo(
                             {formatCompactNumber(totalRecords)}
                         </p>
                         <p className="text-sm mt-2 text-[#6C7FA6]">
-                            {acceptedPoliciesByMonth.data?.period ?? "Periodo seleccionado"}
+                            Acumulado histórico
                         </p>
                     </div>
                 </div>
