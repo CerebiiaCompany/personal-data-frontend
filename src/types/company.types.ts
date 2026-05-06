@@ -24,6 +24,21 @@ export interface Company extends CreateCompany {
   updatedAt: Date;
 }
 
+export interface CompanyDataOfficer {
+  _id: string;
+  name: string;
+  lastName: string;
+  username: string;
+  position?: string;
+  phone?: string;
+  personalEmail?: string;
+  companyUserData?: {
+    position?: string;
+    phone?: string;
+    personalEmail?: string;
+  };
+}
+
 export interface CompanyCreditsCurrentMonth {
   creditsUsed: number;
   month: number;

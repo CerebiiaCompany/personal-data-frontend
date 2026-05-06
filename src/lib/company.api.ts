@@ -1,6 +1,7 @@
 import { APIResponse, QueryParams } from "@/types/api.types";
 import {
   CreateCompany,
+  CompanyDataOfficer,
   CompanyCreditsCurrentMonth,
   CompanyCreditsPricing,
   PlanStatus,
@@ -80,6 +81,24 @@ export async function fetchCompanyCreditsByMonth(params: {
   );
 
   return res;
+}
+
+export async function fetchCompanyDataOfficer(
+  companyId: string
+): Promise<APIResponse<CompanyDataOfficer | null>> {
+  return customFetch<CompanyDataOfficer | null>(
+    `/companies/${companyId}/data-officer`
+  );
+}
+
+export async function assignCompanyDataOfficer(
+  companyId: string,
+  userId: string
+): Promise<APIResponse<CompanyDataOfficer>> {
+  return customFetch<CompanyDataOfficer>(`/companies/${companyId}/data-officer`, {
+    method: "PATCH",
+    body: JSON.stringify({ userId }),
+  });
 }
 
 // Nota: usamos fetch directo (no customFetch) para evitar redirecciones automáticas

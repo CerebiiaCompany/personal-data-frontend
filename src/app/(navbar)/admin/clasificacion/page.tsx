@@ -2,6 +2,7 @@
 
 import Button from "@/components/base/Button";
 import SectionSearchBar from "@/components/base/SectionSearchBar";
+import DataOfficerCard from "@/components/administration/DataOfficerCard";
 import ClasificationTable from "@/components/clasification/ClasificationTable";
 import UploadExcelTemplateDialog from "@/components/dialogs/UploadExcelTemplateFile";
 import CheckPermission from "@/components/checkers/CheckPermission";
@@ -122,6 +123,9 @@ export default function ClassificationPage() {
 
       <div className="px-5 md:px-6 py-4 md:py-5 flex-1 flex flex-col min-h-0 min-w-0">
         <div className="max-w-[1200px] mx-auto w-full flex-1 min-h-0 min-w-0">
+          <div className="mb-4">
+            <DataOfficerCard compact hideWhenAssigned={false} />
+          </div>
           <ClasificationTable
             items={filteredItems}
             aggregateSource={data}

@@ -5,6 +5,7 @@ import DashboardChartCard from "@/components/dashboard/DashboardChartCard";
 import HorizontalBarChart from "@/components/dashboard/HorizontalBarChart";
 import UserActionLogsTable from "@/components/dashboard/UserActionLogsTable";
 import CompanyCreditsCard from "@/components/dashboard/CompanyCreditsCard";
+import DataOfficerCard from "@/components/administration/DataOfficerCard";
 import CustomSelect from "@/components/forms/CustomSelect";
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { useCollectFormClasifications } from "@/hooks/useCollectFormClasifications";
@@ -223,6 +224,8 @@ const dateRange = useMemo(
                     </div>
                 </div>
             </div>
+
+            <DataOfficerCard compact />
 
             <div
                 className="w-full flex-1 min-h-[420px] overflow-visible gap-4 md:gap-5 grid grid-cols-1 xl:grid-cols-2 auto-rows-[minmax(250px,auto)]">

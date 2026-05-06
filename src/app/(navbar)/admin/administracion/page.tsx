@@ -1,6 +1,7 @@
 "use client";
 
 import Button from "@/components/base/Button";
+import DataOfficerCard from "@/components/administration/DataOfficerCard";
 import EditOwnCompanyDialog from "@/components/dialogs/EditOwnCompanyDialog";
 import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import { useOwnCompany } from "@/hooks/useOwnCompany";
@@ -125,6 +126,8 @@ export default function AdministrationPage() {
               <div className="text-sm text-[#64748B]">Sin información disponible.</div>
             )}
           </section>
+
+          <DataOfficerCard />
 
           <section className="rounded-2xl border border-[#E8EDF7] bg-white p-5 shadow-[0_2px_12px_rgba(15,35,70,0.04)] sm:p-6">
             <h2 className="mb-4 text-[16px] font-bold text-[#1A2B5B]">

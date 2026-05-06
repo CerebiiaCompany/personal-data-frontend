@@ -2,6 +2,7 @@
 
 import Button from "@/components/base/Button";
 import SectionSearchBar from "@/components/base/SectionSearchBar";
+import DataOfficerCard from "@/components/administration/DataOfficerCard";
 import CollectFormsList from "@/components/collectForms/CollectFormsList";
 import CheckPermission from "@/components/checkers/CheckPermission";
 import { useCollectForms } from "@/hooks/useCollectForms";
@@ -97,6 +98,7 @@ export default function CollectPage() {
       </div>
 
       <div className="px-5 md:px-6 py-4 md:py-5 flex flex-col gap-4 flex-1 collect-enter-delayed">
+          <DataOfficerCard compact hideWhenAssigned={false} />
         
           <div className="flex items-center gap-2 flex-wrap">
             <button
