@@ -305,6 +305,12 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
 
       toast.success("Código OTP validado");
 
+      const otpRecipientChannel = otpLastSentChannel ?? otpChannel;
+      const otpRecipientAddress =
+        otpRecipientChannel === "SMS"
+          ? fullPhoneNumber
+          : (formData.user.email as string);
+
       // Registrar respuesta con OTP validado
       const res = await registerCollectFormResponse(data._id, {
         ...formData,
@@ -314,6 +320,10 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
         },
         otpCode: formData.otpCode,
         otpCodeId: otpValidation.data.id,
+        recipientData: {
+          channel: otpRecipientChannel,
+          address: otpRecipientAddress,
+        },
       });
 
       if (res.error) {

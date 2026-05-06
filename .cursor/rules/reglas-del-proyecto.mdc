@@ -1,0 +1,576 @@
+# Frontend Rules - Clean Architecture Adaptada (SaaS)
+
+## Stack Tecnológico
+- **Framework**: Next.js 14+ con App Router (`src/app`)
+- **UI/Styling**: Tailwind CSS
+- **State Management**: Zustand para estado global + useState/useEffect para estado local
+- **Forms**: React Hook Form
+- **Data Fetching**: fetch directo encapsulado (`customFetch`)
+- **Lenguaje**: TypeScript estricto
+
+---
+
+## Arquitectura: Clean Architecture Adaptada para Frontend
+
+### Estructura de Carpetas Obligatoria
+
+```
+src/
+├── app/                    # Next.js App Router (solo rutas y layouts)
+│   ├── (auth)/
+│   ├── (dashboard)/
+│   └── layout.tsx
+├── core/                   # DOMINIO (lógica de negocio pura)
+│   ├── entities/          # Modelos de dominio (interfaces/types)
+│   ├── use-cases/         # Casos de uso (lógica de negocio)
+│   └── ports/             # Interfaces para servicios externos
+├── infrastructure/         # ADAPTADORES (implementaciones concretas)
+│   ├── api/               # Llamadas HTTP (customFetch, endpoints)
+│   ├── storage/           # LocalStorage, cookies, IndexedDB
+│   └── services/          # Implementaciones de ports
+├── presentation/           # CAPA DE PRESENTACIÓN
+│   ├── components/        # Componentes reutilizables UI
+│   │   ├── ui/           # Componentes base (Button, Input, Card)
+│   │   └── features/     # Componentes de negocio (UserProfile, PaymentForm)
+│   ├── hooks/            # Custom hooks (lógica de presentación)
+│   ├── stores/           # Zustand stores
+│   └── utils/            # Helpers de UI (formatters, validators)
+└── config/                # Configuración (env, constants)
+```
+
+---
+
+## Principios SOLID Aplicados
+
+### 1. Single Responsibility Principle (SRP)
+```tsx
+// ❌ MAL: Componente con múltiples responsabilidades
+function UserDashboard() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(false);
+  
+  useEffect(() => {
+    fetch('/api/user').then(res => res.json()).then(setUser);
+  }, []);
+  
+  return <div>{/* UI + lógica mezclada */}</div>;
+}
+
+// ✅ BIEN: Responsabilidades separadas
+// core/use-cases/getUser.ts
+export async function getUser(userId: string): Promise<User> {
+  const response = await customFetch(`/api/users/${userId}`);
+  return response.data;
+}
+
+// presentation/hooks/useUser.ts
+export function useUser(userId: string) {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(false);
+  
+  useEffect(() => {
+    setLoading(true);
+    getUser(userId)
+      .then(setUser)
+      .finally(() => setLoading(false));
+  }, [userId]);
+  
+  return { user, loading };
+}
+
+// presentation/components/features/UserDashboard.tsx
+export function UserDashboard({ userId }: Props) {
+  const { user, loading } = useUser(userId);
+  
+  if (loading) return <Spinner />;
+  return <UserCard user={user} />;
+}
+```
+
+### 2. Open/Closed Principle (OCP)
+```tsx
+// ✅ BIEN: Extensible sin modificar código existente
+// core/ports/IPaymentGateway.ts
+export interface IPaymentGateway {
+  processPayment(amount: number, method: PaymentMethod): Promise<PaymentResult>;
+}
+
+// infrastructure/services/StripePaymentGateway.ts
+export class StripePaymentGateway implements IPaymentGateway {
+  async processPayment(amount: number, method: PaymentMethod) {
+    // Implementación Stripe
+  }
+}
+
+// infrastructure/services/PayPalPaymentGateway.ts
+export class PayPalPaymentGateway implements IPaymentGateway {
+  async processPayment(amount: number, method: PaymentMethod) {
+    // Implementación PayPal (nueva sin romper código existente)
+  }
+}
+```
+
+### 3. Liskov Substitution Principle (LSP)
+```tsx
+// ✅ BIEN: Todos los botones son intercambiables
+interface ButtonProps {
+  onClick: () => void;
+  children: React.ReactNode;
+  disabled?: boolean;
+}
+
+function PrimaryButton(props: ButtonProps) { /* ... */ }
+function SecondaryButton(props: ButtonProps) { /* ... */ }
+function DangerButton(props: ButtonProps) { /* ... */ }
+
+// Cualquiera puede usarse sin romper el contrato
+<PrimaryButton onClick={handleSave}>Guardar</PrimaryButton>
+<DangerButton onClick={handleDelete}>Eliminar</DangerButton>
+```
+
+### 4. Interface Segregation Principle (ISP)
+```tsx
+// ❌ MAL: Interface gigante que obliga a implementar todo
+interface IUserService {
+  getUser(): Promise<User>;
+  updateUser(): Promise<void>;
+  deleteUser(): Promise<void>;
+  sendEmail(): Promise<void>;
+  validatePermissions(): boolean;
+}
+
+// ✅ BIEN: Interfaces pequeñas y específicas
+interface IUserReader {
+  getUser(id: string): Promise<User>;
+}
+
+interface IUserWriter {
+  updateUser(id: string, data: Partial<User>): Promise<void>;
+  deleteUser(id: string): Promise<void>;
+}
+
+interface INotificationSender {
+  sendEmail(to: string, message: string): Promise<void>;
+}
+```
+
+### 5. Dependency Inversion Principle (DIP)
+```tsx
+// ✅ BIEN: Dependemos de abstracciones, no de implementaciones concretas
+// core/use-cases/registerUser.ts
+export async function registerUser(
+  userData: UserRegistration,
+  authService: IAuthService,  // ← Port (abstracción)
+  emailService: IEmailService  // ← Port (abstracción)
+) {
+  const user = await authService.createUser(userData);
+  await emailService.sendWelcomeEmail(user.email);
+  return user;
+}
+
+// infrastructure/services/FirebaseAuthService.ts
+export class FirebaseAuthService implements IAuthService {
+  async createUser(data: UserRegistration) { /* ... */ }
+}
+
+// presentation/hooks/useRegisterUser.ts
+export function useRegisterUser() {
+  const authService = new FirebaseAuthService(); // Inyección
+  const emailService = new SendGridEmailService();
+  
+  return (data: UserRegistration) => registerUser(data, authService, emailService);
+}
+```
+
+---
+
+## Reglas de Código Obligatorias
+
+### 1. Naming Conventions
+```tsx
+// Componentes: PascalCase
+export function UserProfileCard() {}
+
+// Hooks: camelCase con prefijo 'use'
+export function useUserProfile() {}
+
+// Constantes: UPPER_SNAKE_CASE
+export const MAX_FILE_SIZE = 5_000_000;
+
+// Funciones/variables: camelCase
+const calculateTotal = (items: Item[]) => {};
+
+// Tipos/Interfaces: PascalCase con prefijo 'I' para interfaces
+export interface IUserRepository {}
+export type User = {};
+```
+
+### 2. Tipado Estricto
+```tsx
+// ✅ BIEN: Tipos explícitos siempre
+interface UserCardProps {
+  user: User;
+  onEdit: (userId: string) => void;
+  className?: string;
+}
+
+export function UserCard({ user, onEdit, className }: UserCardProps) {
+  // ...
+}
+
+// ❌ MAL: any o tipos implícitos
+function UserCard({ user, onEdit }: any) {}
+```
+
+### 3. Manejo de Errores
+```tsx
+// ✅ BIEN: Try-catch en casos de uso + feedback UI
+// core/use-cases/createProject.ts
+export async function createProject(data: ProjectData): Promise<Result<Project>> {
+  try {
+    const response = await customFetch('/api/projects', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+    return { success: true, data: response.data };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Error desconocido' 
+    };
+  }
+}
+
+// presentation/hooks/useCreateProject.ts
+export function useCreateProject() {
+  const [loading, setLoading] = useState(false);
+  
+  const create = async (data: ProjectData) => {
+    setLoading(true);
+    const result = await createProject(data);
+    setLoading(false);
+    
+    if (!result.success) {
+      toast.error(result.error);
+      return null;
+    }
+    
+    toast.success('Proyecto creado');
+    return result.data;
+  };
+  
+  return { create, loading };
+}
+```
+
+### 4. Separación de Concerns
+```tsx
+// ❌ MAL: Lógica de negocio en componente
+function ProductList() {
+  const [products, setProducts] = useState([]);
+  
+  useEffect(() => {
+    fetch('/api/products')
+      .then(res => res.json())
+      .then(data => {
+        // Lógica de negocio aquí ❌
+        const filtered = data.filter(p => p.stock > 0);
+        const sorted = filtered.sort((a, b) => b.price - a.price);
+        setProducts(sorted);
+      });
+  }, []);
+  
+  return <div>{/* ... */}</div>;
+}
+
+// ✅ BIEN: Lógica en caso de uso
+// core/use-cases/getAvailableProducts.ts
+export async function getAvailableProducts(): Promise<Product[]> {
+  const response = await customFetch('/api/products');
+  const products = response.data;
+  
+  return products
+    .filter(p => p.stock > 0)
+    .sort((a, b) => b.price - a.price);
+}
+
+// presentation/hooks/useProducts.ts
+export function useProducts() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    getAvailableProducts()
+      .then(setProducts)
+      .finally(() => setLoading(false));
+  }, []);
+  
+  return { products, loading };
+}
+
+// presentation/components/features/ProductList.tsx
+export function ProductList() {
+  const { products, loading } = useProducts();
+  
+  if (loading) return <Skeleton />;
+  return <ProductGrid products={products} />;
+}
+```
+
+### 5. Zustand Stores
+```tsx
+// ✅ BIEN: Store con acciones y estado separados
+// presentation/stores/authStore.ts
+import { create } from 'zustand';
+import { loginUser, logoutUser } from '@/core/use-cases/auth';
+
+interface AuthState {
+  user: User | null;
+  isAuthenticated: boolean;
+  loading: boolean;
+  
+  // Actions
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  setUser: (user: User | null) => void;
+}
+
+export const useAuthStore = create<AuthState>((set) => ({
+  user: null,
+  isAuthenticated: false,
+  loading: false,
+  
+  login: async (email, password) => {
+    set({ loading: true });
+    const result = await loginUser(email, password);
+    
+    if (result.success) {
+      set({ user: result.data, isAuthenticated: true, loading: false });
+    } else {
+      set({ loading: false });
+      throw new Error(result.error);
+    }
+  },
+  
+  logout: async () => {
+    await logoutUser();
+    set({ user: null, isAuthenticated: false });
+  },
+  
+  setUser: (user) => set({ user, isAuthenticated: !!user })
+}));
+```
+
+### 6. React Hook Form
+```tsx
+// ✅ BIEN: Validación con Zod + tipado
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+
+const registerSchema = z.object({
+  email: z.string().email('Email inválido'),
+  password: z.string().min(8, 'Mínimo 8 caracteres'),
+  name: z.string().min(2, 'Nombre requerido')
+});
+
+type RegisterFormData = z.infer<typeof registerSchema>;
+
+export function RegisterForm() {
+  const { register, handleSubmit, formState: { errors } } = useForm<RegisterFormData>({
+    resolver: zodResolver(registerSchema)
+  });
+  
+  const onSubmit = async (data: RegisterFormData) => {
+    // Caso de uso
+    await registerUser(data);
+  };
+  
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <input {...register('email')} />
+      {errors.email && <span>{errors.email.message}</span>}
+      {/* ... */}
+    </form>
+  );
+}
+```
+
+---
+
+## Reglas de Componentes
+
+### Componentes Pequeños y Cohesivos
+```tsx
+// ✅ BIEN: Componentes de máximo 150 líneas
+// Si crece más, dividir en subcomponentes
+
+// presentation/components/features/UserProfile/UserProfile.tsx
+export function UserProfile({ userId }: Props) {
+  const { user } = useUser(userId);
+  
+  return (
+    <div>
+      <UserAvatar user={user} />
+      <UserInfo user={user} />
+      <UserActions userId={userId} />
+    </div>
+  );
+}
+
+// presentation/components/features/UserProfile/UserAvatar.tsx
+export function UserAvatar({ user }: { user: User }) {
+  return <img src={user.avatar} alt={user.name} />;
+}
+```
+
+### Composición sobre Herencia
+```tsx
+// ✅ BIEN: Composición con children y props
+interface CardProps {
+  title?: string;
+  children: React.ReactNode;
+  footer?: React.ReactNode;
+}
+
+export function Card({ title, children, footer }: CardProps) {
+  return (
+    <div className="card">
+      {title && <h3>{title}</h3>}
+      <div className="card-body">{children}</div>
+      {footer && <div className="card-footer">{footer}</div>}
+    </div>
+  );
+}
+
+// Uso
+<Card 
+  title="Usuario" 
+  footer={<Button>Editar</Button>}
+>
+  <UserInfo user={user} />
+</Card>
+```
+
+---
+
+## Data Fetching con customFetch
+
+```tsx
+// infrastructure/api/customFetch.ts
+export async function customFetch<T>(
+  url: string,
+  options?: RequestInit
+): Promise<ApiResponse<T>> {
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options?.headers
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    return { success: true, data };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Error desconocido'
+    };
+  }
+}
+
+// Uso en casos de uso
+// core/use-cases/getProducts.ts
+export async function getProducts(): Promise<Product[]> {
+  const response = await customFetch<Product[]>('/api/products');
+  
+  if (!response.success) {
+    throw new Error(response.error);
+  }
+  
+  return response.data;
+}
+```
+
+---
+
+## Testing (Opcional pero Recomendado)
+
+```tsx
+// __tests__/core/use-cases/registerUser.test.ts
+describe('registerUser', () => {
+  it('debe crear usuario y enviar email', async () => {
+    const mockAuthService: IAuthService = {
+      createUser: jest.fn().mockResolvedValue({ id: '1', email: 'test@test.com' })
+    };
+    
+    const mockEmailService: IEmailService = {
+      sendWelcomeEmail: jest.fn()
+    };
+    
+    const result = await registerUser(
+      { email: 'test@test.com', password: '12345678' },
+      mockAuthService,
+      mockEmailService
+    );
+    
+    expect(result.success).toBe(true);
+    expect(mockEmailService.sendWelcomeEmail).toHaveBeenCalledWith('test@test.com');
+  });
+});
+```
+
+---
+
+## Checklist Antes de Commit
+
+- [ ] Código sigue arquitectura de 3 capas (core/infrastructure/presentation)
+- [ ] Componentes < 150 líneas
+- [ ] Tipos TypeScript explícitos (sin `any`)
+- [ ] Casos de uso separados de componentes
+- [ ] Manejo de errores con try-catch + feedback UI
+- [ ] Nombres descriptivos (no `temp`, `data1`, `handleClick2`)
+- [ ] Imports organizados (core → infrastructure → presentation)
+- [ ] Sin lógica de negocio en componentes UI
+
+---
+
+## Comandos de Generación
+
+Cuando generes código, **SIEMPRE**:
+
+1. Pregunta primero en qué capa va (core/infrastructure/presentation)
+2. Crea la estructura completa (caso de uso + hook + componente)
+3. Aplica SOLID explícitamente
+4. Usa TypeScript estricto
+5. Incluye manejo de errores
+
+**Ejemplo de flujo completo:**
+
+```
+Usuario: "Necesito un formulario de login"
+
+1. core/entities/User.ts (modelo de dominio)
+2. core/ports/IAuthService.ts (puerto)
+3. core/use-cases/loginUser.ts (caso de uso)
+4. infrastructure/services/FirebaseAuthService.ts (adaptador)
+5. presentation/hooks/useLogin.ts (hook de presentación)
+6. presentation/components/features/LoginForm.tsx (UI)
+```
+
+---
+
+## Reglas Finales
+
+- **NO uses clases** para componentes (solo functional components)
+- **NO mezcles lógica de negocio con UI**
+- **SIEMPRE separa concerns** (un archivo, una responsabilidad)
+- **Tailwind inline** en componentes (no CSS externo salvo globals)
+- **Comentarios solo para lógica compleja** (el código debe auto-explicarse)
+- **DRY**: Si copias código 2 veces, extrae a función/componente

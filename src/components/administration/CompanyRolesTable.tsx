@@ -55,7 +55,7 @@ const CompanyRolesTable = ({ items, loading, error, refresh }: Props) => {
                 </th>
                 <th
                   scope="col"
-                  className="text-center font-medium text-stone-600 text-xs py-2 px-2 sm:px-3 whitespace-nowrap min-w-[200px]"
+                  className="text-left font-medium text-stone-600 text-xs py-2 px-2 sm:px-3 min-w-[180px] max-w-md"
                 >
                   Permisos
                 </th>
@@ -76,7 +76,7 @@ const CompanyRolesTable = ({ items, loading, error, refresh }: Props) => {
                   <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm truncate max-w-[180px]">
                     {item.description}
                   </td>
-                  <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm max-w-[250px]">
+                  <td className="max-w-[min(100vw-6rem,22rem)] py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 text-left align-middle text-xs sm:text-sm">
                     <PermissionsBadges permissions={item.permissions} mode="compact" />
                   </td>
 

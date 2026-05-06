@@ -16,6 +16,7 @@ export function useCollectFormResponses<T = CollectFormWithResponses>(
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [meta, setMeta] = useState<APIResponse["meta"] | null>(null);
+  const [summary, setSummary] = useState<APIResponse["summary"] | null>(null);
 
   async function fetch() {
     setLoading(true);
@@ -32,6 +33,7 @@ export function useCollectFormResponses<T = CollectFormWithResponses>(
     setLoading(false);
     setData(fetchedData.data);
     setMeta(fetchedData.meta || null);
+    setSummary(fetchedData.summary || null);
   }
 
   useEffect(() => {
@@ -45,6 +47,7 @@ export function useCollectFormResponses<T = CollectFormWithResponses>(
     loading,
     error,
     meta,
+    summary,
     refresh: fetch,
   };
 }

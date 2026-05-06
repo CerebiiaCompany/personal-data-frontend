@@ -62,6 +62,12 @@ export const NAVBAR_DATA: NavbarData = [
     requiredPermission: "campaigns.view",
   },
   {
+    title: "IA",
+    path: "/admin/asistente-ia",
+    icon: "tabler:sparkles",
+    minRole: "USER",
+  },
+  {
     title: "Auditoría",
     path: "/admin/auditoria",
     icon: "heroicons:clipboard-document-list",

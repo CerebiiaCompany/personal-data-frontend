@@ -22,24 +22,24 @@ export default function ProfileLayout({
   const pathname = usePathname();
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col bg-[#F8FAFC]">
       {/* Dialogs globales del área de perfil */}
       <UpdatePasswordDialog />
       <SectionHeader />
 
-      <div className="px-8 py-6 flex flex-col gap-6 flex-1">
-        <article className="p-5 gap-4 flex border border-disabled rounded-md flex-1">
+      <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col px-5 py-6 sm:px-6 sm:py-7 lg:px-8 lg:py-8 xl:px-10 2xl:px-12">
+        <article className="flex min-h-0 w-full min-w-0 flex-1 gap-4 rounded-2xl border border-[#E8EDF7] bg-white p-4 shadow-[0_2px_12px_rgba(15,35,70,0.04)] sm:p-5">
           {/* Sidebar */}
-          <nav className="w-fit flex flex-col min-w-[120px] items-center h-full justify-between">
-            <ul className="flex flex-col w-full text-left gap-2">
+          <nav className="flex h-full min-w-[160px] flex-col justify-between lg:min-w-[190px]">
+            <ul className="flex w-full flex-col gap-2 text-left">
               {profileLinks.map((link) => (
                 <li key={link.path}>
                   <Link
                     className={clsx(
-                      "rounded-md px-4 py-2 text-sm transition-colors inline-flex w-full",
+                      "inline-flex w-full rounded-xl px-4 py-2.5 text-sm transition-colors",
                       pathname === link.path
-                        ? "bg-primary-50 text-primary-900 font-semibold"
-                        : "text-stone-500 hover:bg-stone-100 font-normal"
+                        ? "bg-[#EEF3FF] text-[#1A2B5B] font-semibold"
+                        : "text-[#64748B] hover:bg-[#F4F7FF] font-normal"
                     )}
                     href={link.path}
                   >
@@ -49,18 +49,21 @@ export default function ProfileLayout({
               ))}
             </ul>
 
-            <div className="w-full sticky bottom-5">
-              <Button className="w-full" href="/perfil/planes">
+            <div className="w-full pt-4">
+              <Button
+                className="w-full rounded-xl! bg-primary-900! border-primary-900! py-2.5! text-sm!"
+                href="/perfil/planes"
+              >
                 Mejorar Plan
               </Button>
             </div>
           </nav>
 
           {/* Separador vertical */}
-          <div role="separator" className="w-[1px] h-full bg-disabled" />
+          <div role="separator" className="h-full w-[1px] bg-[#EEF2F8]" />
 
           {/* Contenido de cada sub-ruta */}
-          <div className="flex-1 flex flex-col gap-3 max-h-full overflow-y-auto">
+          <div className="flex min-h-0 flex-1 flex-col gap-3">
             {children}
           </div>
         </article>

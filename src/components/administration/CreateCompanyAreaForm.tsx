@@ -147,13 +147,12 @@ const CreateCompanyAreaForm = ({ initialValues }: Props) => {
     <form
       ref={formRef}
       onSubmit={handleSubmit(onSubmit)}
-      className="flex flex-col gap-3 max-w-3xl items-stretch w-full"
+      className="flex w-full flex-col gap-6"
     >
-      {/* Floating action navbar */}
       <nav
         ref={floatingActionNavbarRef}
         className={clsx([
-          "absolute h-full top-0 left-0 transition-all w-full z-10 pointer-events-none",
+          "pointer-events-none absolute left-0 top-0 z-10 h-full w-full transition-all",
           {
             "-translate-y-10 opacity-0": !floatingNavbarToggle,
           },
@@ -161,33 +160,41 @@ const CreateCompanyAreaForm = ({ initialValues }: Props) => {
       >
         <div
           className={clsx(
-            [
-              "pointer-events-auto sticky top-0 w-full shadow-md bg-white border border-stone-100 rounded-b-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 px-3 sm:px-4 md:px-5 py-3 sm:py-4",
-            ],
+            "pointer-events-auto sticky top-0 flex w-full flex-col items-stretch justify-between gap-3 rounded-b-2xl border border-[#E8EDF7] bg-white px-4 py-3 shadow-[0_4px_16px_rgba(15,35,70,0.08)] sm:flex-row sm:items-center sm:px-5 sm:py-3.5",
             { "pointer-events-none": !floatingNavbarToggle }
           )}
         >
-          <h4 className="font-bold text-base sm:text-lg text-primary-900 flex items-center gap-2">
+          <h4 className="flex min-w-0 items-center gap-2 text-base font-bold text-[#1A2B5B] sm:text-lg">
             <Button
               onClick={() => router.back()}
               hierarchy="tertiary"
               isIconOnly
-              className="flex-shrink-0"
+              className="shrink-0"
             >
-              <Icon icon={"tabler:arrow-narrow-left"} className="text-xl sm:text-2xl" />
+              <Icon icon="tabler:arrow-narrow-left" className="text-xl sm:text-2xl" />
             </Button>
-            <span className="truncate">{initialValues ? "Actualizar área" : "Crear nueva área"}</span>
+            <span className="truncate">
+              {initialValues ? "Actualizar área" : "Nueva área"}
+            </span>
           </h4>
 
-          <div className="flex justify-end gap-2 sm:gap-4 items-center flex-shrink-0">
-            <Button className="w-full sm:w-fit text-sm sm:text-base" type="submit" loading={loading}>
+          <div className="flex shrink-0 items-center justify-end gap-2">
+            <Button
+              type="submit"
+              loading={loading}
+              className="w-full rounded-xl! border-[#1A2B5B]! bg-[#1A2B5B]! px-5! py-2.5! text-[13px]! font-semibold! text-white! sm:w-auto"
+            >
               {initialValues ? "Guardar cambios" : "Crear área"}
             </Button>
           </div>
         </div>
       </nav>
 
-      <div className="p-3 sm:p-4 md:p-5 flex flex-col items-stretch gap-4 sm:gap-5">
+      <section className="rounded-2xl border border-[#E8EDF7] bg-white p-5 shadow-[0_2px_12px_rgba(15,35,70,0.04)] sm:p-6">
+        <h2 className="mb-4 text-[15px] font-bold tracking-tight text-[#1A2B5B]">
+          Ubicación y datos del área
+        </h2>
+        <div className="flex flex-col gap-4 sm:gap-5">
         <CustomInput
           label="Nombre del Área"
           {...register("name")}
@@ -220,9 +227,9 @@ const CreateCompanyAreaForm = ({ initialValues }: Props) => {
           error={errors.address}
         />
 
-        <div className="flex flex-col items-start gap-1.5">
-          <p className="font-medium w-full pl-2 text-stone-500 text-xs sm:text-sm">
-            Añadir Etiquetas
+        <div className="flex flex-col items-start gap-1.5 border-t border-[#EEF2F8] pt-5">
+          <p className="w-full pl-0.5 text-xs font-semibold uppercase tracking-[0.06em] text-[#94A3B8] sm:text-[11px]">
+            Etiquetas
           </p>
           <div className="flex gap-2 sm:gap-3 items-stretch w-full">
             <CustomInput
@@ -242,11 +249,11 @@ const CreateCompanyAreaForm = ({ initialValues }: Props) => {
           </div>
         </div>
 
-        <div className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[repeat(auto-fit,_minmax(120px,_30%))] gap-3 sm:gap-4 md:gap-x-6 md:gap-y-4 justify-start">
+        <div className="grid w-full grid-cols-1 justify-start gap-3 sm:grid-cols-2 md:grid-cols-3">
           {(watch("tags") || []).map((tag, index) => (
             <div
               key={tag}
-              className="flex flex-1 p-2 sm:p-1.5 rounded-md gap-2 items-center justify-start text-primary-900 bg-primary-50"
+              className="flex flex-1 items-center justify-start gap-2 rounded-lg border border-[#E2E8F0] bg-[#F8FAFC] p-2 text-[#0B1737] sm:p-2.5"
             >
               <button
                 onClick={(_) => removeTag(index)}
@@ -269,7 +276,7 @@ const CreateCompanyAreaForm = ({ initialValues }: Props) => {
               }))}
               onChange={addUser}
             />
-            <div className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[repeat(auto-fit,_minmax(120px,_30%))] gap-3 sm:gap-4 md:gap-x-6 md:gap-y-4 justify-start">
+            <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
               {(watch("users") || []).map((userId) => {
                 const userData = companyUsers.data?.find(
                   (e) => e._id === userId
@@ -278,7 +285,7 @@ const CreateCompanyAreaForm = ({ initialValues }: Props) => {
                 return (
                   <div
                     key={userId}
-                    className="flex flex-1 p-2 sm:p-1.5 rounded-md gap-2 items-center justify-start text-primary-900 bg-primary-50"
+                    className="flex flex-1 items-center justify-start gap-2 rounded-lg border border-[#E2E8F0] bg-[#F8FAFC] p-2 text-[#0B1737] sm:p-2.5"
                   >
                     <button
                       onClick={(_) => removeUser(userId)}
@@ -296,10 +303,15 @@ const CreateCompanyAreaForm = ({ initialValues }: Props) => {
             </div>
           </>
         )}
-      </div>
+        </div>
+      </section>
 
-      <div className="p-2 sm:p-3 md:p-4">
-        <Button type="submit" className="w-full text-sm sm:text-base" loading={loading}>
+      <div className="flex justify-end pt-1">
+        <Button
+          type="submit"
+          loading={loading}
+          className="w-full rounded-xl! border-[#1A2B5B]! bg-[#1A2B5B]! px-6! py-3! text-[13px]! font-semibold! text-white! sm:w-auto sm:min-w-[200px]"
+        >
           {initialValues ? "Guardar cambios" : "Crear área"}
         </Button>
       </div>

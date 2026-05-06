@@ -1,9 +1,19 @@
 import { fetchCollectFormClasifications } from "@/lib/collectForm.api";
-import { QueryParams } from "@/types/api.types";
-import { CollectFormClasification } from "@/types/collectForm.types";
+import { APIResponse, QueryParams } from "@/types/api.types";
+import {
+  ClasificationListSummary,
+  CollectFormClasification,
+} from "@/types/collectForm.types";
 import { parseApiError } from "@/utils/parseApiError";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+
+function normalizeClasificationItem(
+  item: CollectFormClasification & { updated?: string | Date }
+): CollectFormClasification {
+  const updatedAt = item.updatedAt ?? item.updated ?? item.createdAt;
+  return { ...item, updatedAt };
+}
 
 interface UseCollectFormClasificationsParams extends QueryParams {
   /**
@@ -16,6 +26,8 @@ interface UseCollectFormClasificationsParams extends QueryParams {
 export function useCollectFormClasifications(params: UseCollectFormClasificationsParams) {
   const { enabled = true, ...queryParams } = params;
   const [data, setData] = useState<CollectFormClasification[] | null>(null);
+  const [summary, setSummary] = useState<ClasificationListSummary | null>(null);
+  const [meta, setMeta] = useState<APIResponse["meta"]>(undefined);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,10 +36,13 @@ export function useCollectFormClasifications(params: UseCollectFormClasification
     const fetchedData = await fetchCollectFormClasifications(queryParams);
 
     if (fetchedData.error) {
-      let parsedError = parseApiError(fetchedData.error);
+      const parsedError = parseApiError(fetchedData.error);
       setError(parsedError);
+      setData(null);
+      setSummary(null);
+      setMeta(undefined);
       setLoading(false);
-      
+
       // Solo mostrar error si NO es 403 (sin permisos)
       if (fetchedData.error.code !== "auth/unauthorized") {
         toast.error(parsedError);
@@ -35,8 +50,12 @@ export function useCollectFormClasifications(params: UseCollectFormClasification
       return;
     }
 
+    const list = Array.isArray(fetchedData.data) ? fetchedData.data : [];
+    setData(list.map(normalizeClasificationItem));
+    setSummary(fetchedData.summary ?? null);
+    setMeta(fetchedData.meta);
+    setError(null);
     setLoading(false);
-    setData(fetchedData.data);
   }
 
   useEffect(() => {
@@ -48,6 +67,8 @@ export function useCollectFormClasifications(params: UseCollectFormClasification
 
   return {
     data,
+    summary,
+    meta,
     loading,
     error,
     refresh: fetch,

@@ -14,6 +14,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import { Icon } from "@iconify/react";
+import Link from "next/link";
 
 export default function AuditoriaPage() {
   const user = useSessionStore((store) => store.user);
@@ -79,26 +80,40 @@ export default function AuditoriaPage() {
   }
 
   const inputBaseClass =
-    "px-3 py-2.5 border border-stone-200 rounded-xl text-sm bg-white text-primary-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-shadow";
+    "h-[42px] w-full px-3 border border-[#E4EAF6] rounded-xl text-sm bg-white text-[#0B1737] placeholder:text-[#9AA8C2] focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500";
 
   return (
-    <div className="w-full p-3 sm:p-4 md:p-5 rounded-md border border-disabled flex flex-col">
-      <header className="w-full flex flex-col gap-4 mb-4 sm:mb-5">
-        <h4 className="font-semibold text-lg sm:text-xl text-primary-900 text-center sm:text-left">
-          Auditoría
-        </h4>
-        <p className="text-sm text-stone-600">
-          Registro de acciones realizadas en la aplicación para tu organización.
-        </p>
+    <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col bg-[#F8FAFC]">
+      <div className="w-full px-5 pt-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
+        <header className="rounded-2xl border border-[#E8EDF7] bg-white px-5 py-5 shadow-[0_2px_12px_rgba(15,35,70,0.04)] sm:px-6 sm:py-6">
+          <div className="flex flex-col gap-4">
+            <nav className="flex flex-wrap items-center gap-2 text-sm text-[#64748B]">
+              <Link href="/admin" className="hover:underline">
+                Inicio
+              </Link>
+              <Icon icon="tabler:chevron-right" className="text-base text-[#94A3B8]" />
+              <span className="font-semibold text-[#1A2B5B]">Auditoría</span>
+            </nav>
+            <div className="space-y-2">
+              <h1 className="text-[26px] font-bold leading-tight tracking-tight text-[#1A2B5B] sm:text-[28px]">
+                Auditoría
+              </h1>
+              <p className="text-sm leading-relaxed text-[#64748B]">
+                Registro de acciones realizadas en la aplicación para tu organización.
+              </p>
+            </div>
+          </div>
+        </header>
+      </div>
 
-        {/* Panel de filtros */}
-        <div className="rounded-xl border border-stone-200 bg-primary-50/40 p-4 sm:p-5 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+      <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col px-5 py-6 sm:px-6 sm:py-7 lg:px-8 lg:py-8 xl:px-10 2xl:px-12">
+        <section className="rounded-2xl border border-[#E8EDF7] bg-white p-4 shadow-[0_2px_12px_rgba(15,35,70,0.04)] sm:p-5">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2">
-              <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary-100 text-primary-700">
-                <Icon icon="tabler:filter" className="text-xl" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#EEF3FF] text-primary-700">
+                <Icon icon="tabler:filter" className="text-lg" />
               </div>
-              <span className="font-medium text-primary-900 text-sm sm:text-base">
+              <span className="text-sm font-semibold text-[#1A2B5B] sm:text-base">
                 Filtros
               </span>
             </div>
@@ -107,19 +122,19 @@ export default function AuditoriaPage() {
                 type="button"
                 hierarchy="tertiary"
                 onClick={clearFilters}
-                className="text-xs sm:text-sm text-stone-600 hover:text-primary-700"
-                startContent={<Icon icon="tabler:x" className="text-base" />}
+                className="text-xs sm:text-sm text-[#64748B] hover:text-primary-700"
+                startContent={<Icon icon="tabler:eraser" className="text-base" />}
               >
                 Limpiar filtros
               </Button>
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
             {/* Rango de fechas */}
             <div className="flex flex-col gap-1.5">
-              <label className="flex items-center gap-1.5 text-xs font-medium text-stone-600">
-                <Icon icon="tabler:calendar" className="text-base text-stone-500" />
+              <label className="flex items-center gap-1.5 text-xs font-medium text-[#64748B]">
+                <Icon icon="tabler:calendar" className="text-base text-[#8CA0C3]" />
                 Desde
               </label>
               <input
@@ -130,8 +145,8 @@ export default function AuditoriaPage() {
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="flex items-center gap-1.5 text-xs font-medium text-stone-600">
-                <Icon icon="tabler:calendar-due" className="text-base text-stone-500" />
+              <label className="flex items-center gap-1.5 text-xs font-medium text-[#64748B]">
+                <Icon icon="tabler:calendar-due" className="text-base text-[#8CA0C3]" />
                 Hasta
               </label>
               <input
@@ -144,8 +159,8 @@ export default function AuditoriaPage() {
 
             {/* Acción */}
             <div className="flex flex-col gap-1.5">
-              <label className="flex items-center gap-1.5 text-xs font-medium text-stone-600">
-                <Icon icon="tabler:activity" className="text-base text-stone-500" />
+              <label className="flex items-center gap-1.5 text-xs font-medium text-[#64748B]">
+                <Icon icon="tabler:activity" className="text-base text-[#8CA0C3]" />
                 Acción
               </label>
               <select
@@ -164,8 +179,8 @@ export default function AuditoriaPage() {
 
             {/* Recurso */}
             <div className="flex flex-col gap-1.5">
-              <label className="flex items-center gap-1.5 text-xs font-medium text-stone-600">
-                <Icon icon="tabler:folder" className="text-base text-stone-500" />
+              <label className="flex items-center gap-1.5 text-xs font-medium text-[#64748B]">
+                <Icon icon="tabler:folder" className="text-base text-[#8CA0C3]" />
                 Recurso
               </label>
               <select
@@ -183,15 +198,15 @@ export default function AuditoriaPage() {
             </div>
 
             {/* Usuario */}
-            <div className="flex flex-col gap-1.5 sm:col-span-1">
-              <label className="flex items-center gap-1.5 text-xs font-medium text-stone-600">
-                <Icon icon="tabler:user-search" className="text-base text-stone-500" />
+            <div className="flex flex-col gap-1.5 sm:col-span-2 xl:col-span-1">
+              <label className="flex items-center gap-1.5 text-xs font-medium text-[#64748B]">
+                <Icon icon="tabler:user-search" className="text-base text-[#8CA0C3]" />
                 Usuario
               </label>
               <div className="relative">
                 <Icon
                   icon="tabler:search"
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-base pointer-events-none"
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-[#9AA8C2]"
                 />
                 <input
                   type="search"
@@ -203,23 +218,30 @@ export default function AuditoriaPage() {
               </div>
             </div>
           </div>
-        </div>
-      </header>
+        </section>
 
-      <div id="audit-table-container" className="flex-1 flex flex-col min-h-0">
-        <AuditLogsTable
-          items={data}
-          loading={loading}
-          error={error}
-          refresh={refresh}
-        />
-        {meta && (
-          <Pagination
-            meta={meta}
-            onPageChange={handlePageChange}
-            onPageSizeChange={handlePageSizeChange}
-          />
-        )}
+        <section
+          id="audit-table-container"
+          className="mt-4 flex w-full min-w-0 flex-col overflow-visible rounded-2xl border border-[#E8EDF7] bg-white shadow-[0_2px_12px_rgba(15,35,70,0.04)]"
+        >
+          <div className="overflow-visible p-4 sm:p-5">
+            <AuditLogsTable
+              items={data}
+              loading={loading}
+              error={error}
+              refresh={refresh}
+            />
+          </div>
+          {meta ? (
+            <div className="shrink-0 border-t border-[#EEF2F8] px-4 py-3 sm:px-5">
+              <Pagination
+                meta={meta}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
+              />
+            </div>
+          ) : null}
+        </section>
       </div>
     </div>
   );

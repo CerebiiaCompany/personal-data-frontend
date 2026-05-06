@@ -1,23 +1,17 @@
 "use client";
 
-import AdministrationPageSelector from "@/components/administration/AdministrationPageSelector";
-import CompanyUsersTable from "@/components/administration/CompanyUsersTable";
-import CreateCompanyUserForm from "@/components/administration/CreateCompanyUserForm";
-import Button from "@/components/base/Button";
 import SectionHeader from "@/components/base/SectionHeader";
 import CreateCampaignForm from "@/components/campaigns/CreateCampaignForm";
 import LoadingCover from "@/components/layout/LoadingCover";
 import { useCampaigns } from "@/hooks/useCampaigns";
-import { useCompanyUsers } from "@/hooks/useCompanyUsers";
 import { useSessionStore } from "@/store/useSessionStore";
 import { Campaign } from "@/types/campaign.types";
 import { Icon } from "@iconify/react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 
 export default function EditCampaignPage() {
   const user = useSessionStore((store) => store.user);
-  const router = useRouter();
   const campaignId = useParams().campaignId?.toString();
   const { data, loading, error } = useCampaigns<Campaign>({
     companyId: user?.companyUserData?.companyId,

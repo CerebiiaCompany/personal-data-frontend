@@ -52,6 +52,8 @@ const CreateCampaignForm = ({ initialValues }: Props) => {
   const emailCampaignPriceSetting = useAppSetting("EMAIL_CAMPAIGN_PRICE_PER_MESSAGE");
 
   const [loading, setLoading] = useState<boolean>(false);
+  /** Evita doble envío (p. ej. doble clic) que duplica POST y choca con índice único en `name`. */
+  const submitLockRef = useRef(false);
   const params = useParams();
 
   const parsedInitialValues: CreateCampaign | undefined = initialValues
@@ -130,61 +132,67 @@ const CreateCampaignForm = ({ initialValues }: Props) => {
 
   async function onSubmit(data: CreateCampaign) {
     if (!user?.companyUserData?.companyId) return;
-
+    if (submitLockRef.current) return;
+    submitLockRef.current = true;
     setLoading(true);
 
-    let res;
+    try {
+      let res;
 
-    // Construir mensaje concatenado para SMS: Título + Mensaje + Link (si existe)
-    const contentName = data.content?.name?.trim() || "";
-    const contentBody = data.content?.bodyText?.trim() || "";
-    const contentLink = data.content?.link?.trim() || "";
-    const parts = [contentName, contentBody, contentLink].filter((p) => p && p.length > 0);
-    const compiledMessage = parts.join("\n\n");
+      // Construir mensaje concatenado para SMS: Título + Mensaje + Link (si existe)
+      const contentName = data.content?.name?.trim() || "";
+      const contentBody = data.content?.bodyText?.trim() || "";
+      const contentLink = data.content?.link?.trim() || "";
+      const parts = [contentName, contentBody, contentLink].filter((p) => p && p.length > 0);
+      const compiledMessage = parts.join("\n\n");
 
-    if (initialValues) {
-      //? handle updating
-      res = await updateCampaign(
-        user?.companyUserData?.companyId,
-        params.campaignId as string,
-        {
+      if (initialValues) {
+        //? handle updating
+        res = await updateCampaign(
+          user?.companyUserData?.companyId,
+          params.campaignId as string,
+          {
+            ...data,
+            content: {
+              ...data.content,
+              bodyText: compiledMessage,
+            },
+            active: undefined,
+            scheduling: {
+              ...data.scheduling,
+              startDate: new Date(data.scheduling.startDate).toISOString(),
+              endDate: new Date(data.scheduling.endDate).toISOString(),
+            },
+          }
+        );
+      } else {
+        //? handle creating
+        res = await createCampaign(user?.companyUserData?.companyId, {
           ...data,
           content: {
             ...data.content,
             bodyText: compiledMessage,
           },
-          active: undefined,
           scheduling: {
             ...data.scheduling,
             startDate: new Date(data.scheduling.startDate).toISOString(),
             endDate: new Date(data.scheduling.endDate).toISOString(),
           },
-        }
-      );
-    } else {
-      //? handle creating
-      res = await createCampaign(user?.companyUserData?.companyId, {
-        ...data,
-        content: {
-          ...data.content,
-          bodyText: compiledMessage,
-        },
-        scheduling: {
-          ...data.scheduling,
-          startDate: new Date(data.scheduling.startDate).toISOString(),
-          endDate: new Date(data.scheduling.endDate).toISOString(),
-        },
-      });
+        });
+      }
+
+      if (res.error) {
+        toast.error(parseApiError(res.error));
+        return;
+      }
+
+      toast.success(initialValues ? "Campaña actualizada" : "Campaña creada");
+
+      router.push("/admin/campanas");
+    } finally {
+      submitLockRef.current = false;
+      setLoading(false);
     }
-    setLoading(false);
-
-    if (res.error) {
-      return toast.error(parseApiError(res.error));
-    }
-
-    toast.success(initialValues ? "Campaña actualizada" : "Campaña creada");
-
-    router.push("/admin/campanas");
   }
 
   function deleteSourceFormId(id: string) {

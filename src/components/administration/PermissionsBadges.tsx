@@ -1,25 +1,36 @@
-import { CompanyRolePermissions } from "@/types/companyRole.types";
+import type { CompanyRolePermissions } from "@/types/companyRole.types";
 import { Icon } from "@iconify/react";
 
 interface Props {
   permissions: CompanyRolePermissions;
   /**
-   * Modo de visualización:
-   * - "compact": Muestra solo contadores por módulo
-   * - "full": Muestra todos los permisos con badges
+   * - "compact": resumen legible por módulo (listados de roles)
+   * - "full": detalle con badges por acción
    */
   mode?: "compact" | "full";
 }
 
-const permissionLabels: Record<string, string> = {
-  dashboard: "📊 Dashboard",
-  collect: "📋 Recolección",
-  templates: "📄 Plantillas",
-  classification: "🗂️ Clasificación",
-  campaigns: "📧 Campañas",
+/** Nombres de módulo visibles para el usuario final (sin iconos ambiguos). */
+const MODULE_NAMES: Record<keyof CompanyRolePermissions, string> = {
+  dashboard: "Inicio / Dashboard",
+  collect: "Recolección",
+  templates: "Plantillas",
+  classification: "Clasificación",
+  campaigns: "Campañas",
+  audit: "Auditoría",
 };
 
-const actionLabels: Record<string, string> = {
+/** Etiquetas cortas para listados en tabla (densidad sin perder sentido). */
+const MODULE_SHORT: Record<keyof CompanyRolePermissions, string> = {
+  dashboard: "Inicio",
+  collect: "Recolección",
+  templates: "Plantillas",
+  classification: "Clasif.",
+  campaigns: "Campañas",
+  audit: "Auditoría",
+};
+
+const ACTION_LABELS: Record<string, string> = {
   view: "Ver",
   create: "Crear",
   edit: "Editar",
@@ -27,75 +38,140 @@ const actionLabels: Record<string, string> = {
   send: "Enviar",
 };
 
+function countActive(modulePerms: Record<string, boolean>) {
+  return Object.values(modulePerms).filter(Boolean).length;
+}
+
+function countTotal(modulePerms: Record<string, boolean>) {
+  return Object.keys(modulePerms).length;
+}
+
+function activeActionLabels(modulePerms: Record<string, boolean>): string[] {
+  return Object.entries(modulePerms)
+    .filter(([, v]) => v === true)
+    .map(([action]) => ACTION_LABELS[action] ?? action);
+}
+
 /**
- * Componente para visualizar permisos de un rol de forma visual
+ * Visualización de permisos de un rol: texto claro, sin depender de iconos.
  */
-export default function PermissionsBadges({ permissions, mode = "compact" }: Props) {
-  // Contar permisos activos por módulo
-  const getActivePermissionsCount = (modulePerms: Record<string, boolean>) => {
-    return Object.values(modulePerms).filter(Boolean).length;
-  };
-
-  const getTotalPermissionsCount = (modulePerms: Record<string, boolean>) => {
-    return Object.keys(modulePerms).length;
-  };
-
+export default function PermissionsBadges({
+  permissions,
+  mode = "compact",
+}: Props) {
   if (mode === "compact") {
+    type ModuleKey = keyof CompanyRolePermissions;
+
+    const rows: {
+      module: ModuleKey;
+      active: number;
+      total: number;
+      actionsText: string;
+      longName: string;
+      shortName: string;
+    }[] = [];
+
+    for (const module of Object.keys(permissions) as ModuleKey[]) {
+      const modulePerms = permissions[module] as Record<string, boolean>;
+      const active = countActive(modulePerms);
+      const total = countTotal(modulePerms);
+      if (active === 0) continue;
+
+      rows.push({
+        module,
+        active,
+        total,
+        actionsText: activeActionLabels(modulePerms).join(", "),
+        longName: MODULE_NAMES[module],
+        shortName: MODULE_SHORT[module],
+      });
+    }
+
+    const summaryTitle =
+      rows.length > 0
+        ? rows
+            .map(
+              (r) =>
+                `${r.longName}: ${r.actionsText} (${r.active}/${r.total})`
+            )
+            .join(" · ")
+        : "Sin permisos asignados";
+
+    /** Máximo de módulos en el modelo; chips en línea con wrap (sin apilar bloques). */
+    const maxVisible = 6;
+    const visible = rows.slice(0, maxVisible);
+    const hidden = rows.slice(maxVisible);
+    const hiddenSummary = hidden
+      .map((r) => `${r.longName}: ${r.actionsText}`)
+      .join(" · ");
+
     return (
-      <div className="flex flex-wrap gap-1.5 justify-center items-center">
-        {Object.entries(permissions).map(([module, modulePerms]) => {
-          const active = getActivePermissionsCount(modulePerms);
-          const total = getTotalPermissionsCount(modulePerms);
-          const hasAnyPermission = active > 0;
-
-          if (!hasAnyPermission) return null;
-
-          return (
-            <div
-              key={module}
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary-100 text-primary-900 text-xs font-medium"
-              title={`${permissionLabels[module]}: ${active}/${total} permisos`}
-            >
-              <span>{permissionLabels[module]?.split(" ")[0]}</span>
-              <span className="text-[10px] opacity-70">
-                {active}/{total}
-              </span>
-            </div>
-          );
-        })}
+      <div
+        className="flex flex-wrap items-center gap-1 text-left"
+        title={summaryTitle}
+      >
+        {visible.map((r) => (
+          <span
+            key={r.module}
+            className="inline-flex max-w-full shrink-0 items-baseline gap-0.5 rounded border border-slate-200/90 bg-white/70 px-1.5 py-0.5 text-[10px] leading-tight text-slate-700 sm:text-[11px]"
+            title={`${r.longName}: ${r.actionsText} (${r.active} de ${r.total} en este módulo)`}
+          >
+            <span className="font-semibold text-slate-800">{r.shortName}</span>
+            <span className="text-slate-400" aria-hidden>
+              ·
+            </span>
+            <span className="font-normal text-slate-600">{r.actionsText}</span>
+          </span>
+        ))}
+        {hidden.length > 0 ? (
+          <span
+            className="inline-flex shrink-0 rounded border border-dashed border-slate-300 bg-slate-50 px-1.5 py-0.5 text-[10px] font-medium text-slate-600 sm:text-[11px]"
+            title={hiddenSummary}
+          >
+            +{hidden.length}
+          </span>
+        ) : null}
       </div>
     );
   }
 
-  // Modo "full" - muestra todos los permisos
   return (
     <div className="flex flex-col gap-2">
-      {Object.entries(permissions).map(([module, modulePerms]) => {
-        const activePerms = Object.entries(modulePerms)
-          .filter(([_, value]) => value === true)
-          .map(([action]) => action);
+      {(Object.keys(permissions) as (keyof CompanyRolePermissions)[]).map(
+        (module) => {
+          const modulePerms = permissions[module] as Record<
+            string,
+            boolean
+          >;
+          const activePerms = Object.entries(modulePerms)
+            .filter(([, value]) => value === true)
+            .map(([action]) => action);
 
-        if (activePerms.length === 0) return null;
+          if (activePerms.length === 0) return null;
 
-        return (
-          <div key={module} className="flex flex-col gap-1">
-            <p className="text-xs font-semibold text-stone-700">
-              {permissionLabels[module]}
-            </p>
-            <div className="flex flex-wrap gap-1">
-              {activePerms.map((action) => (
-                <span
-                  key={action}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-green-100 text-green-800 text-xs"
-                >
-                  <Icon icon="heroicons:check-circle-solid" className="text-xs" />
-                  {actionLabels[action]}
-                </span>
-              ))}
+          return (
+            <div key={module} className="flex flex-col gap-1">
+              <p className="text-xs font-semibold text-[#1A2B5B]">
+                {MODULE_NAMES[module]}
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {activePerms.map((action) => (
+                  <span
+                    key={action}
+                    className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-900"
+                  >
+                    <Icon
+                      icon="heroicons:check-circle-solid"
+                      className="text-xs text-emerald-600"
+                    />
+                    {ACTION_LABELS[action] ?? action}
+                  </span>
+                ))}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        }
+      )}
     </div>
   );
 }

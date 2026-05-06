@@ -37,6 +37,8 @@ export interface CreateCollectFormResponse {
   dataProcessing: boolean;
   otpCode: string;
   otpCodeId: string;
+  /** Canal/dirección del OTP que finalmente se usó para verificar (último envío exitoso) */
+  recipientData?: OneTimeCodeRecipientData;
 }
 
 export interface OneTimeCodeRecipientData {

@@ -1,22 +1,15 @@
 "use client";
 
-import AdministrationPageSelector from "@/components/administration/AdministrationPageSelector";
-import CompanyUsersTable from "@/components/administration/CompanyUsersTable";
+import AdministrationFormPageLayout from "@/components/administration/AdministrationFormPageLayout";
 import CreateCompanyUserForm from "@/components/administration/CreateCompanyUserForm";
-import Button from "@/components/base/Button";
-import SectionHeader from "@/components/base/SectionHeader";
 import LoadingCover from "@/components/layout/LoadingCover";
 import { useCompanyUsers } from "@/hooks/useCompanyUsers";
 import { useSessionStore } from "@/store/useSessionStore";
-import { SessionUser, UpdateUser } from "@/types/user.types";
-import { Icon } from "@iconify/react";
-import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { SessionUser } from "@/types/user.types";
+import { useParams } from "next/navigation";
 
 export default function AdministrationUpdateUserPage() {
   const user = useSessionStore((store) => store.user);
-  const router = useRouter();
   const userId = useParams().userId?.toString();
 
   const { data, loading, error } = useCompanyUsers<SessionUser>({
@@ -24,54 +17,33 @@ export default function AdministrationUpdateUserPage() {
     id: userId,
   });
 
-  // ✅ Renderizar loading o error sin cambiar la estructura
   if (loading) {
     return (
-      <div className="w-full p-4 rounded-md border border-disabled flex flex-col gap-10 items-center relative">
-        <header className="w-full flex gap-2 justify-between items-center">
-          <div className="flex gap-2">
-            <Link
-              href={"/admin/administracion/usuarios"}
-              className="flex items-center gap-2 text-primary-900 font-medium text-sm"
-            >
-              <div className="w-fit bg-primary-900 rounded-md text-white p-1">
-                <Icon icon={"tabler:chevron-left"} className="text-2xl" />
-              </div>
-              Volver
-            </Link>
-          </div>
-          <h4 className="font-semibold text-xl text-primary-900 w-full text-center">
-            Actualizar Usuario
-          </h4>
-        </header>
-        <div className="min-h-20 relative w-full">
+      <AdministrationFormPageLayout
+        title="Actualizar usuario"
+        description="Modifica los datos del colaborador y su acceso cuando sea necesario."
+        backHref="/admin/administracion/usuarios"
+        breadcrumbCurrent="Editar usuario"
+      >
+        <div className="relative min-h-[240px] overflow-hidden rounded-2xl border border-[#E8EDF7] bg-white p-8 shadow-[0_2px_12px_rgba(15,35,70,0.04)]">
           <LoadingCover />
         </div>
-      </div>
+      </AdministrationFormPageLayout>
     );
   }
 
   if (error) {
     return (
-      <div className="w-full p-4 rounded-md border border-disabled flex flex-col gap-10 items-center relative">
-        <header className="w-full flex gap-2 justify-between items-center">
-          <div className="flex gap-2">
-            <Link
-              href={"/admin/administracion/usuarios"}
-              className="flex items-center gap-2 text-primary-900 font-medium text-sm"
-            >
-              <div className="w-fit bg-primary-900 rounded-md text-white p-1">
-                <Icon icon={"tabler:chevron-left"} className="text-2xl" />
-              </div>
-              Volver
-            </Link>
-          </div>
-          <h4 className="font-semibold text-xl text-primary-900 w-full text-center">
-            Actualizar Usuario
-          </h4>
-        </header>
-        <p className="text-red-500">{error}</p>
-      </div>
+      <AdministrationFormPageLayout
+        title="Actualizar usuario"
+        description="No se pudo cargar la información del usuario."
+        backHref="/admin/administracion/usuarios"
+        breadcrumbCurrent="Editar usuario"
+      >
+        <div className="rounded-2xl border border-red-100 bg-red-50/80 px-5 py-4 text-sm font-medium text-red-700">
+          {error}
+        </div>
+      </AdministrationFormPageLayout>
     );
   }
 
@@ -79,26 +51,13 @@ export default function AdministrationUpdateUserPage() {
     return null;
   }
 
-  // ✅ Solo renderizar el formulario cuando tengamos data
   return (
-    <div className="w-full p-4 rounded-md border border-disabled flex flex-col gap-10 items-center relative">
-      <header className="w-full flex gap-2 justify-between items-center">
-        <div className="flex gap-2">
-          <Link
-            href={"/admin/administracion/usuarios"}
-            className="flex items-center gap-2 text-primary-900 font-medium text-sm"
-          >
-            <div className="w-fit bg-primary-900 rounded-md text-white p-1">
-              <Icon icon={"tabler:chevron-left"} className="text-2xl" />
-            </div>
-            Volver
-          </Link>
-        </div>
-        <h4 className="font-semibold text-xl text-primary-900 w-full text-center">
-          Actualizar Usuario
-        </h4>
-      </header>
-
+    <AdministrationFormPageLayout
+      title="Actualizar usuario"
+      description={`Editando a ${data.name} ${data.lastName}.`}
+      backHref="/admin/administracion/usuarios"
+      breadcrumbCurrent="Editar usuario"
+    >
       <CreateCompanyUserForm
         initialValues={{
           ...data,
@@ -110,6 +69,6 @@ export default function AdministrationUpdateUserPage() {
         }}
         userId={userId}
       />
-    </div>
+    </AdministrationFormPageLayout>
   );
 }

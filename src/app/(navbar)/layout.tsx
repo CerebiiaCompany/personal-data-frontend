@@ -13,8 +13,10 @@ export default function NavbarLayout({
     <>
       <CheckRole />
       <LoadCloudAppSettings />
-      <DashboardNavbar />
-      <DashboardContent>{children}</DashboardContent>
+      <div className="flex min-h-0 min-w-0 flex-1 flex-row">
+        <DashboardNavbar />
+        <DashboardContent>{children}</DashboardContent>
+      </div>
     </>
   );
 }

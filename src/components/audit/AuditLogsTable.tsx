@@ -164,53 +164,53 @@ const AuditLogsTable = ({ items, loading, error, refresh }: Props) => {
   };
 
   return (
-    <div className="w-full overflow-x-auto flex-1 relative min-h-20">
+    <div className="relative w-full min-h-20 overflow-x-auto">
       {loading && <LoadingCover />}
 
       {items && !error && (
         <div className="w-full overflow-x-auto">
-          <table className="w-full min-w-[700px] table-auto border-separate border-spacing-y-2">
-            <thead className="sticky top-0 bg-white z-10">
+          <table className="w-full min-w-[900px] table-auto border-separate border-spacing-y-2">
+            <thead className="sticky top-0 z-10 bg-white">
               <tr>
                 <th
                   scope="col"
-                  className="text-center font-medium text-stone-600 text-xs py-2 px-2 sm:px-3 whitespace-nowrap min-w-[120px]"
+                  className="min-w-[120px] whitespace-nowrap px-2 py-2 text-center text-xs font-medium text-[#64748B] sm:px-3"
                 >
                   Fecha y hora
                 </th>
                 <th
                   scope="col"
-                  className="text-center font-medium text-stone-600 text-xs py-2 px-2 sm:px-3 whitespace-nowrap min-w-[120px]"
+                  className="min-w-[130px] whitespace-nowrap px-2 py-2 text-center text-xs font-medium text-[#64748B] sm:px-3"
                 >
                   Usuario
                 </th>
                 <th
                   scope="col"
-                  className="text-center font-medium text-stone-600 text-xs py-2 px-2 sm:px-3 whitespace-nowrap min-w-[90px]"
+                  className="min-w-[90px] whitespace-nowrap px-2 py-2 text-center text-xs font-medium text-[#64748B] sm:px-3"
                 >
                   Acción
                 </th>
                 <th
                   scope="col"
-                  className="text-center font-medium text-stone-600 text-xs py-2 px-2 sm:px-3 whitespace-nowrap min-w-[100px]"
+                  className="min-w-[100px] whitespace-nowrap px-2 py-2 text-center text-xs font-medium text-[#64748B] sm:px-3"
                 >
                   Recurso
                 </th>
                 <th
                   scope="col"
-                  className="text-center font-medium text-stone-600 text-xs py-2 px-2 sm:px-3 min-w-[140px]"
+                  className="min-w-[140px] px-2 py-2 text-center text-xs font-medium text-[#64748B] sm:px-3"
                 >
                   Resumen
                 </th>
                 <th
                   scope="col"
-                  className="text-center font-medium text-stone-600 text-xs py-2 px-2 sm:px-3 min-w-[180px] max-w-[220px]"
+                  className="min-w-[220px] max-w-[300px] px-2 py-2 text-center text-xs font-medium text-[#64748B] sm:px-3"
                 >
                   Endpoint
                 </th>
                 <th
                   scope="col"
-                  className="text-center font-medium text-stone-600 text-xs py-2 px-2 sm:px-3 whitespace-nowrap min-w-[100px]"
+                  className="min-w-[100px] whitespace-nowrap px-2 py-2 text-center text-xs font-medium text-[#64748B] sm:px-3"
                 >
                   Acciones
                 </th>
@@ -221,7 +221,7 @@ const AuditLogsTable = ({ items, loading, error, refresh }: Props) => {
                 <tr>
                   <td
                     colSpan={7}
-                    className="py-8 text-center text-stone-500 text-sm bg-primary-50/50 rounded-xl"
+                    className="rounded-xl bg-[#F8FAFF] py-8 text-center text-sm text-[#64748B]"
                   >
                     No hay registros de auditoría en el rango seleccionado.
                   </td>
@@ -232,15 +232,15 @@ const AuditLogsTable = ({ items, loading, error, refresh }: Props) => {
                     key={item._id}
                     className="align-middle text-center"
                   >
-                    <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm text-primary-900 rounded-l-xl whitespace-nowrap">
+                    <td className="rounded-l-xl bg-[#F4F7FF] px-2 py-2 font-medium text-xs whitespace-nowrap text-primary-900 sm:px-4 sm:py-3 sm:text-sm">
                       {formatDateTime(item.createdAt)}
                     </td>
-                    <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm text-primary-900 truncate max-w-[140px]">
+                    <td className="max-w-[160px] truncate bg-[#F4F7FF] px-2 py-2 font-medium text-xs text-primary-900 sm:px-4 sm:py-3 sm:text-sm">
                       {item.user
                         ? `${item.user.name} ${item.user.lastName}`.trim()
                         : "—"}
                     </td>
-                    <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm">
+                    <td className="bg-[#F4F7FF] px-2 py-2 font-medium text-xs sm:px-4 sm:py-3 sm:text-sm">
                       <div className="flex items-center justify-center gap-1">
                         <Icon
                           icon={parseUserActionLogTypeToIcon(item.type)}
@@ -251,24 +251,24 @@ const AuditLogsTable = ({ items, loading, error, refresh }: Props) => {
                         </span>
                       </div>
                     </td>
-                    <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm text-primary-900">
+                    <td className="bg-[#F4F7FF] px-2 py-2 font-medium text-xs text-primary-900 sm:px-4 sm:py-3 sm:text-sm">
                       {parseActionLogTargetModelToString(item.targetModel)}
                     </td>
-                    <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm text-primary-900 truncate max-w-[160px] mx-auto">
+                    <td className="mx-auto max-w-[180px] truncate bg-[#F4F7FF] px-2 py-2 font-medium text-xs text-primary-900 sm:px-4 sm:py-3 sm:text-sm">
                       {item.summary || "—"}
                     </td>
                     <td
-                      className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm text-stone-600 max-w-[220px] truncate"
+                      className="max-w-[300px] truncate bg-[#F4F7FF] px-2 py-2 font-medium text-xs text-stone-600 sm:px-4 sm:py-3 sm:text-sm"
                       title={item.endpoint}
                     >
                       {item.endpoint || "—"}
                     </td>
-                    <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm rounded-r-xl">
+                    <td className="rounded-r-xl bg-[#F4F7FF] px-2 py-2 font-medium text-xs sm:px-4 sm:py-3 sm:text-sm">
                       {item.type === "DELETE" && isRestoreableTargetModel(item.targetModel) && (
                         <Button
                           type="button"
                           hierarchy="tertiary"
-                          className="text-xs text-primary-700 hover:bg-primary-100"
+                          className="text-xs text-primary-700 hover:bg-primary-100 rounded-lg!"
                           onClick={() => handleRestore(item)}
                           disabled={restoringId === item._id}
                           startContent={

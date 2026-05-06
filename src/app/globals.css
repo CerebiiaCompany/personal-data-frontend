@@ -43,6 +43,42 @@ input:focus {
   }
 }
 
+@keyframes pageTransitionEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.995);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.page-transition-enter {
+  animation: pageTransitionEnter 260ms ease-out;
+}
+
+@keyframes collectPageEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: blur(2px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+.collect-enter {
+  animation: collectPageEnter 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.collect-enter-delayed {
+  animation: collectPageEnter 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 .text-ellipsis {
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -57,6 +93,29 @@ input:focus {
 
 .scrollbar-gutter {
   scrollbar-gutter: stable both-edges;
+}
+
+/* Subtle sidebar scrollbar */
+.sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(161, 181, 222, 0.45) transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: rgba(161, 181, 222, 0.45);
+  border-radius: 9999px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(177, 196, 234, 0.62);
 }
 
 /* width */

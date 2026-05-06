@@ -1,24 +1,23 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Button from "../base/Button";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import clsx from "clsx";
-import { Controller, FieldError, useForm } from "react-hook-form";
+import { FieldError, useForm } from "react-hook-form";
 import CustomInput from "../forms/CustomInput";
-import CustomSelect from "../forms/CustomSelect";
-import CustomTextarea from "../forms/CustomTextarea";
 import { useSessionStore } from "@/store/useSessionStore";
 import { parseApiError } from "@/utils/parseApiError";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createScheduledCampaignValidationSchema } from "@/validations/main.validations";
 import {
-  CampaignAudienceGender,
   CampaignDeliveryChannel,
   CampaignGoal,
+  campaignGoalLabels,
+  deliveryChannelLabels,
 } from "@/types/campaign.types";
 import { createCampaign } from "@/lib/campaign.api";
-import { CustomRadioGroup } from "../forms/CustomRadioGroup";
 import { useCollectForms } from "@/hooks/useCollectForms";
 import { useCampaignAudience } from "@/hooks/useCampaignAudience";
 import { useAppSetting } from "@/hooks/useAppSetting";
@@ -27,40 +26,76 @@ import {
   getCreditsPerMessage,
   getTotalCampaignCredits,
 } from "@/utils/campaignCredits.utils";
-import { creditsFormatter } from "@/utils/formatters";
+import { creditsFormatter, priceFormatter } from "@/utils/formatters";
+import CampaignWizardStepper from "./CampaignWizardStepper";
+import CreateScheduledCampaignStep1 from "./CreateScheduledCampaignStep1";
+import CreateScheduledCampaignStep2 from "./CreateScheduledCampaignStep2";
+import CreateScheduledCampaignStep3 from "./CreateScheduledCampaignStep3";
+import CreateScheduledCampaignStep4 from "./CreateScheduledCampaignStep4";
+
+const GOAL_SUMMARY_LABEL: Partial<Record<CampaignGoal, string>> = {
+  SALES: "Ventas",
+  PROMOTION: "Marketing",
+  INTERACTION: "Notificación",
+  POTENTIAL_CUSTOMERS: "Consentimiento",
+};
+
+/** El asistente ocupa todo el ancho disponible del contenido. */
+const WIZARD_MAX = "max-w-none";
+/** Pasos y formulario con ancho igual a la maqueta de referencia. */
+const WIZARD_CONTENT_MAX = "max-w-[980px]";
+
+const topCardClass =
+  "bg-white border border-[#E8EDF7] rounded-xl shadow-sm";
+
+function getCurrentDateTimeLocal() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const hours = String(now.getHours()).padStart(2, "0");
+  const minutes = String(now.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function minScheduledDateTimeLocalString() {
+  const minDateTime = new Date(Date.now() + 10 * 60 * 1000);
+  const year = minDateTime.getFullYear();
+  const month = String(minDateTime.getMonth() + 1).padStart(2, "0");
+  const day = String(minDateTime.getDate()).padStart(2, "0");
+  const hours = String(minDateTime.getHours()).padStart(2, "0");
+  const minutes = String(minDateTime.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
 
 const CreateScheduledCampaignForm = () => {
   const user = useSessionStore((store) => store.user);
+  const router = useRouter();
+  const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState<boolean>(false);
+  /** Evita doble POST: el índice único `name` en BD falla en el 2.º intento aunque el 1.º ya creó la campaña. */
+  const submitLockRef = useRef(false);
+
   const trmCopSetting = useAppSetting("TRM_COP");
   const smsCampaignPriceSetting = useAppSetting(
     "SMS_CAMPAIGN_PRICE_PER_MESSAGE_MASIVAPP"
   );
-  const emailCampaignPriceSetting = useAppSetting("EMAIL_CAMPAIGN_PRICE_PER_MESSAGE");
-
-  const [loading, setLoading] = useState<boolean>(false);
-
-  // Función para obtener fecha y hora actual en formato datetime-local
-  const getCurrentDateTimeLocal = () => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-    const hours = String(now.getHours()).padStart(2, "0");
-    const minutes = String(now.getMinutes()).padStart(2, "0");
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-  };
+  const emailCampaignPriceSetting = useAppSetting(
+    "EMAIL_CAMPAIGN_PRICE_PER_MESSAGE"
+  );
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-    setError,
     setValue,
     watch,
     control: formControl,
+    trigger,
   } = useForm({
     resolver: zodResolver(createScheduledCampaignValidationSchema),
     defaultValues: {
+      name: "",
       active: false,
       sourceFormIds: [],
       audience: {
@@ -71,13 +106,11 @@ const CreateScheduledCampaignForm = () => {
       scheduling: {
         scheduledDateTime: getCurrentDateTimeLocal(),
       },
-      deliveryChannel: "SMS",
+      deliveryChannel: "SMS" as CampaignDeliveryChannel,
+      content: { name: "", bodyText: "", link: "" },
     },
   });
 
-  const router = useRouter();
-  
-  // Obtener valores de edad con valores por defecto, evitando comparaciones inválidas
   const minAgeValue = watch("audience.minAge");
   const maxAgeValue = watch("audience.maxAge");
   const parsedMinAge = Number(minAgeValue);
@@ -96,109 +129,15 @@ const CreateScheduledCampaignForm = () => {
     maxAge: maxAge,
   });
 
-  // Debug: imprimir valores cuando cambien
-  useEffect(() => {
-    console.log("🔍 Parámetros de audiencia:", {
-      companyId: user?.companyUserData?.companyId,
-      sourceForms: sourceFormsValue,
-      gender: genderValue,
-      minAge: minAge,
-      maxAge: maxAge,
-      audienceCount: campaignAudience.data?.count,
-    });
-  }, [sourceFormsValue, genderValue, minAge, maxAge, campaignAudience.data]);
-
-  const formRef = useRef<HTMLFormElement>(null);
-  const floatingActionNavbarRef = useRef<HTMLElement>(null);
-  const [floatingNavbarToggle, setFloatingNavbarToggle] =
-    useState<boolean>(false);
   const collectForms = useCollectForms({
     companyId: user?.companyUserData?.companyId,
   });
 
-  useEffect(() => {
-    const scrollContainer = document.getElementById("scrollContainer");
-    if (!scrollContainer || !formRef.current) return;
-    const firstFormContainer = formRef.current!.querySelector(
-      "&>div"
-    ) as HTMLElement;
-
-    scrollContainer.addEventListener("scroll", (e) => {
-      if (!floatingActionNavbarRef.current) return;
-      if (
-        (e.target as HTMLElement).scrollTop >
-        firstFormContainer.offsetTop + 20
-      ) {
-        setFloatingNavbarToggle(true);
-      } else {
-        setFloatingNavbarToggle(false);
-      }
-    });
-  }, []);
-
-  async function onSubmit(data: any) {
-    if (!user?.companyUserData?.companyId) return;
-
-    setLoading(true);
-
-    // Convertir fecha y hora a ISO string
-    const scheduledDateTime = new Date(data.scheduling.scheduledDateTime).toISOString();
-
-    // Construir mensaje concatenado para SMS: Título + Mensaje + Link (si existe)
-    const contentName = data.content?.name?.trim() || "";
-    const contentBody = data.content?.bodyText?.trim() || "";
-    const contentLink = data.content?.link?.trim() || "";
-    const parts = [contentName, contentBody, contentLink].filter((p) => p && p.length > 0);
-    const compiledMessage = parts.join("\n\n");
-
-    const payload = {
-      ...data,
-      content: {
-        ...data.content,
-        // Enviar en el SMS el contenido concatenado
-        bodyText: compiledMessage,
-      },
-      scheduling: {
-        scheduledDateTime,
-      },
-    };
-
-    // Imprimir en consola lo que se va a enviar al servidor
-    console.log("📤 Datos que se van a enviar al servidor:", payload);
-    console.log("📤 Endpoint:", `/companies/${user?.companyUserData?.companyId}/campaigns`);
-
-    const res = await createCampaign(user?.companyUserData?.companyId, payload);
-
-    setLoading(false);
-
-    if (res.error) {
-      return toast.error(parseApiError(res.error));
-    }
-
-    toast.success("Campaña programada creada");
-    router.push("/admin/campanas");
-  }
-
-  function deleteSourceFormId(id: string) {
-    const newSourceFormIds = watch("sourceFormIds");
-    const startIndex = newSourceFormIds.findIndex((e) => e === id);
-
-    newSourceFormIds.splice(startIndex, 1);
-
-    setValue("sourceFormIds", newSourceFormIds);
-  }
-
-  useEffect(() => {
-    if (campaignAudience.data) {
-      setValue("audience.count", campaignAudience.data.count);
-    } else {
-      setValue("audience.count", 0);
-    }
-  }, [campaignAudience.data, setValue]);
-
   const trmCop = asFiniteNumber(trmCopSetting.data?.value);
   const smsCampaignPrice = asFiniteNumber(smsCampaignPriceSetting.data?.value);
-  const emailCampaignPrice = asFiniteNumber(emailCampaignPriceSetting.data?.value);
+  const emailCampaignPrice = asFiniteNumber(
+    emailCampaignPriceSetting.data?.value
+  );
 
   const smsCreditsPerMessage = getCreditsPerMessage({
     deliveryChannel: "SMS",
@@ -213,6 +152,27 @@ const CreateScheduledCampaignForm = () => {
     smsCampaignPricePerMessage: smsCampaignPrice,
     emailCampaignPricePerMessage: emailCampaignPrice,
   });
+
+  const channelOptions = useMemo(() => {
+    const fmt = (credits: number | undefined) =>
+      credits != null && Number.isFinite(credits)
+        ? `≈ COP ${priceFormatter.format(Math.round(credits))} + IVA`
+        : "COP — + IVA";
+    return [
+      {
+        value: "SMS" as const,
+        title: "SMS",
+        icon: "tabler:message-circle",
+        copLine: fmt(smsCreditsPerMessage),
+      },
+      {
+        value: "EMAIL" as const,
+        title: "Email",
+        icon: "tabler:mail",
+        copLine: fmt(emailCreditsPerMessage),
+      },
+    ];
+  }, [smsCreditsPerMessage, emailCreditsPerMessage]);
 
   const selectedDeliveryChannel = (watch("deliveryChannel") ||
     "SMS") as CampaignDeliveryChannel;
@@ -230,390 +190,382 @@ const CreateScheduledCampaignForm = () => {
     creditsPerMessage: selectedCreditsPerMessage,
   });
 
+  const audienceCount = Number(watch("audience.count") ?? 0);
+
+  const audienceCostPreview = useMemo(() => {
+    const cpm = selectedCreditsPerMessage;
+    const subtotalCop =
+      audienceCount > 0 && cpm != null && Number.isFinite(cpm)
+        ? audienceCount * cpm
+        : 0;
+    const ivaCop = subtotalCop * 0.19;
+    const totalCop = subtotalCop + ivaCop;
+    const creditsNeeded =
+      totalCredits != null && Number.isFinite(totalCredits) ? totalCredits : 0;
+    return {
+      audienceCount,
+      channel: selectedDeliveryChannel,
+      subtotalCop,
+      ivaCop,
+      totalCop,
+      creditsNeeded,
+    };
+  }, [
+    audienceCount,
+    selectedCreditsPerMessage,
+    totalCredits,
+    selectedDeliveryChannel,
+  ]);
+
+  useEffect(() => {
+    if (campaignAudience.data) {
+      setValue("audience.count", campaignAudience.data.count);
+    } else {
+      setValue("audience.count", 0);
+    }
+  }, [campaignAudience.data, setValue]);
+
+  async function goNext() {
+    if (step === 1) {
+      const selectedForms = watch("sourceFormIds") as string[];
+      if (!selectedForms?.length) {
+        toast.error("Selecciona al menos un formulario para continuar.");
+        return;
+      }
+      const ok = await trigger(["goal", "deliveryChannel", "sourceFormIds"]);
+      if (!ok) {
+        toast.error("Revisa objetivo, canal y al menos un formulario.");
+        return;
+      }
+      setStep(2);
+      return;
+    }
+    if (step === 2) {
+      const ok = await trigger([
+        "audience.minAge",
+        "audience.maxAge",
+        "audience.gender",
+        "audience.count",
+      ]);
+      if (!ok) {
+        toast.error("Revisa la audiencia (género, edad y personas en rango).");
+        return;
+      }
+      setStep(3);
+      return;
+    }
+    if (step === 3) {
+      const contentName = String(watch("content.name") ?? "").trim();
+      const contentBody = String(watch("content.bodyText") ?? "").trim();
+      const campaignName = String(watch("name") ?? "").trim();
+      if (!contentName || !contentBody || !campaignName) {
+        toast.error("Completa nombre del anuncio, texto y nombre de campaña.");
+        return;
+      }
+      const body = String(watch("content.bodyText") ?? "");
+      if (selectedDeliveryChannel === "SMS" && body.length > 160) {
+        toast.error(
+          "En SMS el texto principal admite como máximo 160 caracteres."
+        );
+        return;
+      }
+      const ok = await trigger([
+        "content.name",
+        "content.bodyText",
+        "content.link",
+        "name",
+        "scheduling.scheduledDateTime",
+      ]);
+      if (!ok) {
+        toast.error(
+          "Revisa el contenido del anuncio, el nombre de la campaña y la programación."
+        );
+        return;
+      }
+      setStep(4);
+    }
+  }
+
+  function goBack() {
+    if (step <= 1) {
+      router.push("/admin/campanas");
+      return;
+    }
+    setStep((s) => s - 1);
+  }
+
+  async function onSubmit(data: any) {
+    if (!user?.companyUserData?.companyId) return;
+    if (submitLockRef.current) return;
+    submitLockRef.current = true;
+    setLoading(true);
+
+    try {
+      const scheduledDateTime = new Date(
+        data.scheduling.scheduledDateTime
+      ).toISOString();
+
+      const contentName = data.content?.name?.trim() || "";
+      const contentBody = data.content?.bodyText?.trim() || "";
+      const contentLink = data.content?.link?.trim() || "";
+      const parts = [contentName, contentBody, contentLink].filter(
+        (p) => p && p.length > 0
+      );
+      const compiledMessage = parts.join("\n\n");
+
+      const payload = {
+        ...data,
+        content: {
+          ...data.content,
+          bodyText: compiledMessage,
+        },
+        scheduling: {
+          scheduledDateTime,
+        },
+      };
+
+      const res = await createCampaign(
+        user?.companyUserData?.companyId,
+        payload
+      );
+
+      if (res.error) {
+        toast.error(parseApiError(res.error));
+        return;
+      }
+
+      toast.success("Campaña programada creada");
+      router.push("/admin/campanas");
+    } finally {
+      submitLockRef.current = false;
+      setLoading(false);
+    }
+  }
+
+  const goalKey = watch("goal") as keyof typeof campaignGoalLabels | undefined;
+  const formIds = watch("sourceFormIds") as string[];
+  const selectedFormNames =
+    collectForms.data?.filter((f) => formIds.includes(f._id)).map((f) => f.name) ??
+    [];
+
   return (
-    <form
-      ref={formRef}
-      onSubmit={handleSubmit((data) => onSubmit(data))}
-      className="flex flex-col gap-3 items-stretch w-full"
-    >
-      {/* Floating action navbar */}
-      <nav
-        ref={floatingActionNavbarRef}
-        className={clsx([
-          "absolute h-full top-0 left-0 transition-all w-full z-10 pointer-events-none",
-          {
-            "-translate-y-10 opacity-0": !floatingNavbarToggle,
-          },
-        ])}
-      >
+    <div className="flex flex-col w-full min-h-0 bg-[#F8FAFC] pb-16 md:pb-20">
+      <div className="px-5 md:px-8 pt-5 md:pt-6 flex-1 min-h-0">
         <div
           className={clsx(
-            [
-              "pointer-events-auto sticky top-0 w-full shadow-md bg-white border border-stone-100 rounded-b-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 px-3 sm:px-4 md:px-5 py-3 sm:py-4",
-            ],
-            { "pointer-events-none": !floatingNavbarToggle }
+            WIZARD_MAX,
+            "mx-auto w-full flex flex-col gap-6 md:gap-8"
           )}
         >
-          <h4 className="font-bold text-base sm:text-lg text-primary-900 flex items-center gap-2">
-            <Button
-              onClick={() => router.back()}
-              hierarchy="tertiary"
-              isIconOnly
-              className="flex-shrink-0"
-            >
-              <Icon icon={"tabler:arrow-narrow-left"} className="text-xl sm:text-2xl" />
-            </Button>
-            <span className="truncate">Crear nueva campaña programada</span>
-          </h4>
+          <section className={clsx(topCardClass, "px-5 py-5 md:px-6 md:py-5")}>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+              <div className="min-w-0 flex-1 space-y-2.5">
+                <nav className="flex flex-wrap items-center gap-2 text-sm text-[#7384A6]">
+                  <Link href="/admin" className="hover:underline">
+                    Inicio
+                  </Link>
+                  <Icon
+                    icon="tabler:chevron-right"
+                    className="text-base shrink-0"
+                  />
+                  <Link href="/admin/campanas" className="hover:underline">
+                    Campañas
+                  </Link>
+                  <Icon
+                    icon="tabler:chevron-right"
+                    className="text-base shrink-0"
+                  />
+                  <span className="text-[#1D2E56] font-semibold">
+                    Crear campaña
+                  </span>
+                </nav>
+                <h1 className="text-[22px] sm:text-[26px] font-bold text-[#0B1737] leading-tight tracking-tight">
+                  Crear campaña
+                </h1>
+                <p className="text-[#64748B] text-[13px] sm:text-sm max-w-lg leading-relaxed">
+                  Configura y programa un nuevo envío masivo.
+                </p>
+              </div>
+              <Button
+                type="button"
+                hierarchy="secondary"
+                onClick={() => router.push("/admin/campanas")}
+                className="rounded-xl! border-[#E2E8F0]! bg-white! text-[13px]! shrink-0 self-start sm:self-auto"
+                startContent={
+                  <Icon icon="tabler:arrow-left" className="text-lg" />
+                }
+              >
+                Cancelar
+              </Button>
+            </div>
+          </section>
 
-          <div className="flex justify-end gap-2 sm:gap-4 items-center flex-shrink-0">
-            <Button className="w-full sm:w-fit text-sm sm:text-base" type="submit" loading={loading}>
-              Crear campaña programada
-            </Button>
-          </div>
-        </div>
-      </nav>
-      {/* Name */}
-      <div className="rounded-xl border border-disabled p-4 sm:p-6 md:p-10 py-4 sm:py-5 md:py-6 flex flex-col items-stretch gap-1.5">
-        <h6 className="text-primary-900 font-normal text-base sm:text-lg">
-          Nombre de la campaña
-        </h6>
-        <CustomInput
-          {...register("name")}
-          placeholder="Ej. Campaña #1"
-          error={errors.name}
-        />
-      </div>
+          <div className={clsx(WIZARD_CONTENT_MAX, "mx-auto w-full flex flex-col gap-6 md:gap-8")}>
+            <CampaignWizardStepper currentStep={step} />
 
-      {/* Goal */}
-      <div className="rounded-xl border border-disabled p-4 sm:p-6 md:p-10 py-4 sm:py-5 md:py-6 flex flex-col items-stretch gap-4">
-        <h6 className="text-primary-900 font-normal text-base sm:text-lg">
-          Objetivo de la campaña
-        </h6>
-
-        <Controller
-          name="goal"
-          control={formControl}
-          render={({ field }) => (
-            <CustomRadioGroup<CampaignGoal>
-              options={[
-                {
-                  value: "INTERACTION",
-                  title: "Interacción",
-                  desc: "¡Fomenta la participación!",
-                  icon: "tabler:message-share",
-                },
-                {
-                  value: "POTENTIAL_CUSTOMERS",
-                  title: "Clientes potenciales",
-                  desc: "¡Capta nuevos prospectos!",
-                  icon: "tabler:user-share",
-                },
-                {
-                  value: "SALES",
-                  title: "Ventas",
-                  desc: "¡Multiplica tus conversiones!",
-                  icon: "tabler:basket-bolt",
-                },
-                {
-                  value: "PROMOTION",
-                  title: "Promoción",
-                  desc: "¡Anuncia y lanza al éxito!",
-                  icon: "tabler:speakerphone",
-                },
-                {
-                  value: "OTHER",
-                  title: "Otro",
-                  desc: "¡Define tu objetivo único!",
-                  icon: "icon-park-outline:other",
-                },
-              ]}
-              value={field.value as any}
-              onChange={field.onChange}
-              name={field.name}
-              error={errors.goal}
-            />
-          )}
-        />
-      </div>
-
-      {/* Scheduling - Fecha y hora específica */}
-      <div className="rounded-xl border border-disabled p-4 sm:p-6 md:p-10 py-4 sm:py-5 md:py-6 flex flex-col items-stretch gap-4 sm:gap-5 md:gap-6">
-        <h6 className="text-primary-900 font-normal text-base sm:text-lg">Programación</h6>
-
-        <CustomInput
-          type="datetime-local"
-          label="Fecha y hora de envío"
-          {...register("scheduling.scheduledDateTime")}
-          error={errors.scheduling?.scheduledDateTime as FieldError}
-          min={(() => {
-            // Calcular la fecha mínima (10 minutos en el futuro)
-            const now = new Date();
-            const minDateTime = new Date(now.getTime() + 10 * 60 * 1000);
-            // Formato para datetime-local: YYYY-MM-DDTHH:mm
-            const year = minDateTime.getFullYear();
-            const month = String(minDateTime.getMonth() + 1).padStart(2, "0");
-            const day = String(minDateTime.getDate()).padStart(2, "0");
-            const hours = String(minDateTime.getHours()).padStart(2, "0");
-            const minutes = String(minDateTime.getMinutes()).padStart(2, "0");
-            return `${year}-${month}-${day}T${hours}:${minutes}`;
-          })()}
-        />
-        <span className="text-xs sm:text-sm text-stone-500 flex items-center gap-2">
-          <Icon icon={"tabler:info-circle"} className="text-sm sm:text-base flex-shrink-0" />
-          La campaña debe programarse al menos 10 minutos en el futuro
-        </span>
-      </div>
-
-      {/* DeliveryChannel - Solo SMS (EMAIL deshabilitado) */}
-      <div className="rounded-xl border border-disabled p-4 sm:p-6 md:p-10 py-4 sm:py-5 md:py-6 flex flex-col items-stretch gap-4 sm:gap-5 md:gap-6">
-        <h6 className="text-primary-900 font-normal text-base sm:text-lg">
-          Ruta de envío
-        </h6>
-
-        <Controller
-          name="deliveryChannel"
-          control={formControl}
-          render={({ field }) => (
-            <CustomRadioGroup<CampaignDeliveryChannel>
-              options={[
-                {
-                  value: "SMS",
-                  title: "SMS",
-                  icon: "tabler:device-mobile-message",
-                },
-                {
-                  value: "EMAIL",
-                  title: "Correo",
-                  icon: "tabler:mail",
-                },
-              ]}
-              value={field.value as any}
-              onChange={field.onChange}
-              name={field.name}
-              error={errors.deliveryChannel}
-            />
-          )}
-        />
-
-        <div className="flex flex-col gap-1 text-xs sm:text-sm text-stone-600">
-          <p className="font-medium text-primary-900">Costo por envío</p>
-          <p>
-            SMS:{" "}
-            <b>
-              {smsCreditsPerMessage != null
-                ? `${creditsFormatter.format(smsCreditsPerMessage)} Créditos`
-                : "..."}
-            </b>{" "}
-            por mensaje
-          </p>
-          <p>
-            Correo:{" "}
-            <b>
-              {emailCreditsPerMessage != null
-                ? `${creditsFormatter.format(emailCreditsPerMessage)} Créditos`
-                : "..."}
-            </b>{" "}
-            por mensaje
-          </p>
-          {trmCop != null && (
-            <p className="text-[11px] sm:text-xs text-stone-500">
-              TRM usada: {creditsFormatter.format(trmCop)}
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* Source Form Ids */}
-      <div className="rounded-xl border border-disabled p-4 sm:p-6 md:p-10 py-4 sm:py-5 md:py-6 flex flex-col items-stretch gap-4 sm:gap-5 md:gap-6">
-        <h6 className="text-primary-900 font-normal text-base sm:text-lg">
-          Selección de datos
-        </h6>
-
-        {collectForms.data && (
-          <>
-            <CustomSelect
-              unselectedText="Seleccione los formularios para enviar la campaña"
-              options={collectForms.data
-                .filter((form) => !watch("sourceFormIds").includes(form._id))
-                .map((form) => ({
-                  title: form.name,
-                  value: form._id,
-                }))}
-              onChange={(value) => {
-                setValue("sourceFormIds", [...watch("sourceFormIds"), value]);
-                setError("sourceFormIds", { message: "" });
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
               }}
-            />
-            <div className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[repeat(auto-fit,_minmax(120px,_30%))] gap-3 sm:gap-4 md:gap-x-6 md:gap-y-4 justify-start">
-              {watch("sourceFormIds").map((formId) => {
-                const formData = collectForms.data?.find(
-                  (form) => form._id === formId
-                );
+              className="flex flex-col gap-6 md:gap-8 min-w-0"
+            >
+              {step === 1 && (
+                <CreateScheduledCampaignStep1
+                  control={formControl}
+                  watch={watch}
+                  setValue={setValue}
+                  errors={errors}
+                  collectForms={collectForms.data}
+                  channelOptions={channelOptions}
+                />
+              )}
 
-                return (
-                  formData && (
-                    <div
-                      key={formId}
-                      className="flex flex-1 p-2 sm:p-1.5 rounded-md gap-2 items-center justify-start text-primary-900 bg-primary-50"
-                    >
-                      <button
-                        onClick={(_) => deleteSourceFormId(formId)}
-                        className="p-1 hover:bg-primary-900/10 rounded-md transition-colors flex-shrink-0"
-                      >
-                        <Icon icon={"tabler:x"} className="text-base sm:text-lg" />
-                      </button>
-                      <p className="font-normal text-ellipsis text-sm sm:text-base truncate">
-                        {formData.name}
-                      </p>
-                    </div>
-                  )
-                );
-              })}
-            </div>
-          </>
-        )}
+              {step === 2 && (
+                <CreateScheduledCampaignStep2
+                  control={formControl}
+                  register={register}
+                  watch={watch}
+                  errors={errors}
+                  costPreview={audienceCostPreview}
+                />
+              )}
 
-        {errors.sourceFormIds && (
-          <span className="text-red-400 text-sm font-semibold">
-            {errors.sourceFormIds.message}
-          </span>
-        )}
+              {step === 3 && (
+                <div className="flex flex-col gap-5 md:gap-6">
+                  <CreateScheduledCampaignStep3
+                    register={register}
+                    watch={watch}
+                    errors={errors}
+                    deliveryChannel={selectedDeliveryChannel}
+                  />
+                  <section
+                    className={clsx(
+                      topCardClass,
+                      "p-5 sm:p-6 flex flex-col gap-4"
+                    )}
+                  >
+                    <h2 className="text-[15px] font-bold tracking-tight text-[#1A2B5B]">
+                      Nombre de la campaña
+                    </h2>
+                    <CustomInput
+                      {...register("name")}
+                      placeholder="Ej. Campaña lanzamiento Q2"
+                      error={errors.name as FieldError | undefined}
+                    />
+                  </section>
+                  <section
+                    className={clsx(
+                      topCardClass,
+                      "p-5 sm:p-6 flex flex-col gap-4"
+                    )}
+                  >
+                    <h2 className="text-[15px] font-bold tracking-tight text-[#1A2B5B]">
+                      Programación
+                    </h2>
+                    <CustomInput
+                      type="datetime-local"
+                      label="Fecha y hora de envío"
+                      {...register("scheduling.scheduledDateTime")}
+                      error={
+                        errors.scheduling?.scheduledDateTime as FieldError
+                      }
+                      min={minScheduledDateTimeLocalString()}
+                    />
+                    <p className="flex gap-2 text-xs text-[#64748B]">
+                      <Icon
+                        icon="tabler:info-circle"
+                        className="text-base shrink-0"
+                      />
+                      La campaña debe programarse al menos 10 minutos en el
+                      futuro.
+                    </p>
+                  </section>
+                </div>
+              )}
 
-        <span className="text-xs sm:text-sm w-fit flex gap-1 items-center py-1 px-2 bg-primary-500/10 rounded-lg text-primary-500">
-          <Icon icon={"tabler:info-circle"} className="text-base sm:text-lg flex-shrink-0" />
-          La selección de cada formulario tiene un costo de 20 créditos.
-        </span>
-      </div>
+              {step === 4 && (
+                <CreateScheduledCampaignStep4
+                  summary={{
+                    goalLabel: goalKey
+                      ? GOAL_SUMMARY_LABEL[goalKey] ??
+                        campaignGoalLabels[goalKey] ??
+                        goalKey
+                      : "—",
+                    formularioLabel:
+                      selectedFormNames.length > 0
+                        ? selectedFormNames.join(", ")
+                        : "—",
+                    generoLabel:
+                      genderValue === "ALL"
+                        ? "Todos"
+                        : genderValue === "MALE"
+                          ? "Hombres"
+                          : genderValue === "FEMALE"
+                            ? "Mujeres"
+                            : "Otro",
+                    nombreCampaña: String(watch("name") ?? ""),
+                    canalLabel:
+                      deliveryChannelLabels[selectedDeliveryChannel] ??
+                      selectedDeliveryChannel,
+                    audienciaDestinatarios: audienceCostPreview.audienceCount,
+                    rangoEdadLabel: `${minAge} - ${maxAge}`,
+                    totalLine: `COP ${priceFormatter.format(
+                      Math.round(audienceCostPreview.totalCop)
+                    )} (${creditsFormatter.format(
+                      Math.round(audienceCostPreview.creditsNeeded)
+                    )} créditos)`,
+                  }}
+                />
+              )}
 
-      {/* Audience */}
-      <div className="rounded-xl border border-disabled p-4 sm:p-6 md:p-10 py-4 sm:py-5 md:py-6 flex flex-col items-stretch gap-4 sm:gap-5 md:gap-6">
-        <h6 className="text-primary-900 font-normal text-base sm:text-lg">Audiencia</h6>
-
-        <Controller
-          name="audience.gender"
-          control={formControl}
-          render={({ field }) => (
-            <CustomRadioGroup<CampaignAudienceGender>
-              label="Género"
-              {...field}
-              options={[
-                {
-                  title: "Todos",
-                  value: "ALL",
-                  icon: "tabler:users-group",
-                },
-                {
-                  title: "Hombres",
-                  value: "MALE",
-                  icon: "tabler:gender-male",
-                },
-                {
-                  title: "Mujeres",
-                  value: "FEMALE",
-                  icon: "tabler:gender-female",
-                },
-              ]}
-              error={errors.audience?.gender}
-            />
-          )}
-        />
-
-        <div className="flex flex-col gap-1">
-          <p className="font-medium w-full pl-2 text-stone-500 text-sm">
-            Edad
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
-            <div className="flex items-center gap-2 sm:gap-3 flex-1 sm:flex-none">
-              <CustomInput
-                type="number"
-                className="flex-none w-20 sm:w-auto"
-                {...register("audience.minAge")}
-                error={errors.audience?.minAge as FieldError}
-              />
-              <p className="font-normal text-stone-500 text-sm sm:text-base whitespace-nowrap">Hasta</p>
-              <CustomInput
-                type="number"
-                className="flex-none w-20 sm:w-auto"
-                {...register("audience.maxAge")}
-                error={errors.audience?.maxAge as FieldError}
-              />
-            </div>
-            <div className="flex items-center gap-2 sm:gap-3">
-              <p className="font-normal text-stone-500 text-sm sm:text-base whitespace-nowrap">
-                Personas en este rango
-              </p>
-              <p className="bg-primary-50 px-3 sm:px-5 py-2 rounded-lg text-sm sm:text-base font-medium">
-                {watch("audience.count") ?? "--"}
-              </p>
-            </div>
+              <div className="mt-2 border-t border-[#E5E7EB] pt-6 pb-4 md:pb-6 flex flex-col-reverse sm:flex-row sm:justify-between sm:items-center gap-3">
+                <Button
+                  type="button"
+                  hierarchy="secondary"
+                  onClick={goBack}
+                  className={clsx(
+                    "rounded-xl! border-[#E2E8F0]! bg-white! text-[13px]! font-semibold!",
+                    step === 4
+                      ? "text-[#475569]!"
+                      : "text-[#1A2B5B]!"
+                  )}
+                  startContent={
+                    <Icon icon="tabler:arrow-left" className="text-lg" />
+                  }
+                >
+                  {step === 1 ? "Volver a campañas" : "Anterior"}
+                </Button>
+                {step < 4 ? (
+                  <Button
+                    type="button"
+                    onClick={() => void goNext()}
+                    className="rounded-xl! bg-[#1A2B5B]! border-[#1A2B5B]! text-[13px]! font-semibold!"
+                    endContent={
+                      <Icon icon="tabler:arrow-right" className="text-lg" />
+                    }
+                  >
+                    {step === 3 ? "Ver resumen" : "Siguiente"}
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    loading={loading}
+                    onClick={() => void handleSubmit((data) => onSubmit(data))()}
+                    className="rounded-xl! w-full sm:w-auto sm:min-w-[300px]! bg-emerald-600! border-emerald-600! text-[13px]! font-semibold! text-white!"
+                    startContent={
+                      <Icon icon="tabler:check" className="text-lg" />
+                    }
+                  >
+                    Crear y programar campaña
+                  </Button>
+                )}
+              </div>
+            </form>
           </div>
         </div>
-
-        {errors.audience?.count && (
-          <span className="text-red-400 text-sm font-semibold">
-            {errors.audience.count.message}
-          </span>
-        )}
       </div>
-
-      {/* Credits */}
-      <div className="rounded-xl border border-disabled p-4 sm:p-6 md:p-10 py-4 sm:py-5 md:py-6 flex flex-col items-stretch">
-        <h6 className="text-primary-900 font-normal text-base sm:text-lg">
-          Créditos de campaña
-        </h6>
-        <p className="text-xs sm:text-sm font-normal text-stone-500">
-          Creditos estimados en campaña en base a los formularios seleccionados
-          y segmentación realizada.
-        </p>
-        <p className="font-bold text-lg sm:text-xl text-primary-900 mt-3">
-          {totalCredits != null ? `${creditsFormatter.format(totalCredits)} Créditos` : "..."}
-        </p>
-        <span className="text-xs sm:text-sm w-fit flex gap-1 items-start py-1 px-2 bg-primary-500/10 rounded-lg text-primary-500 mt-3 -ml-1">
-          <Icon icon={"tabler:info-circle"} className="text-base sm:text-lg mt-0.5 flex-shrink-0" />
-          Este número puede diferir de la cantidad de créditos final de la
-          campaña ya que solo consumes créditos si la campaña llega al
-          destinatario.
-        </span>
-      </div>
-
-      {/* Content */}
-      <div className="rounded-xl border border-disabled p-4 sm:p-6 md:p-10 py-4 sm:py-5 md:py-6 flex flex-col items-stretch gap-4 sm:gap-5 md:gap-6">
-        <h6 className="text-primary-900 font-normal text-base sm:text-lg">
-          Contenido del anuncio
-        </h6>
-
-        <CustomInput
-          {...register("content.name")}
-          placeholder="Nombre del anuncio"
-          label="Nombre"
-          error={errors.content?.name}
-        />
-        <CustomTextarea
-          {...register("content.bodyText")}
-          rows={4}
-          label="Texto principal"
-          placeholder="Texto principal de la campaña"
-          className="resize-y"
-          error={errors.content?.bodyText}
-        />
-
-        <CustomInput
-          {...register("content.link")}
-          placeholder="https://sitio.com"
-          label="Añade link"
-          error={errors.content?.link}
-        />
-      </div>
-
-      <div className="p-2 sm:p-3 md:p-4">
-        <Button type="submit" className="w-full text-sm sm:text-base" loading={loading}>
-          Crear campaña programada
-        </Button>
-      </div>
-    </form>
+    </div>
   );
 };
 
 export default CreateScheduledCampaignForm;
-

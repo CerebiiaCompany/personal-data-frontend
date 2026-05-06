@@ -304,6 +304,12 @@ const PublicConsentForm = ({ data }: Props) => {
       
       // Paso 2: Registrar la respuesta con el consentimiento aceptado
       const userInfo = userData.user || userData; // Manejar ambas estructuras
+      const otpRecipientChannel = otpLastSentChannel ?? otpChannel;
+      const otpRecipientAddress =
+        otpRecipientChannel === "SMS"
+          ? userInfo.phone
+          : userInfo.email;
+
       const responseData: CreateCollectFormResponse = {
         user: {
           docType: userInfo.docType,
@@ -319,6 +325,10 @@ const PublicConsentForm = ({ data }: Props) => {
         dataProcessing: true,
         otpCode: formData.otpCode.trim(),
         otpCodeId: pendingOtpId,
+        recipientData: {
+          channel: otpRecipientChannel,
+          address: otpRecipientAddress,
+        },
       };
 
       console.log("   - Datos a enviar:", JSON.stringify(responseData, null, 2));

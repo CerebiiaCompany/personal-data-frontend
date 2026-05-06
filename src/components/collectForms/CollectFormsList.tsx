@@ -69,7 +69,7 @@ const CollectFormsList = ({ items, loading, error, refresh }: Props) => {
   }
 
   return (
-    <div className="w-full grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,_minmax(280px,_1fr))] gap-4 sm:gap-5 md:gap-6 relative flex-1">
+    <div className="w-full grid grid-cols-1 md:grid-cols-[repeat(auto-fill,_minmax(320px,_1fr))] gap-4 relative flex-1 content-start">
       {loading && <LoadingCover />}
       {items ? (
         items.length ? (

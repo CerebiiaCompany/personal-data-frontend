@@ -40,7 +40,11 @@ export default function RootLayout({
           <AuthHydrator />
           <GridWrapper>
             <CheckActiveSession />
-            <ConfirmProvider>{children}</ConfirmProvider>
+            <ConfirmProvider>
+              <div className="flex min-h-0 min-w-0 flex-1 flex-row">
+                {children}
+              </div>
+            </ConfirmProvider>
           </GridWrapper>
         </ErrorBoundary>
       </body>

@@ -1,4 +1,4 @@
-import { CampaignDeliveryChannel } from "@/types/campaign.types";
+import { Campaign, CampaignDeliveryChannel } from "@/types/campaign.types";
 
 export function asFiniteNumber(value: unknown): number | undefined {
   const n =
@@ -45,5 +45,32 @@ export function getTotalCampaignCredits(params: {
   if (!Number.isFinite(creditsPerMessage)) return undefined;
 
   return (audienceCount as number) * (deliveriesCount as number) * (creditsPerMessage as number);
+}
+
+/** Créditos estimados de una campaña (misma lógica que el listado). */
+export function getCampaignInstanceCredits(params: {
+  item: Campaign;
+  trmCop?: number;
+  smsCampaignPricePerMessage?: number;
+  emailCampaignPricePerMessage?: number;
+}): number | undefined {
+  const { item, trmCop, smsCampaignPricePerMessage, emailCampaignPricePerMessage } =
+    params;
+  const creditsPerMessage = getCreditsPerMessage({
+    deliveryChannel: item.deliveryChannel,
+    trmCop,
+    smsCampaignPricePerMessage,
+    emailCampaignPricePerMessage,
+  });
+  const audienceTotal = item.audience.total ?? item.audience.count ?? 0;
+  const deliveriesCount =
+    item.scheduling?.scheduledDateTime || item.scheduledFor
+      ? 1
+      : item.scheduling?.ocurrences ?? 1;
+  return getTotalCampaignCredits({
+    audienceCount: audienceTotal,
+    deliveriesCount,
+    creditsPerMessage,
+  });
 }
 

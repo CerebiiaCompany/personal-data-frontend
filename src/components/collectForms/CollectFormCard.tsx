@@ -47,63 +47,84 @@ const CollectFormCard = ({ data, deleteHandler }: Props) => {
     deleteHandler(data._id);
   }, [data._id, deleteHandler]);
 
+  const responseCount = data.totalResponses ?? 0;
+
+  const statusLabel = "Activo";
+  const statusClassName = "bg-[#E8F8EC] text-[#21A45D]";
+
   return (
-    <div className="bg-primary-700 overflow-hidden rounded-lg relative after:absolute after:top-2 after:rounded-lg after:left-0 after:w-full after:h-full after:bg-white border border-disabled aspect-[4.5/5] sm:aspect-[4.5/5] after:z-0 shadow-[5px_5px_12px] shadow-primary-shadows">
-      <div className="relative z-1 w-full h-full flex flex-col items-start p-4 sm:p-5 gap-3 sm:gap-4">
-        <header className="w-full flex flex-col gap-1.5">
-          <h4 className="text-lg sm:text-xl md:text-2xl leading-tight text-center text-primary-700 font-semibold line-clamp-3 break-words">
+    <div className="bg-white overflow-hidden rounded-[20px] border border-[#E3EAF7] shadow-[0_4px_14px_rgba(13,42,96,0.05)] transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_10px_28px_rgba(13,42,96,0.12)] hover:border-[#D4DEEE]">
+      <div className="w-full h-full flex flex-col items-start py-4 gap-3">
+        <header className="w-full flex items-start justify-between gap-3 min-h-[80px]">
+          <h4 className="text-[14px] leading-[1.25] text-[#051634] font-bold uppercase line-clamp-3 break-words max-w-[82%] pl-5">
             {data.name}
           </h4>
-          <span className="inline-block w-full h-[1.5px] bg-disabled" />
+          <span
+            className={`inline-flex px-3 py-1 rounded-full text-[10px] font-semibold leading-none mr-5 ${statusClassName}`}
+          >
+            {statusLabel}
+          </span>
         </header>
 
-        {/* Form data */}
-        <div className="flex flex-col items-start text-left gap-2 sm:gap-3 flex-1 justify-end overflow-hidden">
-          <div className="text-primary-700 w-full">
-            <h6 className="text-left font-bold leading-tight text-xs sm:text-sm">
-              Ruta de envío:
-            </h6>
-            <p className="text-left leading-tight text-xs sm:text-sm break-words">{channelsText}</p>
+        <div className="flex flex-col items-start text-left gap-1.5 w-full text-[#2F4675] px-5">
+          <div className="flex items-center gap-2 text-[13px]">
+            <Icon icon="tabler:calendar-event" className="text-[15px] text-[#6F7FA4]" />
+            <p>Creado el {formattedDate}</p>
           </div>
-          <div className="text-primary-700 w-full">
-            <h6 className="text-left font-bold leading-tight text-xs sm:text-sm">
-              Fecha de creación:
-            </h6>
-            <p className="text-left leading-tight text-xs sm:text-sm">{formattedDate}</p>
-          </div>
-          <div className="text-primary-700 w-full">
-            <h6 className="text-left font-bold leading-tight text-xs sm:text-sm">Origen:</h6>
-            <p className="text-left leading-tight text-xs sm:text-sm break-words">
+          <div className="flex items-center gap-2 text-[13px]">
+            <Icon icon="tabler:file-description" className="text-[15px] text-[#6F7FA4]" />
+            <p className="break-words">
               {data.isImported ? "Importado" : "Creado en la plataforma"}
             </p>
           </div>
+          <div className="hidden">{channelsText}</div>
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center justify-end w-full gap-1.5 sm:gap-2 flex-shrink-0">
+        <span className="inline-block w-full h-[1px] bg-[#E7ECF6]" />
+
+        <div className="w-full px-5 py-3 bg-[#F0F5FF] border-y border-[#DDE6F6]">
+          <p className="text-[12px] leading-none text-[#60759E]">
+            <span className="text-[16px] font-bold text-[#091A3D] mr-1.5">
+              {responseCount}
+            </span>
+            respuestas registradas
+          </p>
+        </div>
+
+        <div className="flex items-center justify-start w-full gap-2 flex-shrink-0 px-5">
           <Button
             href={`/admin/clasificacion/${data._id}`}
-            className="flex-1 w-full text-xs sm:text-sm!"
+            className="w-fit text-[12px]! px-4! py-2! bg-[#0D2B74]! border-[#0D2B74]! rounded-xl! font-semibold!"
+            startContent={<Icon icon={"tabler:eye"} className="text-[15px]" />}
           >
             Ver reporte
           </Button>
 
-          <Button hierarchy="secondary" onClick={handleCopyLink} className="p-2 sm:p-3 flex-shrink-0">
-            <Icon icon={"tabler:link"} className="text-lg sm:text-xl" />
+          <Button
+            hierarchy="secondary"
+            onClick={handleCopyLink}
+            className="p-2 flex-shrink-0 border-[#DEE7F3]! text-[#60729A]! rounded-xl! bg-white!"
+          >
+            <Icon icon={"tabler:link"} className="text-[15px]" />
           </Button>
 
           <CheckPermission group="collect" permission="edit">
-            <Button hierarchy="secondary" href={`/admin/recoleccion/${data._id}`} className="p-2 sm:p-3 flex-shrink-0">
-              <Icon icon={"material-symbols:edit-outline"} className="text-lg sm:text-xl" />
+            <Button
+              hierarchy="secondary"
+              href={`/admin/recoleccion/${data._id}`}
+              className="p-2 flex-shrink-0 border-[#DEE7F3]! text-[#60729A]! rounded-xl! bg-white!"
+            >
+              <Icon icon={"material-symbols:edit-outline"} className="text-[15px]" />
             </Button>
           </CheckPermission>
 
           <CheckPermission group="collect" permission="delete">
             <Button
-              className="bg-red-400/20 border-red-400 p-2 sm:p-3 flex-shrink-0"
+              hierarchy="secondary"
+              className="p-2 flex-shrink-0 border-[#FFC9D3]! text-[#F05F74]! rounded-xl! bg-white!"
               onClick={handleDelete}
             >
-              <Icon icon={"bx:trash"} className="text-lg sm:text-xl text-red-400" />
+              <Icon icon={"bx:trash"} className="text-[15px]" />
             </Button>
           </CheckPermission>
         </div>

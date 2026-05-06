@@ -154,13 +154,12 @@ const CreateCompanyUserForm = ({
     <form
       ref={formRef}
       onSubmit={handleSubmit(onSubmit)}
-      className="flex flex-col gap-3 max-w-3xl items-stretch w-full"
+      className="flex w-full flex-col gap-6"
     >
-      {/* Floating action navbar */}
       <nav
         ref={floatingActionNavbarRef}
         className={clsx([
-          "absolute h-full top-0 left-0 transition-all w-full z-10 pointer-events-none",
+          "pointer-events-none absolute left-0 top-0 z-10 h-full w-full transition-all",
           {
             "-translate-y-10 opacity-0": !floatingNavbarToggle,
           },
@@ -168,33 +167,41 @@ const CreateCompanyUserForm = ({
       >
         <div
           className={clsx(
-            [
-              "pointer-events-auto sticky top-0 w-full shadow-md bg-white border border-stone-100 rounded-b-xl flex items-center justify-between px-5 py-4",
-            ],
+            "pointer-events-auto sticky top-0 flex w-full items-center justify-between gap-3 rounded-b-2xl border border-[#E8EDF7] bg-white px-4 py-3 shadow-[0_4px_16px_rgba(15,35,70,0.08)] sm:px-5 sm:py-3.5",
             { "pointer-events-none": !floatingNavbarToggle }
           )}
         >
-          <h4 className="font-bold text-lg text-primary-900 flex items-center gap-2">
+          <h4 className="flex min-w-0 items-center gap-2 text-base font-bold text-[#1A2B5B] sm:text-lg">
             <Button
               onClick={() => router.back()}
               hierarchy="tertiary"
               isIconOnly
             >
-              <Icon icon={"tabler:arrow-narrow-left"} className="text-2xl" />
+              <Icon icon="tabler:arrow-narrow-left" className="text-2xl" />
             </Button>
-            {initialValues ? "Actualizar usuario" : "Crear nuevo usuario"}
+            <span className="truncate">
+              {initialValues ? "Actualizar usuario" : "Nuevo usuario"}
+            </span>
           </h4>
 
-          <div className="flex justify-end gap-4 items-center">
-            <Button className="w-fit" type="submit" loading={loading}>
-              {initialValues ? "Guardar cambios" : "Crear usuario "}
+          <div className="flex shrink-0 items-center gap-2">
+            <Button
+              type="submit"
+              loading={loading}
+              className="rounded-xl! border-[#1A2B5B]! bg-[#1A2B5B]! px-5! py-2.5! text-[13px]! font-semibold! text-white!"
+            >
+              {initialValues ? "Guardar cambios" : "Crear usuario"}
             </Button>
           </div>
         </div>
       </nav>
 
-      <div className="p-4 flex flex-col items-stretch gap-5">
-        <div className="flex gap-5">
+      <section className="rounded-2xl border border-[#E8EDF7] bg-white p-5 shadow-[0_2px_12px_rgba(15,35,70,0.04)] sm:p-6">
+        <h2 className="mb-4 text-[15px] font-bold tracking-tight text-[#1A2B5B]">
+          Datos personales y laborales
+        </h2>
+        <div className="flex flex-col gap-5">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
           <CustomInput
             label="Nombres"
             {...register("name")}
@@ -214,7 +221,7 @@ const CreateCompanyUserForm = ({
           placeholder="Ej. Vicepresidente Ejecutivo"
           error={errors.companyUserData?.position}
         />
-        <div className="flex gap-5">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
           <CustomInput
             label="Correo Personal"
             type="email"
@@ -229,7 +236,7 @@ const CreateCompanyUserForm = ({
             error={errors.companyUserData?.phone}
           />
         </div>
-        <div className="flex gap-5">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
           <div>
             <CustomSelect
               label="Tipo de documento"
@@ -313,14 +320,16 @@ const CreateCompanyUserForm = ({
           className="resize-y"
           error={errors.companyUserData?.note}
         />
-      </div>
+        </div>
+      </section>
 
       {(!initialValues || isCompanyAdmin || isSuperAdmin) && (
         <>
-          {/* Separator */}
-          <div role="separator" className="w-full h-[1px] bg-disabled"></div>
-
-          <div className="p-4 flex flex-col items-stretch gap-5">
+          <section className="rounded-2xl border border-[#E8EDF7] bg-white p-5 shadow-[0_2px_12px_rgba(15,35,70,0.04)] sm:p-6">
+            <h2 className="mb-4 text-[15px] font-bold tracking-tight text-[#1A2B5B]">
+              Acceso a la plataforma
+            </h2>
+          <div className="flex flex-col gap-5">
             {initialValues && isCompanyAdmin && !isSuperAdmin && (
               <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <Icon icon="tabler:info-circle" className="text-blue-600 text-xl flex-shrink-0 mt-0.5" />
@@ -330,7 +339,7 @@ const CreateCompanyUserForm = ({
               </div>
             )}
             
-            <div className="flex gap-5">
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
               <CustomInput
                 label={initialValues ? "Nuevo Usuario (opcional)" : "Usuario"}
                 {...register("username")}
@@ -350,7 +359,7 @@ const CreateCompanyUserForm = ({
                     type={isPasswordVisible ? "text" : "password"}
                     placeholder={initialValues ? "Dejar vacío para mantener la actual" : "••••••••"}
                     {...(register("password" as any) as any)}
-                    className="gap-2 w-full text-primary-900 flex-1 relative px-3 py-2 pr-12 border border-disabled rounded-lg"
+                    className="relative w-full flex-1 gap-2 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2.5 pr-12 text-sm text-[#0F172A] outline-none transition focus:border-[#1A2B5B] focus:bg-white focus:ring-2 focus:ring-[#1A2B5B]/12"
                   />
                   <button
                     type="button"
@@ -386,10 +395,15 @@ const CreateCompanyUserForm = ({
               </div>
             </div>
           </div>
+          </section>
         </>
       )}
-      <div className="p-4">
-        <Button type="submit" className="w-full" loading={loading}>
+      <div className="flex justify-end pt-1">
+        <Button
+          type="submit"
+          loading={loading}
+          className="w-full rounded-xl! border-[#1A2B5B]! bg-[#1A2B5B]! px-6! py-3! text-[13px]! font-semibold! text-white! sm:w-auto sm:min-w-[200px]"
+        >
           {initialValues ? "Guardar cambios" : "Crear usuario"}
         </Button>
       </div>

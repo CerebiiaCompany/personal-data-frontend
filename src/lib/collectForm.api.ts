@@ -1,5 +1,7 @@
 import { APIResponse, QueryParams } from "@/types/api.types";
 import {
+  ClasificationListSummary,
+  CollectFormClasification,
   CreateCollectForm,
   CreateCollectFormFromTemplate,
 } from "@/types/collectForm.types";
@@ -12,16 +14,23 @@ export async function fetchPublicCollectForm(
   return res;
 }
 
+/** Respuesta del listado de clasificación: `data` + `meta` + `summary` */
+export type ClasificationListApiResponse = APIResponse<
+  CollectFormClasification[]
+> & {
+  summary?: ClasificationListSummary;
+};
+
 export async function fetchCollectFormClasifications(
   params: QueryParams
-): Promise<APIResponse> {
-  const res = await customFetch(
+): Promise<ClasificationListApiResponse> {
+  const res = await customFetch<CollectFormClasification[]>(
     `/companies/${params.companyId}/collectForms/clasification`,
     {},
     params
   );
 
-  return res;
+  return res as ClasificationListApiResponse;
 }
 
 export async function fetchCollectForms(
@@ -32,6 +41,37 @@ export async function fetchCollectForms(
   if (params.id) endpoint += `/${params.id}`;
 
   const res = await customFetch(endpoint, {}, params);
+
+  return res;
+}
+
+export async function fetchCompanyCollectFormsCount(): Promise<
+  APIResponse<{ totalForms: number }>
+> {
+  const res = await customFetch<{ totalForms: number }>(
+    `/companies/collect-forms/count`
+  );
+
+  return res;
+}
+
+export async function fetchAcceptedPoliciesByMonth(params: {
+  year: number;
+  month: number;
+}): Promise<
+  APIResponse<{
+    acceptedCount: number;
+    month: number;
+    year: number;
+    period: string;
+  }>
+> {
+  const res = await customFetch<{
+    acceptedCount: number;
+    month: number;
+    year: number;
+    period: string;
+  }>(`/companies/collect-forms/accepted-policies/by-month`, {}, params);
 
   return res;
 }
