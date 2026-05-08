@@ -36,8 +36,10 @@ export async function downloadExcelTemplate() {
 
   // ── Validaciones de lista desplegable ────────────────────────────────────────
 
+  const dataValidations = (sheet as any).dataValidations;
+
   // Tipo de Documento → columna A
-  sheet.dataValidations.add(`A2:A${MAX_DATA_ROWS}`, {
+  dataValidations.add(`A2:A${MAX_DATA_ROWS}`, {
     type: "list",
     allowBlank: true,
     formulae: ['"CC,TI,OTHER"'],
@@ -52,7 +54,7 @@ export async function downloadExcelTemplate() {
   });
 
   // Género → columna F
-  sheet.dataValidations.add(`F2:F${MAX_DATA_ROWS}`, {
+  dataValidations.add(`F2:F${MAX_DATA_ROWS}`, {
     type: "list",
     allowBlank: true,
     formulae: ['"MASCULINO,FEMENINO,OTRO"'],

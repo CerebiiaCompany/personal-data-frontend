@@ -16,18 +16,39 @@ interface Props {
   profile: CompanyProfile | null;
 }
 
+const PAGE_SIZE = 50;
+
 const RightsAttentionSection = ({ companyId, profile }: Props) => {
-  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [phoneLine, setPhoneLine] = useState("");
 
-  const { data: users, loading: usersLoading } = useCompanyUsers<
-    CompanyUserSummary[]
-  >({
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [allUsers, setAllUsers] = useState<CompanyUserSummary[]>([]);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 400);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  useEffect(() => {
+    setPage(1);
+    setAllUsers([]);
+  }, [debouncedSearch]);
+
+  const { data: pageData, loading, meta } = useCompanyUsers<CompanyUserSummary[]>({
     companyId,
-    page: 1,
-    pageSize: 200,
+    page,
+    pageSize: PAGE_SIZE,
+    search: debouncedSearch,
   });
+
+  useEffect(() => {
+    if (!pageData) return;
+    setAllUsers((prev) => (page === 1 ? pageData : [...prev, ...pageData]));
+  }, [pageData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!profile) return;
@@ -35,15 +56,18 @@ const RightsAttentionSection = ({ companyId, profile }: Props) => {
     setPhoneLine(profile.rightsAttentionPhoneLine ?? "");
   }, [profile]);
 
+  const hasMore = !!meta && (meta.page ?? 1) < (meta.totalPages ?? 1);
+  const isInitialLoading = loading && allUsers.length === 0;
+  const isLoadingMore = loading && allUsers.length > 0;
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
+    setSaving(true);
     const res = await updateCompanyRightsAttention(companyId, {
       user_ids: selectedIds,
       phone_line: phoneLine,
     });
-    setLoading(false);
-
+    setSaving(false);
     if (res.error) return toast.error(parseApiError(res.error));
     toast.success("Atención de derechos ARCO actualizada");
   }
@@ -54,17 +78,23 @@ const RightsAttentionSection = ({ companyId, profile }: Props) => {
       title="Atención de derechos ARCO"
       description="Responsables de atender solicitudes de acceso, rectificación, cancelación u oposición."
       onSubmit={handleSubmit}
-      loading={loading}
+      loading={saving}
     >
       <div className="flex flex-col gap-1">
         <p className="font-medium pl-2 text-stone-500 text-sm">
           Responsables (usuarios de la organización)
         </p>
         <CompanyUserMultiSelect
-          users={users ?? []}
-          loading={usersLoading}
+          users={allUsers}
+          loading={isInitialLoading}
+          loadingMore={isLoadingMore}
           selectedIds={selectedIds}
           onChange={setSelectedIds}
+          search={search}
+          onSearchChange={setSearch}
+          totalCount={meta?.totalCount}
+          hasMore={hasMore}
+          onLoadMore={() => setPage((p) => p + 1)}
         />
         {selectedIds.length > 0 && (
           <p className="text-xs text-[#64748B]">
