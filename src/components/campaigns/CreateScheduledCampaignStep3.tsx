@@ -106,9 +106,8 @@ export default function CreateScheduledCampaignStep3({
         </label>
         <input
           id="campaign-content-link"
-          type="url"
-          inputMode="url"
-          placeholder="https://sitio.com"
+          type="text"
+          placeholder="Ej: github.com/usuario"
           className={INPUT_CLASS}
           {...register("content.link")}
         />

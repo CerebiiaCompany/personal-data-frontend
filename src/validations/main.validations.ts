@@ -259,7 +259,7 @@ export const createCampaignValidationSchema = z.object({
       .string({ error: "Texto obligatorio" })
       .min(1, "Texto obligatorio")
       .max(1000, "Máximo 1000 caracteres"),
-    link: z.url("Link inválido").or(z.literal("")).optional(),
+    link: z.string().optional(),
     imageUrl: z.url({ error: "URL de imagen inválida" }).optional(),
   }),
 });
@@ -277,12 +277,11 @@ export const createScheduledCampaignValidationSchema = z.object({
       (val) => {
         const selectedDate = new Date(val);
         const now = new Date();
-        // Agregar 10 minutos
-        const minDateTime = new Date(now.getTime() + 10 * 60 * 1000);
+        const minDateTime = new Date(now.getTime() + 5 * 60 * 1000);
         return selectedDate >= minDateTime;
       },
       {
-        message: "La campaña debe programarse al menos 10 minutos en el futuro",
+        message: "La campaña debe programarse al menos 5 minutos en el futuro",
       }
     ), // "YYYY-MM-DDTHH:mm" - fecha y hora específica
   }),
@@ -329,7 +328,7 @@ export const createScheduledCampaignValidationSchema = z.object({
       .string({ error: "Texto obligatorio" })
       .min(1, "Texto obligatorio")
       .max(1000, "Máximo 1000 caracteres"),
-    link: z.url("Link inválido").or(z.literal("")).optional(),
+    link: z.string().optional(),
     imageUrl: z.url({ error: "URL de imagen inválida" }).optional(),
   }),
 });

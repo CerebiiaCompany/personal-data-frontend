@@ -651,7 +651,7 @@ const CreateCampaignForm = ({ initialValues }: Props) => {
 
           <CustomInput
             {...register("content.link")}
-            placeholder="https://sitio.com"
+            placeholder="Ej: github.com/usuario"
             label="Añade link"
             error={errors.content?.link}
           />
