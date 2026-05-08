@@ -64,13 +64,24 @@ export default function AdministrationPage() {
             <div className="flex shrink-0 flex-wrap items-center gap-2 sm:pt-1">
               <Button
                 type="button"
-                onClick={() => showDialog(HTML_IDS_DATA.editOwnCompanyDialog)}
+                href="/admin/administracion/perfil-empresa"
                 className="rounded-xl! border-[#1A2B5B]! bg-[#1A2B5B]! px-5! py-2.5! text-[13px]! font-semibold! text-white!"
+                startContent={
+                  <Icon icon="tabler:building-community" className="text-lg" />
+                }
+              >
+                Perfil de empresa
+              </Button>
+              <Button
+                type="button"
+                onClick={() => showDialog(HTML_IDS_DATA.editOwnCompanyDialog)}
+                className="rounded-xl! px-5! py-2.5! text-[13px]! font-semibold!"
+                hierarchy="secondary"
                 startContent={
                   <Icon icon="material-symbols:edit-outline" className="text-lg" />
                 }
               >
-                Editar datos de empresa
+                Editar básico
               </Button>
             </div>
           </header>

@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path . -Depth 1)",
+      "Bash(Select-Object Name)",
+      "PowerShell(Set-Location \"C:\\\\Users\\\\USUARIO\\\\Desktop\\\\Cerebiia\\\\Cerebiia Data\\\\personal-data-frontend\"; Get-ChildItem -Path src -Recurse | Where-Object {$_.PSIsContainer} | Select-Object FullName)",
+      "Bash(npx tsc *)",
+      "Bash(Get-ChildItem \"C:\\\\Users\\\\USUARIO\\\\Desktop\\\\Cerebiia\\\\Cerebiia Data\\\\personal-data-frontend\\\\src\\\\components\\\\company-profile\")",
+      "Bash(Get-ChildItem \"C:\\\\Users\\\\USUARIO\\\\Desktop\\\\Cerebiia\\\\Cerebiia Data\" -Directory)",
+      "Bash(xargs grep -l \"profile/data-protection-officer\\\\|profile/authorized-personnel\\\\|profile/rights-attention\")"
+    ]
+  }
+}

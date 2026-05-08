@@ -80,3 +80,17 @@ export interface CollectFormWithResponses {
   name: string;
   responses: CollectFormResponse[];
 }
+
+export interface ImportTemplateSkippedUser {
+  docType: string;
+  docNumber: number;
+  name: string;
+  lastName: string;
+}
+
+export interface ImportTemplateResult {
+  id: string;
+  responsesCreated: number;
+  responsesSkipped: number;
+  skippedUsers: ImportTemplateSkippedUser[];
+}
