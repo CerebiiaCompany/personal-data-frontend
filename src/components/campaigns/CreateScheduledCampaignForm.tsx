@@ -59,7 +59,7 @@ function getCurrentDateTimeLocal() {
 }
 
 function minScheduledDateTimeLocalString() {
-  const minDateTime = new Date(Date.now() + 10 * 60 * 1000);
+  const minDateTime = new Date(Date.now() + 5 * 60 * 1000);
   const year = minDateTime.getFullYear();
   const month = String(minDateTime.getMonth() + 1).padStart(2, "0");
   const day = String(minDateTime.getDate()).padStart(2, "0");
@@ -476,7 +476,7 @@ const CreateScheduledCampaignForm = () => {
                         icon="tabler:info-circle"
                         className="text-base shrink-0"
                       />
-                      La campaña debe programarse al menos 10 minutos en el
+                      La campaña debe programarse al menos 5 minutos en el
                       futuro.
                     </p>
                   </section>
