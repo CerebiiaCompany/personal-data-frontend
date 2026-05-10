@@ -1,26 +1,22 @@
-// middleware.ts (at project root)
-import { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 
-// Map path prefixes to the minimum role required
-const ACCESS_MAP: {
-  prefix: string;
-  minRole: "USER" | "COMPANY_ADMIN" | "SUPERADMIN";
-}[] = [
-  { prefix: "/dashboard", minRole: "USER" },
-  { prefix: "/admin", minRole: "COMPANY_ADMIN" },
-  { prefix: "/superadmin", minRole: "SUPERADMIN" },
-  // add more segments as you grow
-];
-
-const rank = { USER: 1, COMPANY_ADMIN: 2, SUPERADMIN: 3 };
-
-export async function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
-
-  console.log({ pathname });
+/**
+ * Middleware de protección de rutas.
+ *
+ * TODO (seguridad - Prioridad 2):
+ *  - Implementar verificación real de sesión/JWT desde cookie httpOnly.
+ *  - Validar rol mínimo por prefijo usando un mapa tipo:
+ *      { prefix: "/admin", minRole: "COMPANY_ADMIN" }
+ *  - Redirigir a /login o /sin-acceso según corresponda.
+ *  - Migrar a `proxy.ts` cuando se valide la nueva convención de Next 16.
+ *
+ * Hoy este middleware NO bloquea ninguna ruta. La protección efectiva debe
+ * vivir aquí (perimetral) además de en cada page server-side.
+ */
+export async function middleware() {
+  return NextResponse.next();
 }
 
-// Only run on routes that might be protected
 export const config = {
-  matcher: ["/dashboard/:path*", "/company-admin/:path*", "/superadmin/:path*"],
+  matcher: ["/admin/:path*", "/superadmin/:path*"],
 };

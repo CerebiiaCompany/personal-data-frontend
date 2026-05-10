@@ -71,19 +71,19 @@ export default function PermissionsBadges({
       shortName: string;
     }[] = [];
 
-    for (const module of Object.keys(permissions) as ModuleKey[]) {
-      const modulePerms = permissions[module] as Record<string, boolean>;
+    for (const moduleKey of Object.keys(permissions) as ModuleKey[]) {
+      const modulePerms = permissions[moduleKey] as Record<string, boolean>;
       const active = countActive(modulePerms);
       const total = countTotal(modulePerms);
       if (active === 0) continue;
 
       rows.push({
-        module,
+        module: moduleKey,
         active,
         total,
         actionsText: activeActionLabels(modulePerms).join(", "),
-        longName: MODULE_NAMES[module],
-        shortName: MODULE_SHORT[module],
+        longName: MODULE_NAMES[moduleKey],
+        shortName: MODULE_SHORT[moduleKey],
       });
     }
 
@@ -138,8 +138,8 @@ export default function PermissionsBadges({
   return (
     <div className="flex flex-col gap-2">
       {(Object.keys(permissions) as (keyof CompanyRolePermissions)[]).map(
-        (module) => {
-          const modulePerms = permissions[module] as Record<
+        (moduleKey) => {
+          const modulePerms = permissions[moduleKey] as Record<
             string,
             boolean
           >;
@@ -150,9 +150,9 @@ export default function PermissionsBadges({
           if (activePerms.length === 0) return null;
 
           return (
-            <div key={module} className="flex flex-col gap-1">
+            <div key={moduleKey} className="flex flex-col gap-1">
               <p className="text-xs font-semibold text-[#1A2B5B]">
-                {MODULE_NAMES[module]}
+                {MODULE_NAMES[moduleKey]}
               </p>
               <div className="flex flex-wrap gap-1">
                 {activePerms.map((action) => (

@@ -27,18 +27,17 @@ const ConfirmDialog: React.FC<Props> = (props) => {
     reasonPlaceholder,
     onReasonChange,
   } = props;
-  if (!open) return null;
 
   const [reason, setReason] = useState("");
 
   useEffect(() => {
-    // Resetear motivo cada vez que se abre el modal
     if (open) {
       setReason("");
     }
   }, [open]);
 
-  // Render via portal to avoid z-index/layout issues
+  if (!open) return null;
+
   return ReactDOM.createPortal(
     <div
       aria-modal
