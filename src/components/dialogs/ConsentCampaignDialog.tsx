@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import clsx from "clsx";
 import { toast } from "sonner";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import Button from "@/components/base/Button";
@@ -69,10 +70,10 @@ export default function ConsentCampaignDialog({ companyId, formId, formName }: P
   }
 
   async function handleCreate(activate: boolean) {
-    if (!scheduledDateTime) return toast.error("Selecciona una fecha y hora de envío");
-    if (!campaignName.trim()) return toast.error("Ingresa un nombre para la campaña");
-    if (!bodyText.trim()) return toast.error("Ingresa el texto del mensaje");
-    if (!contentName.trim()) return toast.error("Ingresa el nombre del anuncio");
+    if (!canSubmit) {
+      toast.error(disabledReasons[0] ?? "Revisa los datos del formulario.");
+      return;
+    }
 
     setSubmitting(true);
 
@@ -112,6 +113,72 @@ export default function ConsentCampaignDialog({ companyId, formId, formName }: P
   }
 
   const maxChars = channel === "SMS" ? 160 : 1000;
+
+  const { canSubmit, disabledReasons } = useMemo(() => {
+    const reasons: string[] = [];
+
+    if (audienceLoading) {
+      return { canSubmit: false, disabledReasons: ["Esperando el cálculo de audiencia…"] };
+    }
+    if (audienceCount === null) {
+      reasons.push(
+        "No se pudo calcular la audiencia. Cierra el modal e inténtalo de nuevo."
+      );
+      return { canSubmit: false, disabledReasons: reasons };
+    }
+    if (audienceCount < 1) {
+      reasons.push("No hay personas con consentimiento pendiente.");
+    }
+
+    const name = campaignName.trim();
+    if (!name) reasons.push("Indica el nombre de la campaña.");
+    else if (name.length < 3) reasons.push("El nombre de la campaña debe tener al menos 3 caracteres.");
+
+    if (!contentName.trim()) reasons.push("Indica el nombre del anuncio.");
+
+    if (!bodyText.trim()) reasons.push("Escribe el texto del mensaje.");
+    else if (bodyText.length > maxChars) {
+      reasons.push(
+        `El mensaje supera ${maxChars} caracteres (${channel === "SMS" ? "SMS" : "correo"}). Acorta el texto o cambia el canal.`
+      );
+    }
+
+    if (!scheduledDateTime.trim()) {
+      reasons.push("Selecciona fecha y hora de envío.");
+    } else {
+      const when = new Date(scheduledDateTime);
+      if (Number.isNaN(when.getTime())) {
+        reasons.push("La fecha u hora de envío no es válida.");
+      } else if (when.getTime() <= Date.now()) {
+        reasons.push("La fecha y hora de envío deben ser posteriores al momento actual.");
+      }
+    }
+
+    return { canSubmit: reasons.length === 0, disabledReasons: reasons };
+  }, [
+    audienceLoading,
+    audienceCount,
+    campaignName,
+    contentName,
+    bodyText,
+    maxChars,
+    scheduledDateTime,
+    channel,
+  ]);
+
+  const inputBase =
+    "w-full rounded-xl border px-4 py-2.5 text-sm text-[#0F172A] outline-none transition-all disabled:opacity-60 disabled:bg-stone-50";
+  const inputOk = "border-[#E2E8F0] focus:border-[#1D2D5B] focus:ring-2 focus:ring-[#1D2D5B]/15";
+  const inputErr = "border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-500/20";
+
+  const nameInvalid =
+    !campaignName.trim() || (campaignName.trim().length > 0 && campaignName.trim().length < 3);
+  const contentInvalid = !contentName.trim();
+  const bodyInvalid = !bodyText.trim() || bodyText.length > maxChars;
+  const scheduleInvalid =
+    !scheduledDateTime.trim() ||
+    Number.isNaN(new Date(scheduledDateTime).getTime()) ||
+    new Date(scheduledDateTime).getTime() <= Date.now();
 
   return (
     <div
@@ -209,7 +276,8 @@ export default function ConsentCampaignDialog({ companyId, formId, formName }: P
               onChange={(e) => setCampaignName(e.target.value)}
               disabled={submitting}
               placeholder="Ej: Campaña consentimiento enero 2025"
-              className="w-full rounded-xl border border-[#E2E8F0] px-4 py-2.5 text-sm text-[#0F172A] outline-none focus:border-[#1D2D5B] focus:ring-2 focus:ring-[#1D2D5B]/15 transition-all disabled:opacity-60 disabled:bg-stone-50"
+              aria-invalid={nameInvalid}
+              className={clsx(inputBase, nameInvalid ? inputErr : inputOk)}
             />
           </div>
 
@@ -265,7 +333,8 @@ export default function ConsentCampaignDialog({ companyId, formId, formName }: P
               onChange={(e) => setScheduledDateTime(e.target.value)}
               disabled={submitting}
               min={toDateTimeLocalString(new Date().toISOString())}
-              className="w-full rounded-xl border border-[#E2E8F0] px-4 py-2.5 text-sm text-[#0F172A] outline-none focus:border-[#1D2D5B] focus:ring-2 focus:ring-[#1D2D5B]/15 transition-all disabled:opacity-60 disabled:bg-stone-50"
+              aria-invalid={scheduleInvalid}
+              className={clsx(inputBase, scheduleInvalid ? inputErr : inputOk)}
             />
           </div>
 
@@ -278,7 +347,8 @@ export default function ConsentCampaignDialog({ companyId, formId, formName }: P
               onChange={(e) => setContentName(e.target.value)}
               disabled={submitting}
               placeholder="Ej: Aceptación Política de Datos"
-              className="w-full rounded-xl border border-[#E2E8F0] px-4 py-2.5 text-sm text-[#0F172A] outline-none focus:border-[#1D2D5B] focus:ring-2 focus:ring-[#1D2D5B]/15 transition-all disabled:opacity-60 disabled:bg-stone-50"
+              aria-invalid={contentInvalid}
+              className={clsx(inputBase, contentInvalid ? inputErr : inputOk)}
             />
           </div>
 
@@ -292,9 +362,19 @@ export default function ConsentCampaignDialog({ companyId, formId, formName }: P
               disabled={submitting}
               maxLength={maxChars}
               placeholder="Texto del mensaje que recibirá cada usuario..."
-              className="w-full rounded-xl border border-[#E2E8F0] px-4 py-2.5 text-sm text-[#0F172A] outline-none focus:border-[#1D2D5B] focus:ring-2 focus:ring-[#1D2D5B]/15 transition-all resize-y min-h-[96px] disabled:opacity-60 disabled:bg-stone-50"
+              aria-invalid={bodyInvalid}
+              className={clsx(
+                inputBase,
+                "resize-y min-h-[96px]",
+                bodyInvalid ? inputErr : inputOk
+              )}
             />
-            <p className="text-xs text-stone-400 text-right">
+            <p
+              className={clsx(
+                "text-xs text-right",
+                bodyText.length > maxChars ? "text-red-600 font-medium" : "text-stone-400"
+              )}
+            >
               {bodyText.length} / {maxChars}
             </p>
           </div>
@@ -312,34 +392,51 @@ export default function ConsentCampaignDialog({ companyId, formId, formName }: P
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 p-5 border-t border-stone-200 shrink-0">
-          <Button
-            type="button"
-            hierarchy="tertiary"
-            onClick={() => hideDialog(id)}
-            disabled={submitting}
-          >
-            Cancelar
-          </Button>
-          <Button
-            type="button"
-            hierarchy="secondary"
-            onClick={() => handleCreate(false)}
-            loading={submitting}
-            disabled={submitting}
-          >
-            Solo crear
-          </Button>
-          <Button
-            type="button"
-            hierarchy="primary"
-            onClick={() => handleCreate(true)}
-            loading={submitting}
-            disabled={submitting}
-            startContent={<Icon icon="tabler:send" />}
-          >
-            Crear y activar
-          </Button>
+        <div className="flex flex-col gap-3 p-5 border-t border-stone-200 shrink-0">
+          {!canSubmit && !submitting && disabledReasons.length > 0 && (
+            <div
+              className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3"
+              role="status"
+            >
+              <p className="text-xs font-semibold text-amber-900 mb-1.5">
+                Para crear la campaña:
+              </p>
+              <ul className="list-disc pl-4 space-y-0.5 text-xs text-amber-900/90">
+                {disabledReasons.map((msg, idx) => (
+                  <li key={`${idx}-${msg}`}>{msg}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <div className="flex items-center justify-end gap-3 flex-wrap">
+            <Button
+              type="button"
+              hierarchy="tertiary"
+              onClick={() => hideDialog(id)}
+              disabled={submitting}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              hierarchy="secondary"
+              onClick={() => handleCreate(false)}
+              loading={submitting}
+              disabled={submitting || !canSubmit}
+            >
+              Solo crear
+            </Button>
+            <Button
+              type="button"
+              hierarchy="primary"
+              onClick={() => handleCreate(true)}
+              loading={submitting}
+              disabled={submitting || !canSubmit}
+              startContent={<Icon icon="tabler:send" />}
+            >
+              Crear y activar
+            </Button>
+          </div>
         </div>
       </div>
     </div>

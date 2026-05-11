@@ -17,6 +17,8 @@ import { UserGender, userGendersOptions } from "@/types/collectFormResponse.type
 import { CustomSelectOption } from "@/types/forms.types";
 import { parseApiError } from "@/utils/parseApiError";
 import { registerConsentCampaignResponse } from "@/lib/collectFormResponse.api";
+import { getPolicyTemplateFileUrl } from "@/lib/policyTemplate.api";
+import LoadingCover from "@/components/layout/LoadingCover";
 
 type PhoneCountryCode =
   | "57" | "58" | "1" | "52" | "51"
@@ -79,6 +81,37 @@ function buildDataSchema(fields: Record<string, FieldConfig>) {
 export default function PublicConsentCampaignForm({ data, cct }: Props) {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [policyUrl, setPolicyUrl] = useState<string | null>(null);
+  const [policyLoading, setPolicyLoading] = useState(false);
+
+  React.useEffect(() => {
+    if (!data?.policyTemplateId || !data?.companyId) return;
+
+    let cancelled = false;
+    setPolicyLoading(true);
+
+    getPolicyTemplateFileUrl(data.companyId, data.policyTemplateId)
+      .then((res) => {
+        if (cancelled) return;
+        if (!res.error && res.data?.url) {
+          setPolicyUrl(res.data.url);
+        } else if (res.error) {
+          toast.error(parseApiError(res.error));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          toast.error("No se pudo obtener el enlace a la política de tratamiento de datos.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setPolicyLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [data.companyId, data.policyTemplateId]);
 
   const fields: Record<string, FieldConfig> = {};
   data.questions.forEach((q) => {
@@ -367,18 +400,65 @@ export default function PublicConsentCampaignForm({ data, cct }: Props) {
           Al aceptar, autorizo el tratamiento de mis datos personales conforme a
           lo establecido en la Ley 1581 de 2012 y sus decretos reglamentarios.
         </p>
-        <CustomCheckbox
-          {...register("dataProcessing")}
-          label="Acepto la política de tratamiento de datos personales de esta empresa."
-          error={errors.dataProcessing as FieldError}
-        />
+        {policyUrl && (
+          <a
+            href={policyUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex w-fit items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-primary-700 bg-primary-50 border border-primary-200 rounded-lg hover:bg-primary-100 transition-colors"
+          >
+            <Icon icon="tabler:file-text" className="text-base" />
+            Ver política completa (PDF)
+            <Icon icon="tabler:external-link" className="text-sm" />
+          </a>
+        )}
+        {policyLoading ? (
+          <div className="flex items-center gap-3 min-h-[3rem]">
+            <div className="w-10 h-10 relative shrink-0">
+              <LoadingCover size="sm" />
+            </div>
+            <span className="text-sm text-[#64748B]">Cargando enlace a la política…</span>
+          </div>
+        ) : policyUrl ? (
+          <CustomCheckbox
+            {...register("dataProcessing")}
+            label={
+              <span>
+                Acepto la{" "}
+                <a
+                  href={policyUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline text-primary-600 hover:text-primary-800 font-medium"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  política de tratamiento de datos personales
+                </a>{" "}
+                de esta empresa.
+              </span>
+            }
+            error={errors.dataProcessing as FieldError}
+          />
+        ) : (
+          <>
+            <div className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3">
+              No hay enlace disponible a la política en este momento. Si necesitas
+              leerla antes de aceptar, contacta a la empresa.
+            </div>
+            <CustomCheckbox
+              {...register("dataProcessing")}
+              label="Acepto la política de tratamiento de datos personales de esta empresa."
+              error={errors.dataProcessing as FieldError}
+            />
+          </>
+        )}
       </div>
 
       <Button
         type="submit"
         className="w-full"
         loading={submitting}
-        disabled={submitting}
+        disabled={submitting || policyLoading}
         startContent={<Icon icon="tabler:check" />}
       >
         {submitting ? "Enviando..." : "Aceptar y registrar consentimiento"}
