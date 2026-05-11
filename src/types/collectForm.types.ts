@@ -35,6 +35,13 @@ export interface CreateCollectFormFromTemplate
 
 export interface CollectForm extends CreateCollectForm {
   companyId: string;
+  /** Si el backend la incluye (p. ej. GET público del formulario), nombre del responsable del tratamiento */
+  company?: {
+    name?: string;
+    _id?: string;
+  };
+  /** Alternativa: nombre comercial en raíz (según contrato del API) */
+  companyName?: string;
   _id: string;
   createdAt: Date;
   isImported: boolean;

@@ -78,11 +78,18 @@ function buildDataSchema(fields: Record<string, FieldConfig>) {
   return z.object(shape);
 }
 
+function companyDisplayName(form: CollectForm): string | null {
+  const raw = form.company?.name?.trim() || form.companyName?.trim();
+  return raw && raw.length > 0 ? raw : null;
+}
+
 export default function PublicConsentCampaignForm({ data, cct }: Props) {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [policyUrl, setPolicyUrl] = useState<string | null>(null);
   const [policyLoading, setPolicyLoading] = useState(false);
+
+  const companyName = companyDisplayName(data);
 
   React.useEffect(() => {
     if (!data?.policyTemplateId || !data?.companyId) return;
@@ -236,7 +243,15 @@ export default function PublicConsentCampaignForm({ data, cct }: Props) {
           </h2>
           <p className="text-[#64748B] leading-relaxed">
             Tu aceptación de la política de tratamiento de datos personales ha
-            sido registrada exitosamente. Gracias por tu confianza.
+            sido registrada exitosamente.
+            {companyName ? (
+              <>
+                {" "}
+                Gracias por tu confianza en <span className="font-semibold text-[#0B1737]">{companyName}</span>.
+              </>
+            ) : (
+              " Gracias por tu confianza."
+            )}
           </p>
         </div>
         <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-5 py-4 text-sm text-emerald-800 w-full text-left flex gap-3">
@@ -261,14 +276,56 @@ export default function PublicConsentCampaignForm({ data, cct }: Props) {
         )}
       </div>
 
+      {companyName ? (
+        <div className="rounded-xl border border-primary-200 bg-gradient-to-br from-primary-50 to-blue-50 px-4 py-4 flex gap-3 shadow-sm">
+          <div className="p-2.5 bg-white rounded-lg border border-primary-100 shrink-0 h-fit shadow-sm">
+            <Icon icon="tabler:building" className="text-2xl text-primary-600" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-primary-700/90 mb-0.5">
+              Responsable del tratamiento de datos personales
+            </p>
+            <p className="text-lg font-bold text-primary-950 leading-snug break-words">
+              {companyName}
+            </p>
+            <p className="text-xs text-primary-900/85 mt-2 leading-relaxed">
+              La información que registres será tratada por esta empresa conforme a la Ley 1581 de 2012 y la política que aceptes a continuación.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-amber-200 bg-amber-50/90 px-4 py-4 flex gap-3">
+          <Icon
+            icon="tabler:building-community"
+            className="text-amber-700 text-xl shrink-0 mt-0.5"
+          />
+          <div className="text-sm text-amber-950 leading-relaxed">
+            <p className="font-semibold mb-1">Empresa responsable</p>
+            <p className="text-amber-900/95 text-xs">
+              En este enlace no aparece el nombre comercial de quien tratará tus datos. Si tienes dudas, contacta a quien te envió el mensaje. Los datos se asocian al formulario{" "}
+              <span className="font-medium">«{data.name}»</span>.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-4 flex gap-3">
         <Icon
           icon="tabler:info-circle"
           className="text-blue-600 text-xl shrink-0 mt-0.5"
         />
         <p className="text-sm text-blue-900 leading-relaxed">
-          Completa tus datos y acepta la política de tratamiento de datos
-          personales para registrar tu consentimiento.
+          {companyName ? (
+            <>
+              Completa tus datos y acepta la política de tratamiento de datos personales de{" "}
+              <span className="font-semibold">{companyName}</span> para registrar tu consentimiento.
+            </>
+          ) : (
+            <>
+              Completa tus datos y acepta la política de tratamiento de datos
+              personales para registrar tu consentimiento.
+            </>
+          )}
         </p>
       </div>
 
@@ -397,8 +454,16 @@ export default function PublicConsentCampaignForm({ data, cct }: Props) {
           Política de tratamiento de datos personales
         </h2>
         <p className="text-sm text-[#64748B] leading-relaxed">
-          Al aceptar, autorizo el tratamiento de mis datos personales conforme a
-          lo establecido en la Ley 1581 de 2012 y sus decretos reglamentarios.
+          {companyName ? (
+            <>
+              Al aceptar, autorizo a <span className="font-semibold text-[#334155]">{companyName}</span> el tratamiento de mis datos personales conforme a la Ley 1581 de 2012 y sus decretos reglamentarios, de acuerdo con la política vinculada abajo.
+            </>
+          ) : (
+            <>
+              Al aceptar, autorizo el tratamiento de mis datos personales conforme a
+              lo establecido en la Ley 1581 de 2012 y sus decretos reglamentarios.
+            </>
+          )}
         </p>
         {policyUrl && (
           <a
@@ -434,7 +499,11 @@ export default function PublicConsentCampaignForm({ data, cct }: Props) {
                 >
                   política de tratamiento de datos personales
                 </a>{" "}
-                de esta empresa.
+                {companyName ? (
+                  <>de {companyName}.</>
+                ) : (
+                  <>de la empresa responsable del tratamiento.</>
+                )}
               </span>
             }
             error={errors.dataProcessing as FieldError}
@@ -447,7 +516,11 @@ export default function PublicConsentCampaignForm({ data, cct }: Props) {
             </div>
             <CustomCheckbox
               {...register("dataProcessing")}
-              label="Acepto la política de tratamiento de datos personales de esta empresa."
+              label={
+                companyName
+                  ? `Acepto la política de tratamiento de datos personales de ${companyName}.`
+                  : "Acepto la política de tratamiento de datos personales de la empresa responsable."
+              }
               error={errors.dataProcessing as FieldError}
             />
           </>
