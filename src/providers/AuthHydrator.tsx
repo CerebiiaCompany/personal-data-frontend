@@ -86,21 +86,27 @@ export function AuthHydrator() {
           return;
         }
 
-        // Verificar si hay un error VÁLIDO (no vacío)
+        // Sin sesión: respuesta esperada de la API; no usar console.error (Next dev lo trata como error de app)
+        if (
+          session.error &&
+          isValidError(session.error) &&
+          session.error.code === "auth/unauthenticated"
+        ) {
+          if (process.env.NODE_ENV === "development") {
+            console.debug(
+              "[AuthHydrator] Sin sesión activa (visitante o sin cookies de sesión)"
+            );
+          }
+          setError(undefined);
+          setLoading(false);
+          isLoadingRef.current = false;
+          return;
+        }
+
+        // Otros errores de sesión: sí registrar y propagar al store
         if (session.error && isValidError(session.error)) {
           console.error("[AuthHydrator] ❌ Error al obtener sesión:", session.error);
           const parsedError = parseApiError(session.error);
-          
-          // Si el error es de autenticación (no hay sesión), no es un error crítico
-          if (session.error.code === 'auth/unauthenticated') {
-            console.log("[AuthHydrator] ℹ️ Usuario no autenticado (esperado si no ha iniciado sesión)");
-            setError(parsedError);
-            setLoading(false);
-            isLoadingRef.current = false;
-            return;
-          }
-          
-          // Para otros errores, sí es problemático
           setError(parsedError);
           setLoading(false);
           isLoadingRef.current = false;
@@ -137,7 +143,9 @@ export function AuthHydrator() {
           const permissionsRes = await getPermissions();
 
           if (permissionsRes.error && isValidError(permissionsRes.error)) {
-            console.error("[AuthHydrator] ⚠️ Error al obtener permisos:", permissionsRes.error);
+            if (permissionsRes.error.code !== "auth/unauthenticated") {
+              console.error("[AuthHydrator] ⚠️ Error al obtener permisos:", permissionsRes.error);
+            }
             console.log("[AuthHydrator] Continuando sin permisos (admins pueden funcionar sin ellos)");
             // No bloquear la app si fallan los permisos
           } else if (permissionsRes.data) {
