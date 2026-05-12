@@ -14,6 +14,7 @@ import { Icon } from "@iconify/react";
 import clsx from "clsx";
 import { useForm } from "react-hook-form";
 import SelectTemplateDialog from "../dialogs/SelectTemplateDialog";
+import ConsentCampaignDialog from "../dialogs/ConsentCampaignDialog";
 import CustomInput from "../forms/CustomInput";
 import CustomSelect from "../forms/CustomSelect";
 import { useSessionStore } from "@/store/useSessionStore";
@@ -685,6 +686,41 @@ const CreateCollectFormForm = ({ initialValues }: Props) => {
                 )}
               </div>
             </div>
+
+            {isEdit && formIdForLink && user?.companyUserData?.companyId && (
+              <>
+                <div className="rounded-2xl border border-emerald-200 bg-[#F0FDF4] px-5 py-5 flex flex-col gap-3 shadow-[0_2px_12px_rgba(16,185,129,0.08)]">
+                  <div className="flex items-start gap-3">
+                    <Icon
+                      icon="tabler:bell-ringing"
+                      className="text-xl text-emerald-600 shrink-0 mt-0.5"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-bold text-[#0F172A]">
+                        Campaña de consentimiento
+                      </p>
+                      <p className="text-[12px] text-[#64748B] mt-1 leading-snug">
+                        Envía solicitudes de aceptación masivas a los usuarios con consentimiento pendiente
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => showDialog(HTML_IDS_DATA.consentCampaignDialog)}
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-[13px] font-semibold text-white hover:brightness-95 transition-all shadow-[0_4px_14px_rgba(16,185,129,0.30)]"
+                  >
+                    <Icon icon="tabler:send" className="text-base" />
+                    Crear campaña
+                  </button>
+                </div>
+
+                <ConsentCampaignDialog
+                  companyId={user.companyUserData.companyId}
+                  formId={formIdForLink}
+                  formName={watch("name")}
+                />
+              </>
+            )}
           </aside>
         </div>
             </section>

@@ -9,4 +9,5 @@ export const HTML_IDS_DATA = {
   editOwnCompanyDialog: "editOwnCompanyDialog",
   editProfileDialog: "editProfileDialog",
   sendConsentInvitationDialog: "sendConsentInvitationDialog",
+  consentCampaignDialog: "consentCampaignDialog",
 };

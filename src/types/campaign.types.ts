@@ -89,8 +89,23 @@ export interface CreateScheduledCampaign {
 
 export type CampaignStatus = "COMPLETED" | "EXPIRED" | "DRAFT" | "ACTIVE" | "SCHEDULED";
 
+export interface CreateConsentCampaign {
+  type: "CONSENT_REQUEST";
+  name: string;
+  deliveryChannel: CampaignDeliveryChannel;
+  sourceFormIds: [string];
+  scheduling: {
+    scheduledDateTime: string;
+  };
+  content: {
+    name: string;
+    bodyText: string;
+  };
+}
+
 export interface Campaign {
   _id: string;
+  type?: "MARKETING" | "CONSENT_REQUEST";
   active: boolean;
   companyId: string;
   name: string;

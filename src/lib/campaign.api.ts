@@ -1,5 +1,5 @@
 import { APIResponse, QueryParams } from "@/types/api.types";
-import { CreateCampaign } from "@/types/campaign.types";
+import { CreateCampaign, CreateConsentCampaign } from "@/types/campaign.types";
 import { UpdatePartial } from "@/types/utils.types";
 import { customFetch } from "@/utils/customFetch";
 
@@ -74,6 +74,16 @@ export async function restoreCampaign(
     `/companies/${companyId}/campaigns/${campaignId}/restore`,
     { method: "PATCH" }
   );
+}
+
+export async function createConsentCampaign(
+  companyId: string,
+  data: CreateConsentCampaign
+): Promise<APIResponse> {
+  return customFetch(`/companies/${companyId}/campaigns`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
 }
 
 export async function createScheduledCampaign(

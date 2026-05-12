@@ -98,7 +98,10 @@ function getScheduledDateTimeLabel(item: Campaign): string {
   if (!raw) return "—";
   const d = new Date(raw);
   if (Number.isNaN(d.getTime())) return "—";
-  const datePart = formatDateToString({ date: raw });
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+  const datePart = `${day}/${month}/${year}`;
   const timePart = d.toLocaleTimeString("es-CO", {
     hour: "numeric",
     minute: "2-digit",
@@ -170,8 +173,13 @@ const CampaignsTable = ({ items, loading, error }: Props) => {
     "text-left text-[10px] font-semibold uppercase tracking-[0.06em] text-[#94A3B8] py-3.5 px-4 border-b border-[#EEF2F8] bg-[#F8FAFC]";
 
   return (
-    <div className="relative min-h-[220px] w-full flex-1 overflow-hidden rounded-2xl border border-[#E8EDF7] bg-white shadow-[0_2px_12px_rgba(15,35,70,0.04)]">
-      {loading && (
+    <div className="relative w-full overflow-hidden rounded-2xl border border-[#E8EDF7] bg-white shadow-[0_2px_12px_rgba(15,35,70,0.04)]">
+      {loading && !localItems && (
+        <div className="relative min-h-[280px] w-full">
+          <LoadingCover />
+        </div>
+      )}
+      {loading && localItems && (
         <div className="absolute inset-0 z-10 rounded-2xl bg-white/70">
           <LoadingCover />
         </div>
@@ -269,9 +277,17 @@ const CampaignsTable = ({ items, loading, error }: Props) => {
                     </td>
                     <td className="py-4 px-4 align-middle">
                       <div className="flex flex-col gap-1.5 min-w-0">
-                        <span className="font-semibold text-[#0B1737] text-[15px] leading-snug line-clamp-2">
-                          {item.name}
-                        </span>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="font-semibold text-[#0B1737] text-[15px] leading-snug line-clamp-2">
+                            {item.name}
+                          </span>
+                          {item.type === "CONSENT_REQUEST" && (
+                            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 shrink-0">
+                              <Icon icon="tabler:bell-ringing" className="text-xs" />
+                              Consentimiento
+                            </span>
+                          )}
+                        </div>
                         {desc ? (
                           <span className="text-[13px] text-[#64748B] line-clamp-2">
                             {desc}
@@ -291,7 +307,12 @@ const CampaignsTable = ({ items, loading, error }: Props) => {
                       </div>
                     </td>
                     <td className="py-4 px-4 align-middle">
-                      {goal ? (
+                      {item.type === "CONSENT_REQUEST" ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[12px] font-semibold text-emerald-800">
+                          <Icon icon="tabler:shield-check" className="text-base shrink-0" />
+                          Consentimiento
+                        </span>
+                      ) : goal ? (
                         <span
                           className={clsx(
                             "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-semibold",

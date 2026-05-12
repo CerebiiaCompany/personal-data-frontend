@@ -14,6 +14,33 @@ export async function registerCollectFormResponse(
   return res;
 }
 
+export async function registerConsentCampaignResponse(
+  formId: string,
+  cct: string,
+  data: {
+    dataProcessing: boolean;
+    data: Record<string, any>;
+    user: {
+      docType: string;
+      docNumber: number;
+      name: string;
+      lastName: string;
+      age: number;
+      gender: string;
+      email: string;
+      phone: string;
+    };
+  }
+): Promise<APIResponse> {
+  return customFetch(
+    `/public/collectForms/${formId}/responses?cct=${encodeURIComponent(cct)}`,
+    {
+      method: "POST",
+      body: JSON.stringify(data),
+    }
+  );
+}
+
 export async function fetchCollectFormResponses(
   params: QueryParams
 ): Promise<APIResponse> {

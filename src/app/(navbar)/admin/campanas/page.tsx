@@ -26,6 +26,7 @@ const topCardClass =
 const NAVY = "#1A2B5B";
 
 type StatusFilterTab = "ALL" | "ACTIVE" | "SCHEDULED" | "PAUSED" | "COMPLETED";
+type TypeFilterTab = "ALL" | "MARKETING" | "CONSENT_REQUEST";
 
 const FILTER_TABS: { id: StatusFilterTab; label: string }[] = [
   { id: "ALL", label: "Todas" },
@@ -33,6 +34,12 @@ const FILTER_TABS: { id: StatusFilterTab; label: string }[] = [
   { id: "SCHEDULED", label: "Programada" },
   { id: "PAUSED", label: "Pausada" },
   { id: "COMPLETED", label: "Completada" },
+];
+
+const TYPE_FILTER_TABS: { id: TypeFilterTab; label: string; icon: string }[] = [
+  { id: "ALL", label: "Todos los tipos", icon: "tabler:layout-grid" },
+  { id: "MARKETING", label: "Marketing", icon: "tabler:speakerphone" },
+  { id: "CONSENT_REQUEST", label: "Consentimiento", icon: "tabler:bell-ringing" },
 ];
 
 function matchesStatusFilter(item: Campaign, tab: StatusFilterTab): boolean {
@@ -50,10 +57,12 @@ export default function CampaignsPage() {
   const { shouldFetch } = usePermissionCheck();
   const { search, debouncedValue, setSearch } = useDebouncedSearch();
   const [statusTab, setStatusTab] = useState<StatusFilterTab>("ALL");
+  const [typeTab, setTypeTab] = useState<TypeFilterTab>("ALL");
 
   const { data, loading, error } = useCampaigns({
     companyId: user?.companyUserData?.companyId,
     search: debouncedValue,
+    type: typeTab !== "ALL" ? typeTab : undefined,
     enabled: shouldFetch("campaigns.view"),
   });
 
@@ -121,14 +130,19 @@ export default function CampaignsPage() {
 
   const filteredItems = useMemo(() => {
     if (!data) return null;
-    return data.filter((item) => matchesStatusFilter(item, statusTab));
+    return data
+      .filter((item) => matchesStatusFilter(item, statusTab))
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
   }, [data, statusTab]);
 
   /** Mostrar métricas cuando ya hubo respuesta (`[]` incluido) o mientras carga */
   const showSummaryRow = data !== null || loading;
 
   return (
-    <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col bg-[#F8FAFC]">
+    <div className="flex min-h-full w-full flex-col bg-[#F8FAFC]">
       <div className="w-full shrink-0 px-5 pt-5 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
         <section className={clsx(topCardClass, "px-5 py-5 sm:px-6 sm:py-6")}>
           <div className="flex flex-col gap-6">
@@ -179,8 +193,8 @@ export default function CampaignsPage() {
         </section>
       </div>
 
-      <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col px-5 py-6 sm:px-6 sm:py-7 lg:px-8 lg:py-8 xl:px-10 2xl:px-12">
-        <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-6 md:gap-8">
+      <div className="w-full px-5 py-6 sm:px-6 sm:py-7 lg:px-8 lg:py-8 xl:px-10 2xl:px-12">
+        <div className="flex w-full flex-col gap-6 md:gap-8">
           {showSummaryRow && (
             <CampaignsSummaryCards
               activeCount={summaryMetrics.activeCount}
@@ -196,7 +210,7 @@ export default function CampaignsPage() {
             <div className="flex flex-wrap items-center gap-2">
               <span className="mr-1 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#64748B]">
                 <Icon icon="tabler:filter" className="text-base" />
-                Filtrar
+                Estado
               </span>
               {FILTER_TABS.map((tab) => (
                 <button
@@ -210,6 +224,31 @@ export default function CampaignsPage() {
                       : "border-[#E2E8F0] bg-white text-[#334155] hover:bg-[#F1F5F9]"
                   )}
                 >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="mr-1 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#64748B]">
+                <Icon icon="tabler:tag" className="text-base" />
+                Tipo
+              </span>
+              {TYPE_FILTER_TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setTypeTab(tab.id)}
+                  className={clsx(
+                    "inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition-colors",
+                    typeTab === tab.id
+                      ? tab.id === "CONSENT_REQUEST"
+                        ? "border-emerald-600 bg-emerald-600 text-white shadow-sm"
+                        : "border-[#1A2B5B] bg-[#1A2B5B] text-white shadow-sm"
+                      : "border-[#E2E8F0] bg-white text-[#334155] hover:bg-[#F1F5F9]"
+                  )}
+                >
+                  <Icon icon={tab.icon} className="text-base" />
                   {tab.label}
                 </button>
               ))}

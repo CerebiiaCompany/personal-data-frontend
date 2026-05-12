@@ -54,7 +54,7 @@ export function useCampaigns<T = Campaign[]>(params: UseCampaignsParams) {
     if (!enabled || !queryParams.companyId) return;
 
     fetch();
-  }, [enabled, queryParams.companyId, queryParams.search, queryParams.startDate, queryParams.endDate, fetch]);
+  }, [enabled, queryParams.companyId, queryParams.search, queryParams.startDate, queryParams.endDate, queryParams.type, fetch]);
 
   return {
     data,
