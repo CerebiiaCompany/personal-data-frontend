@@ -13,7 +13,7 @@ import CustomInput from "../forms/CustomInput";
 import CustomSelect from "../forms/CustomSelect";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import { generateOtpCode, validateOtpCode } from "@/lib/oneTimeCode.api";
-import { getPolicyTemplateFileUrl } from "@/lib/policyTemplate.api";
+import { getPublicCollectFormPolicyUrl } from "@/lib/collectForm.api";
 import LoadingCover from "../layout/LoadingCover";
 import { CampaignDeliveryChannel } from "@/types/campaign.types";
 import { fetchCollectFormResponses, registerCollectFormResponse } from "@/lib/collectFormResponse.api";
@@ -113,14 +113,14 @@ const PublicConsentForm = ({ data }: Props) => {
     }
 
     // Obtener URL de la política
-    if (data.policyTemplateId && data.companyId) {
-      getPolicyTemplateFileUrl(data.companyId, data.policyTemplateId).then((res) => {
+    if (data._id) {
+      getPublicCollectFormPolicyUrl(data._id).then((res) => {
         if (!res.error && res.data?.url) {
           setPolicyUrl(res.data.url);
         }
       });
     }
-  }, [data.policyTemplateId, data.companyId]);
+  }, [data._id, data.company]);
 
   async function onSearchSubmit(formData: SearchFormValues) {
     const hasSession = await ensureActiveSession();

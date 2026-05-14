@@ -6,12 +6,35 @@ import {
   CreateCollectFormFromTemplate,
 } from "@/types/collectForm.types";
 import { customFetch } from "@/utils/customFetch";
+import type { PolicyTemplateFileUrlResponse } from "@/lib/policyTemplate.api";
 
 export async function fetchPublicCollectForm(
   params: QueryParams
 ): Promise<APIResponse> {
   let res = await customFetch(`/public/collectForms/${params.id}`, {}, params);
   return res;
+}
+
+export type PublicCollectFormPolicyUrlResponse = PolicyTemplateFileUrlResponse & {
+  policyTemplate: PolicyTemplateFileUrlResponse["policyTemplate"] & {
+    versionLabel?: string;
+  };
+};
+
+/** URL firmada de la política del formulario (sin sesión; no requiere cct). */
+export async function getPublicCollectFormPolicyUrl(
+  collectFormId: string,
+  expiresIn?: number
+): Promise<APIResponse<PublicCollectFormPolicyUrlResponse>> {
+  const query: QueryParams | undefined = expiresIn
+    ? { expiresIn: expiresIn.toString() }
+    : undefined;
+
+  return customFetch<PublicCollectFormPolicyUrlResponse>(
+    `/public/collectForms/${collectFormId}/policy/url`,
+    { method: "GET" },
+    query
+  );
 }
 
 /** Respuesta del listado de clasificación: `data` + `meta` + `summary` */

@@ -24,7 +24,7 @@ import { showDialog } from "@/utils/dialogs.utils";
 import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import { generateOtpCode, validateOtpCode, resendOtpCodeByEmail } from "@/lib/oneTimeCode.api";
-import { getPolicyTemplateFileUrl } from "@/lib/policyTemplate.api";
+import { getPublicCollectFormPolicyUrl } from "@/lib/collectForm.api";
 import LoadingCover from "../layout/LoadingCover";
 import { CampaignDeliveryChannel } from "@/types/campaign.types";
 import { useCompanyCreditsPricing } from "@/hooks/useCompanyCreditsPricing";
@@ -473,21 +473,11 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
   }
 
   useEffect(() => {
-    // Obtener la URL del archivo de la plantilla de política usando el nuevo endpoint
     const fetchPolicyUrl = async () => {
-      if (!data?.policyTemplateId || !data?.companyId) {
-        console.warn("El formulario no tiene una plantilla de política asignada", {
-          hasPolicyTemplateId: !!data?.policyTemplateId,
-          hasCompanyId: !!data?.companyId,
-        });
-        return;
-      }
+      if (!data?._id) return;
 
       try {
-        const res = await getPolicyTemplateFileUrl(
-          data.companyId,
-          data.policyTemplateId
-        );
+        const res = await getPublicCollectFormPolicyUrl(data._id);
 
         if (res.error) {
           console.error("Error al obtener URL de la política:", res.error);

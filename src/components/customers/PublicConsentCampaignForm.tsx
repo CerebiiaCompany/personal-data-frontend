@@ -17,7 +17,7 @@ import { UserGender, userGendersOptions } from "@/types/collectFormResponse.type
 import { CustomSelectOption } from "@/types/forms.types";
 import { parseApiError } from "@/utils/parseApiError";
 import { registerConsentCampaignResponse } from "@/lib/collectFormResponse.api";
-import { getPolicyTemplateFileUrl } from "@/lib/policyTemplate.api";
+import { getPublicCollectFormPolicyUrl } from "@/lib/collectForm.api";
 import LoadingCover from "@/components/layout/LoadingCover";
 
 type PhoneCountryCode =
@@ -92,12 +92,12 @@ export default function PublicConsentCampaignForm({ data, cct }: Props) {
   const companyName = companyDisplayName(data);
 
   React.useEffect(() => {
-    if (!data?.policyTemplateId || !data?.companyId) return;
+    if (!data?._id) return;
 
     let cancelled = false;
     setPolicyLoading(true);
 
-    getPolicyTemplateFileUrl(data.companyId, data.policyTemplateId)
+    getPublicCollectFormPolicyUrl(data._id)
       .then((res) => {
         if (cancelled) return;
         if (!res.error && res.data?.url) {
@@ -118,7 +118,7 @@ export default function PublicConsentCampaignForm({ data, cct }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [data.companyId, data.policyTemplateId]);
+  }, [data._id]);
 
   const fields: Record<string, FieldConfig> = {};
   data.questions.forEach((q) => {
