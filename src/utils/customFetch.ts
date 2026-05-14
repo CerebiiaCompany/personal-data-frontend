@@ -1,6 +1,13 @@
 import { useSessionStore } from "@/store/useSessionStore";
 import { APIResponse, QueryParams } from "@/types/api.types";
 import { API_BASE_URL } from "@/utils/env.utils";
+import { isPublicAppRoute } from "@/utils/publicRoutes";
+
+function isPublicClientContext(endpoint: string): boolean {
+  if (endpoint.startsWith("/public/")) return true;
+  if (typeof window === "undefined") return false;
+  return isPublicAppRoute(window.location.pathname);
+}
 
 // Build a query string from an object, skipping null/undefined/empty and the `id` key
 function buildQueryString(params?: QueryParams): string {
@@ -132,7 +139,7 @@ export async function customFetch<T>(
           serverBody = (await req.json()) as APIResponse;
         } catch {}
 
-        const isPublic = endpoint.startsWith("/public/");
+        const isPublic = isPublicClientContext(endpoint);
 
         if (isPublic) {
           // For public endpoints, DO NOT logout or redirect; just return server error/message
@@ -182,7 +189,7 @@ export async function customFetch<T>(
       const res = (await req.json()) as APIResponse;
 
       if (res.error?.code === "auth/unauthenticated") {
-        const isPublic = endpoint.startsWith("/public/");
+        const isPublic = isPublicClientContext(endpoint);
         if (!isPublic) {
           // notify user session has ended only for protected endpoints
           const sessionStore = useSessionStore.getState();

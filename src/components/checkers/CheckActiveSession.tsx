@@ -7,6 +7,7 @@ import { parseApiError } from "@/utils/parseApiError";
 import { getSession } from "@/lib/auth.api";
 import { useOwnCompanyStore } from "@/store/useOwnCompanyStore";
 import { fetchOwnCompany } from "@/lib/company.api";
+import { isPublicAppRoute } from "@/utils/publicRoutes";
 
 const CheckActiveSession = () => {
   const router = useRouter();
@@ -33,7 +34,7 @@ const CheckActiveSession = () => {
     
     // Skip if already checking
     if (isCheckingRef.current) return;
-    if (currentPath === "/login") return;
+    if (currentPath === "/login" || isPublicAppRoute(currentPath)) return;
 
     // Esperar a que termine la carga inicial del AuthHydrator
     if (!initialLoadCompleteRef.current && loading) {
@@ -56,7 +57,12 @@ const CheckActiveSession = () => {
         isCheckingRef.current = false;
         
         // If it's an auth error and we're not on login, redirect
-        if ((session.error.code === "auth/unauthenticated" || parsedError === "Sesión expirada") && currentPath !== "/login") {
+        if (
+          (session.error.code === "auth/unauthenticated" ||
+            parsedError === "Sesión expirada") &&
+          currentPath !== "/login" &&
+          !isPublicAppRoute(currentPath)
+        ) {
           router.push(`/login?callback_url=${encodeURIComponent(currentPath)}`);
         }
         return;
@@ -85,7 +91,7 @@ const CheckActiveSession = () => {
       isCheckingRef.current = false;
       
       // Redirect to login on error if not already there
-      if (currentPath !== "/login") {
+      if (currentPath !== "/login" && !isPublicAppRoute(currentPath)) {
         router.push(`/login?callback_url=${encodeURIComponent(currentPath)}`);
       }
     }
@@ -109,7 +115,7 @@ const CheckActiveSession = () => {
     }
 
     // Si estamos en login, resetear y no verificar
-    if (pathname === "/login") {
+    if (pathname === "/login" || isPublicAppRoute(pathname)) {
       hasCheckedRef.current = false;
       isCheckingRef.current = false;
       setLoading(false);
