@@ -13,9 +13,15 @@ import CustomCheckbox from "@/components/forms/CustomCheckbox";
 import RenderQuestionInput from "@/components/forms/RenderQuestionInput";
 import { AnswerType, CollectForm } from "@/types/collectForm.types";
 import { DocType, docTypesOptions } from "@/types/user.types";
-import { UserGender, userGendersOptions } from "@/types/collectFormResponse.types";
+import {
+  PersonKind,
+  personKindOptions,
+  UserGender,
+  userGendersOptions,
+} from "@/types/collectFormResponse.types";
 import { CustomSelectOption } from "@/types/forms.types";
 import { parseApiError } from "@/utils/parseApiError";
+import { buildCollectFormUserPayload, parseNitDocNumber } from "@/utils/collectFormUser.utils";
 import { registerConsentCampaignResponse } from "@/lib/collectFormResponse.api";
 import { getPublicCollectFormPolicyUrl } from "@/lib/collectForm.api";
 import LoadingCover from "@/components/layout/LoadingCover";
@@ -84,6 +90,7 @@ function companyDisplayName(form: CollectForm): string | null {
 }
 
 export default function PublicConsentCampaignForm({ data, cct }: Props) {
+  const [personKind, setPersonKind] = useState<PersonKind>("NATURAL");
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [policyUrl, setPolicyUrl] = useState<string | null>(null);
@@ -130,37 +137,62 @@ export default function PublicConsentCampaignForm({ data, cct }: Props) {
 
   const dataSchema = React.useMemo(() => buildDataSchema(fields), [data._id]);
 
-  const schema = React.useMemo(
-    () =>
-      z.object({
-        user: z.object({
-          docType: z.string<DocType>(),
-          docNumber: z.preprocess(
-            (v) => (v === "" ? undefined : v),
-            z.coerce.number("Número de documento inválido")
-          ),
-          name: z.string().min(1, "Este campo es obligatorio"),
-          lastName: z.string().min(1, "Este campo es obligatorio"),
-          age: z.preprocess(
-            (v) => (v === "" ? undefined : v),
-            z.coerce.number("Este campo es obligatorio").int("Edad inválida")
-          ),
-          gender: z.string<UserGender>(),
-          email: z.email("Correo inválido"),
-          phone: z.preprocess(
-            (v: any) =>
-              typeof v === "string" ? v.replace(/[^\d]/g, "") : String(v ?? ""),
-            z.string().regex(/^\d{10}$/, "Ingresa 10 dígitos (solo números)")
-          ),
-          phoneCountryCode: z.string(),
-        }),
-        dataProcessing: z.boolean().refine((v) => v === true, {
-          message: "Debes aceptar el tratamiento de datos",
-        }),
-        data: dataSchema,
-      }),
-    [dataSchema]
+  const naturalDocNumber = z.preprocess(
+    (v) => (v === "" ? undefined : v),
+    z.coerce.number("Número de documento inválido")
   );
+
+  const juridicaDocNumber = z.preprocess((v) => {
+    if (v === "" || v === undefined || v === null) return undefined;
+    const parsed = parseNitDocNumber(String(v));
+    return Number.isNaN(parsed) ? undefined : parsed;
+  }, z.number("Número de NIT inválido"));
+
+  const sharedUserFields = {
+    email: z.email("Correo inválido").min(1, "Este campo es obligatorio"),
+    phone: z.preprocess(
+      (v: unknown) =>
+        typeof v === "string" ? v.replace(/[^\d]/g, "") : String(v ?? ""),
+      z.string().regex(/^\d{10}$/, "Ingresa 10 dígitos (solo números)")
+    ),
+    phoneCountryCode: z.string().min(1, "Código de país requerido"),
+  };
+
+  const schema = React.useMemo(() => {
+    const userSchema =
+      personKind === "JURIDICA"
+        ? z.object({
+            ...sharedUserFields,
+            docNumber: juridicaDocNumber,
+            docType: z.literal("NIT"),
+            razonSocial: z.string().min(1, "Este campo es obligatorio"),
+            name: z.string().min(1, "Este campo es obligatorio"),
+            lastName: z.string().min(1, "Este campo es obligatorio"),
+            age: z.any().optional(),
+            gender: z.any().optional(),
+          })
+        : z.object({
+            ...sharedUserFields,
+            docNumber: naturalDocNumber,
+            docType: z.enum(["CC", "TI", "OTHER"]),
+            name: z.string().min(1, "Este campo es obligatorio"),
+            lastName: z.string().min(1, "Este campo es obligatorio"),
+            age: z.preprocess(
+              (v) => (v === "" ? undefined : v),
+              z.coerce.number("Este campo es obligatorio").int("Edad inválida")
+            ),
+            gender: z.string<UserGender>(),
+            razonSocial: z.string().optional(),
+          });
+
+    return z.object({
+      user: userSchema,
+      dataProcessing: z.boolean().refine((v) => v === true, {
+        message: "Debes aceptar el tratamiento de datos",
+      }),
+      data: dataSchema,
+    });
+  }, [personKind, dataSchema]);
 
   const dynamicDefaults = React.useMemo(
     () =>
@@ -170,6 +202,8 @@ export default function PublicConsentCampaignForm({ data, cct }: Props) {
     [data._id]
   );
 
+  const resolver = React.useMemo(() => zodResolver(schema), [schema]);
+
   const {
     register,
     handleSubmit,
@@ -177,7 +211,7 @@ export default function PublicConsentCampaignForm({ data, cct }: Props) {
     setValue,
     watch,
   } = useForm({
-    resolver: zodResolver(schema),
+    resolver,
     defaultValues: {
       user: {
         docType: "CC" as DocType,
@@ -189,26 +223,34 @@ export default function PublicConsentCampaignForm({ data, cct }: Props) {
         gender: undefined as UserGender | undefined,
         email: "",
         phone: "",
+        razonSocial: "",
       },
       dataProcessing: false,
       data: dynamicDefaults,
     },
   });
 
+  const handlePersonKindChange = (kind: PersonKind) => {
+    setPersonKind(kind);
+    if (kind === "JURIDICA") {
+      setValue("user.docType", "NIT" as unknown as DocType);
+      setValue("user.age", undefined as unknown as number);
+      setValue("user.gender", undefined as UserGender | undefined);
+    } else {
+      setValue("user.docType", "CC");
+      setValue("user.razonSocial", "");
+    }
+  };
+
   async function onSubmit(formData: any) {
     setSubmitting(true);
 
-    const phoneCountryCode = (watch("user.phoneCountryCode") as string) || "57";
-    const fullPhone = `${phoneCountryCode}${formData.user.phone}`;
+    const userPayload = buildCollectFormUserPayload(formData.user, personKind);
 
     const res = await registerConsentCampaignResponse(data._id, cct, {
       dataProcessing: formData.dataProcessing,
       data: formData.data ?? {},
-      user: {
-        ...formData.user,
-        phone: fullPhone,
-        phoneCountryCode: undefined,
-      },
+      user: userPayload,
     });
 
     setSubmitting(false);
@@ -332,73 +374,160 @@ export default function PublicConsentCampaignForm({ data, cct }: Props) {
       {/* Datos personales */}
       <div className="rounded-xl border border-[#E4E9F2] bg-white p-6 flex flex-col gap-5">
         <h2 className="font-semibold text-[#0B1737] text-base">
-          Datos personales
+          Datos del titular
         </h2>
 
-        <div className="flex gap-5">
-          <CustomInput
-            label="Nombres"
-            {...register("user.name")}
-            placeholder="Ej. Juan"
-            error={errors.user?.name}
-          />
-          <CustomInput
-            label="Apellidos"
-            {...register("user.lastName")}
-            placeholder="Ej. Pérez"
-            error={errors.user?.lastName}
-          />
-        </div>
-
-        <div className="flex gap-5">
-          <div>
-            <CustomSelect
-              label="Tipo de documento"
-              options={docTypesOptions}
-              value={watch("user.docType")}
-              onChange={(v) => setValue("user.docType", v)}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <Icon
+              icon="material-symbols:info-outline"
+              className="text-2xl text-blue-600 flex-shrink-0 mt-0.5"
             />
+            <div className="flex flex-col gap-2">
+              <h3 className="font-semibold text-blue-900 text-base">
+                ¿Quién realiza este registro?
+              </h3>
+              <p className="text-sm text-blue-800 leading-relaxed">
+                Indica si el titular es una{" "}
+                <span className="font-semibold">persona natural</span> (ciudadano)
+                o una{" "}
+                <span className="font-semibold">persona jurídica</span> (empresa
+                u organización). Los campos que verás a continuación dependen de
+                esa elección.
+              </p>
+              {personKind === "NATURAL" ? (
+                <p className="text-sm text-blue-800 leading-relaxed border-t border-blue-200/80 pt-2">
+                  <span className="font-semibold text-blue-900">
+                    Persona natural seleccionada:
+                  </span>{" "}
+                  completa tus nombres, apellidos, tipo y número de documento
+                  (C.C., T.I., etc.), género y edad. Debes ser tú quien autoriza
+                  el tratamiento de tus datos personales.
+                </p>
+              ) : (
+                <p className="text-sm text-blue-800 leading-relaxed border-t border-blue-200/80 pt-2">
+                  <span className="font-semibold text-blue-900">
+                    Persona jurídica seleccionada:
+                  </span>{" "}
+                  ingresa la razón social y el NIT de la empresa, y los nombres
+                  y apellidos del representante legal que registra el
+                  consentimiento en nombre de la organización.
+                </p>
+              )}
+            </div>
           </div>
-          <CustomInput
-            label="Número de documento"
-            {...register("user.docNumber")}
-            error={errors.user?.docNumber as FieldError}
-          />
         </div>
 
-        <div className="flex gap-5">
-          <div className="flex flex-col items-start gap-1 text-left flex-1 relative h-fit">
-            <label className="font-medium w-full text-ellipsis pl-2 text-stone-500 text-sm">
-              Género
-            </label>
-            <select
-              value={watch("user.gender") || ""}
-              onChange={(e) =>
-                setValue("user.gender", e.target.value as UserGender, {
-                  shouldValidate: true,
-                  shouldDirty: true,
-                  shouldTouch: true,
-                })
+        <CustomSelect<PersonKind>
+          label="Tipo de persona"
+          options={personKindOptions}
+          value={personKind}
+          onChange={handlePersonKindChange}
+        />
+
+        {personKind === "NATURAL" ? (
+          <>
+            <div className="flex gap-5">
+              <CustomInput
+                label="Nombres"
+                {...register("user.name")}
+                placeholder="Ej. Juan"
+                error={errors.user?.name}
+              />
+              <CustomInput
+                label="Apellidos"
+                {...register("user.lastName")}
+                placeholder="Ej. Pérez"
+                error={errors.user?.lastName}
+              />
+            </div>
+            <div className="flex gap-5">
+              <div>
+                <CustomSelect
+                  label="Tipo de documento"
+                  options={docTypesOptions}
+                  value={watch("user.docType")}
+                  onChange={(v) => setValue("user.docType", v)}
+                />
+              </div>
+              <CustomInput
+                label="Número de documento"
+                {...register("user.docNumber")}
+                error={errors.user?.docNumber as FieldError}
+              />
+            </div>
+            <div className="flex gap-5">
+              <div className="flex flex-col items-start gap-1 text-left flex-1 relative h-fit">
+                <label className="font-medium w-full text-ellipsis pl-2 text-stone-500 text-sm">
+                  Género
+                </label>
+                <select
+                  value={watch("user.gender") || ""}
+                  onChange={(e) =>
+                    setValue("user.gender", e.target.value as UserGender, {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                      shouldTouch: true,
+                    })
+                  }
+                  className="rounded-lg gap-2 w-full text-primary-900 border border-primary-900 flex-1 relative px-3 py-2 bg-primary-50"
+                >
+                  <option value="" disabled>
+                    Seleccionar opción
+                  </option>
+                  {userGendersOptions.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <CustomInput
+                type="number"
+                label="Edad"
+                {...register("user.age")}
+                error={errors.user?.age as FieldError}
+              />
+            </div>
+          </>
+        ) : (
+          <>
+            <CustomInput
+              label="Razón social"
+              {...register("user.razonSocial")}
+              placeholder="Ej. Empresa XYZ S.A.S."
+              error={
+                errors.user && "razonSocial" in errors.user
+                  ? (errors.user as { razonSocial?: FieldError }).razonSocial
+                  : undefined
               }
-              className="rounded-lg gap-2 w-full text-primary-900 border border-primary-900 flex-1 relative px-3 py-2 bg-primary-50"
-            >
-              <option value="" disabled>
-                Seleccionar opción
-              </option>
-              {userGendersOptions.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.title}
-                </option>
-              ))}
-            </select>
-          </div>
-          <CustomInput
-            type="number"
-            label="Edad"
-            {...register("user.age")}
-            error={errors.user?.age as FieldError}
-          />
-        </div>
+            />
+            <div className="flex gap-5">
+              <CustomInput
+                label="Nombres del representante legal"
+                {...register("user.name")}
+                placeholder="Ej. Juan"
+                error={errors.user?.name}
+              />
+              <CustomInput
+                label="Apellidos del representante legal"
+                {...register("user.lastName")}
+                placeholder="Ej. Pérez"
+                error={errors.user?.lastName}
+              />
+            </div>
+            <CustomInput
+              label="NIT"
+              {...register("user.docNumber")}
+              placeholder="Ej. 900123456 o 900123456-7"
+              error={errors.user?.docNumber as FieldError}
+            />
+            <p className="text-xs text-stone-500 -mt-2 pl-2">
+              Ingresa el NIT con o sin dígito de verificación; se enviará solo
+              el número principal.
+            </p>
+          </>
+        )}
 
         <div className="flex gap-5">
           <CustomInput

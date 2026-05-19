@@ -5,13 +5,12 @@ import SectionSearchBar from "@/components/base/SectionSearchBar";
 import FormResponsesTable from "@/components/clasification/FormResponsesTable";
 import { useCollectFormResponses } from "@/hooks/useCollectFormResponses";
 import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
-import { fetchCollectFormResponses } from "@/lib/collectFormResponse.api";
+import { useConsentResponsesExport } from "@/hooks/useConsentResponsesExport";
 import { useSessionStore } from "@/store/useSessionStore";
 import { Icon } from "@iconify/react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
 
 type FormResponseSummary = {
   verifiedResponses?: number;
@@ -25,8 +24,10 @@ export default function FormClassificationPage() {
   const { debouncedValue, search, setSearch } = useDebouncedSearch();
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [exportingExcel, setExportingExcel] = useState(false);
-  
+  const companyId = user?.companyUserData?.companyId;
+  const { startExport, exporting: exportingExcel, progress: exportProgress } =
+    useConsentResponsesExport(companyId);
+
   const apiSearch = useMemo(() => {
     const value = debouncedValue.trim();
     if (!value) return "";
@@ -40,7 +41,7 @@ export default function FormClassificationPage() {
   }, [debouncedValue]);
 
   const { data, loading, error, meta, summary, refresh } = useCollectFormResponses({
-    companyId: user?.companyUserData?.companyId,
+    companyId,
     id: formId,
     search: apiSearch,
     page: currentPage,
@@ -135,114 +136,9 @@ export default function FormClassificationPage() {
     typedSummary.verifiedResponses,
   ]);
 
-  async function exportAllToExcel() {
-    const companyId = user?.companyUserData?.companyId;
-    if (!companyId || !formId) return;
-
-    setExportingExcel(true);
-    try {
-      const res = await fetchCollectFormResponses({
-        companyId,
-        id: formId,
-        pageSize: 0,
-      });
-
-      if (res.error) {
-        toast.error("No se pudo exportar el Excel completo");
-        return;
-      }
-
-      const rows = (res.data?.responses || res.data || []) as any[];
-      if (!Array.isArray(rows) || rows.length === 0) {
-        toast.info("No hay registros para exportar");
-        return;
-      }
-
-      const ExcelJS = await import("exceljs");
-      const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet("Registros");
-
-      worksheet.columns = [
-      { header: "Tipo Doc", key: "docType", width: 12 },
-      { header: "Documento", key: "docNumber", width: 16 },
-      { header: "Nombre", key: "name", width: 18 },
-      { header: "Apellido", key: "lastName", width: 18 },
-      { header: "Edad", key: "age", width: 10 },
-      { header: "Genero", key: "gender", width: 12 },
-      { header: "Correo", key: "email", width: 30 },
-      { header: "Telefono", key: "phone", width: 16 },
-      { header: "Canal OTP", key: "otpChannel", width: 14 },
-      { header: "Destino OTP", key: "otpAddress", width: 30 },
-      { header: "Estado OTP", key: "otpStatus", width: 14 },
-      { header: "Provider OTP", key: "otpProvider", width: 16 },
-      { header: "OTP sentAt", key: "otpSentAt", width: 20 },
-      { header: "OTP verifiedAt", key: "otpVerifiedAt", width: 20 },
-      { header: "OTP expiresAt", key: "otpExpiresAt", width: 20 },
-      { header: "Intentos OTP", key: "otpAttempts", width: 12 },
-      { header: "Fallos OTP", key: "otpFails", width: 12 },
-      { header: "Consentimiento", key: "consentStatus", width: 14 },
-      { header: "Politica version", key: "policyVersion", width: 20 },
-      { header: "Politica URL", key: "policyUrl", width: 40 },
-      { header: "Consent acceptedAt", key: "consentAcceptedAt", width: 20 },
-      { header: "IP", key: "ipAddress", width: 18 },
-      { header: "User Agent", key: "userAgent", width: 45 },
-      { header: "Obtenido via", key: "obtainedVia", width: 16 },
-      { header: "Creado", key: "createdAt", width: 20 },
-      { header: "Procesamiento", key: "processingStatus", width: 14 },
-    ];
-
-      for (const item of rows) {
-        const otp = typeof item.otpCodeId === "object" ? item.otpCodeId : null;
-        worksheet.addRow({
-        docType: item.user?.docType || "",
-        docNumber: item.user?.docNumber || "",
-        name: item.user?.name || "",
-        lastName: item.user?.lastName || "",
-        age: item.user?.age ?? "",
-        gender: item.user?.gender || "",
-        email: item.user?.email || "",
-        phone: item.user?.phone || "",
-        otpChannel: otp?.recipientData?.channel || item.consent?.otp?.channel || "",
-        otpAddress: otp?.recipientData?.address || item.consent?.otp?.address || "",
-        otpStatus: otp?.status || "",
-        otpProvider: otp?.delivery?.provider || item.consent?.otp?.sendStatus || "",
-        otpSentAt: otp?.delivery?.sentAt || "",
-        otpVerifiedAt: otp?.verifiedAt || item.consent?.otp?.verifiedAt || "",
-        otpExpiresAt: otp?.expiresAt || "",
-        otpAttempts: otp?.delivery?.attempts ?? item.consent?.otp?.sendAttempts ?? "",
-        otpFails: otp?.failedAttempts ?? item.consent?.otp?.failedVerifyAttempts ?? "",
-        consentStatus: item.consent?.status || "",
-        policyVersion: item.consent?.policy?.policyVersionLabel || "",
-        policyUrl: otp?.policyUrl || item.consent?.otpMessage?.policyUrl || "",
-        consentAcceptedAt: item.consent?.acceptedAt || "",
-        ipAddress: item.consent?.ipAddress || "",
-        userAgent: item.consent?.userAgent || "",
-        obtainedVia: item.consent?.obtainedVia || "",
-        createdAt: item.createdAt || "",
-        processingStatus: item.dataProcessing ? "Completo" : "Incompleto",
-        });
-      }
-
-      worksheet.getRow(1).font = { bold: true };
-      worksheet.getRow(1).alignment = { vertical: "middle", horizontal: "center" };
-      const file = await workbook.xlsx.writeBuffer();
-      const blob = new Blob([file], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `registros_datos_personales_${formId}.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      toast.success("Excel completo exportado");
-    } catch {
-      toast.error("Ocurrió un error al generar el Excel");
-    } finally {
-      setExportingExcel(false);
-    }
+  function exportAllToExcel() {
+    if (!formId) return;
+    startExport({ collectFormId: formId });
   }
 
   const handlePageChange = (newPage: number) => {
@@ -263,7 +159,7 @@ export default function FormClassificationPage() {
             <SectionSearchBar
               search={search}
               onSearchChange={setSearch}
-              placeholder="Buscar por nombre, CC, correo, teléfono..."
+              placeholder="Buscar por nombre, NIT, razón social, documento, correo..."
             />
             <div className="flex flex-wrap items-center gap-2">
               <Button
@@ -271,10 +167,17 @@ export default function FormClassificationPage() {
                 className="rounded-xl! border-[#E3E9F4]! text-[13px]! px-4! py-2.5!"
                 onClick={exportAllToExcel}
                 disabled={exportingExcel}
+                loading={exportingExcel}
               >
                 <span className="flex items-center gap-2">
-                  <Icon icon="tabler:file-export" className="text-base" />
-                  {exportingExcel ? "Exportando..." : "Exportar Excel"}
+                  {!exportingExcel && (
+                    <Icon icon="tabler:file-export" className="text-base" />
+                  )}
+                  {exportingExcel
+                    ? exportProgress != null
+                      ? `Exportando... ${exportProgress}%`
+                      : "Exportando..."
+                    : "Exportar Excel"}
                 </span>
               </Button>
             </div>

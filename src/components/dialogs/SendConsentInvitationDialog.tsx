@@ -9,7 +9,10 @@ import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import { sendConsentInvitation } from "@/lib/collectFormResponse.api";
 import { hideDialog } from "@/utils/dialogs.utils";
 import { parseApiError } from "@/utils/parseApiError";
-import { CollectFormResponse } from "@/types/collectFormResponse.types";
+import {
+  CollectFormResponse,
+  isJuridicaDocType,
+} from "@/types/collectFormResponse.types";
 import { useCompanyCreditsPricing } from "@/hooks/useCompanyCreditsPricing";
 import LoadingCover from "@/components/layout/LoadingCover";
 
@@ -133,8 +136,18 @@ const SendConsentInvitationDialog = ({
                 Información del destinatario
               </h6>
               <div className="grid grid-cols-1 gap-2 text-xs">
+                {isJuridicaDocType(response.user.docType) && response.user.razonSocial && (
+                  <div>
+                    <span className="font-medium text-stone-600">Razón social:</span>{" "}
+                    <span className="text-primary-900">{response.user.razonSocial}</span>
+                  </div>
+                )}
                 <div>
-                  <span className="font-medium text-stone-600">Nombre:</span>{" "}
+                  <span className="font-medium text-stone-600">
+                    {isJuridicaDocType(response.user.docType)
+                      ? "Representante legal:"
+                      : "Nombre:"}
+                  </span>{" "}
                   <span className="text-primary-900">
                     {response.user.name} {response.user.lastName}
                   </span>

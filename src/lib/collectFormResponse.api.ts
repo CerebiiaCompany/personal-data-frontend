@@ -1,5 +1,8 @@
 import { APIResponse, QueryParams } from "@/types/api.types";
-import { CreateCollectFormResponse } from "@/types/collectFormResponse.types";
+import {
+  CollectFormResponseUserPayload,
+  CreateCollectFormResponse,
+} from "@/types/collectFormResponse.types";
 import { customFetch } from "@/utils/customFetch";
 
 export async function registerCollectFormResponse(
@@ -20,16 +23,7 @@ export async function registerConsentCampaignResponse(
   data: {
     dataProcessing: boolean;
     data: Record<string, any>;
-    user: {
-      docType: string;
-      docNumber: number;
-      name: string;
-      lastName: string;
-      age: number;
-      gender: string;
-      email: string;
-      phone: string;
-    };
+    user: CollectFormResponseUserPayload;
   }
 ): Promise<APIResponse> {
   return customFetch(

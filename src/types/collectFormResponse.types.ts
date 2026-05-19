@@ -1,6 +1,34 @@
 import { CustomSelectOption } from "./forms.types";
 import { DocType } from "./user.types";
 
+export type CollectFormDocType = DocType | "NIT";
+
+export const parseCollectFormDocTypeToString = (type: CollectFormDocType): string => {
+  if (type === "NIT") return "NIT";
+  return (
+    { CC: "C.C.", TI: "T.I.", OTHER: "Otro" }[type] ?? "Tipo de documento inválido"
+  );
+};
+
+export type PersonKind = "NATURAL" | "JURIDICA";
+
+export const personKindOptions: CustomSelectOption<PersonKind>[] = [
+  { value: "NATURAL", title: "Persona natural" },
+  { value: "JURIDICA", title: "Persona jurídica" },
+];
+
+export function isJuridicaDocType(docType?: string): boolean {
+  return (docType || "").toUpperCase() === "NIT";
+}
+
+export function getPersonKindFromDocType(docType?: string): PersonKind {
+  return isJuridicaDocType(docType) ? "JURIDICA" : "NATURAL";
+}
+
+export function getPersonKindLabel(docType?: string): string {
+  return isJuridicaDocType(docType) ? "Jurídica" : "Natural";
+}
+
 export type UserGender = "MALE" | "FEMALE" | "OTHER";
 export const userGendersOptions: CustomSelectOption<UserGender>[] = [
   {
@@ -20,7 +48,7 @@ export const userGendersOptions: CustomSelectOption<UserGender>[] = [
 export const parseUserGenderToString = (role: UserGender): string =>
   userGendersOptions.find((e) => e.value === role)?.title || "Género inválido";
 
-export interface CollectFormResponseUser {
+export interface CollectFormResponseUserNatural {
   docType: DocType;
   docNumber: number;
   name: string;
@@ -31,8 +59,31 @@ export interface CollectFormResponseUser {
   phone: string;
 }
 
+export interface CollectFormResponseUserJuridica {
+  docType: Extract<CollectFormDocType, "NIT">;
+  docNumber: number;
+  razonSocial: string;
+  name: string;
+  lastName: string;
+  email: string;
+  phone: string;
+}
+
+export type CollectFormResponseUserPayload =
+  | CollectFormResponseUserNatural
+  | CollectFormResponseUserJuridica;
+
+/** Usuario en respuestas del API (natural o jurídica). */
+export type CollectFormResponseUser = CollectFormResponseUserPayload & {
+  name?: string;
+  lastName?: string;
+  age?: number;
+  gender?: UserGender;
+  razonSocial?: string;
+};
+
 export interface CreateCollectFormResponse {
-  user: CollectFormResponseUser;
+  user: CollectFormResponseUserPayload;
   data: { [key: string]: any };
   dataProcessing: boolean;
   otpCode: string;

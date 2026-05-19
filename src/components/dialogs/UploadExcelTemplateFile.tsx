@@ -34,20 +34,30 @@ const acceptedFiletypes = [
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 ];
 
-const formSchema = z.object({
-  name: z.string().min(1, "Este campo es obligatorio"),
-  policyTemplateId: z.string().min(1, "Debes seleccionar una plantilla"),
-  marketingChannels: z.object({
-    SMS: z.boolean(),
-    EMAIL: z.boolean(),
-    WHATSAPP: z.boolean(),
-  }),
-  attachments: z
-    .array(generateFileSchema(acceptedFiletypes))
-    .min(1, "Sube la plantilla de excel")
-    .max(MAX_FILES, `Máximo ${MAX_FILES} archivos`)
-    .default([]),
-});
+const formSchema = z
+  .object({
+    name: z.string().min(1, "Este campo es obligatorio"),
+    policyTemplateId: z.string().min(1, "Debes seleccionar una plantilla"),
+    marketingChannels: z.object({
+      SMS: z.boolean(),
+      EMAIL: z.boolean(),
+      WHATSAPP: z.boolean(),
+    }),
+    attachments: z
+      .array(generateFileSchema(acceptedFiletypes))
+      .min(1, "Sube la plantilla de excel")
+      .max(MAX_FILES, `Máximo ${MAX_FILES} archivos`),
+  })
+  .refine(
+    (data) =>
+      data.marketingChannels.SMS ||
+      data.marketingChannels.EMAIL ||
+      data.marketingChannels.WHATSAPP,
+    {
+      message: "Selecciona al menos un canal de envío",
+      path: ["marketingChannels"],
+    }
+  );
 
 interface Props {
   refresh: () => void;
@@ -65,14 +75,32 @@ const UploadExcelTemplateDialog = ({ refresh }: Props) => {
     reset,
   } = useForm<any>({
     resolver: zodResolver(formSchema),
+    mode: "onChange",
     defaultValues: {
       name: "",
       description: "",
       policyTemplateId: "",
-      marketingChannels: { SMS: true, EMAIL: false, WHATSAPP: false },
+      marketingChannels: { SMS: true, EMAIL: true, WHATSAPP: true },
       attachments: [],
     },
   });
+
+  const formName = watch("name");
+  const policyTemplateId = watch("policyTemplateId");
+  const attachments = watch("attachments");
+  const marketingChannels = watch("marketingChannels");
+
+  const hasAtLeastOneChannel = Boolean(
+    marketingChannels?.SMS ||
+      marketingChannels?.EMAIL ||
+      marketingChannels?.WHATSAPP
+  );
+  const hasExcelFile = Array.isArray(attachments) && attachments.length > 0;
+  const isFormComplete =
+    Boolean(formName?.trim()) &&
+    Boolean(policyTemplateId) &&
+    hasExcelFile &&
+    hasAtLeastOneChannel;
 
   const [loading, setLoading] = useState(false);
   const [importResult, setImportResult] = useState<ImportTemplateResult | null>(null);
@@ -88,10 +116,12 @@ const UploadExcelTemplateDialog = ({ refresh }: Props) => {
   }, [policyTemplates]);
 
   function handleBackdropClick(e: React.MouseEvent<HTMLDivElement>) {
+    if (loading) return;
     if ((e.target as HTMLElement).id === id) handleClose();
   }
 
   function handleClose() {
+    if (loading) return;
     hideDialog(id);
     // Reset after animation
     setTimeout(() => {
@@ -101,6 +131,8 @@ const UploadExcelTemplateDialog = ({ refresh }: Props) => {
   }
 
   async function onSubmit(data: any) {
+    if (loading || !isFormComplete) return;
+
     const companyId = user?.companyUserData?.companyId;
     if (!companyId) return;
 
@@ -110,29 +142,37 @@ const UploadExcelTemplateDialog = ({ refresh }: Props) => {
       return;
     }
 
-    const { rows, errors: parseErrors } = await parseExcelTemplate(file);
-
-    if (parseErrors.length) {
-      toast.error(`Hay ${parseErrors.length} fila(s) con errores. Corrige y vuelve a subir.`);
-      return;
-    }
-
     setLoading(true);
-    const res = await createCollectFormFromTemplate(companyId, {
-      name: data.name,
-      policyTemplateId: data.policyTemplateId,
-      marketingChannels: data.marketingChannels,
-      responses: rows,
-    } as CreateCollectFormFromTemplate);
-    setLoading(false);
 
-    if (res.error) {
-      toast.error(parseApiError(res.error));
-      return;
+    try {
+      const { rows, errors: parseErrors } = await parseExcelTemplate(file);
+
+      if (parseErrors.length) {
+        toast.error(
+          `Hay ${parseErrors.length} fila(s) con errores. Corrige y vuelve a subir.`
+        );
+        return;
+      }
+
+      const res = await createCollectFormFromTemplate(companyId, {
+        name: data.name.trim(),
+        policyTemplateId: data.policyTemplateId,
+        marketingChannels: data.marketingChannels,
+        responses: rows,
+      } as CreateCollectFormFromTemplate);
+
+      if (res.error) {
+        toast.error(parseApiError(res.error));
+        return;
+      }
+
+      refresh();
+      setImportResult(res.data as ImportTemplateResult);
+    } catch {
+      toast.error("Ocurrió un error al procesar el archivo. Intenta nuevamente.");
+    } finally {
+      setLoading(false);
     }
-
-    refresh();
-    setImportResult(res.data as ImportTemplateResult);
   }
 
   const hasSkipped = (importResult?.responsesSkipped ?? 0) > 0;
@@ -163,8 +203,13 @@ const UploadExcelTemplateDialog = ({ refresh }: Props) => {
             </p>
           </div>
           <button
+            type="button"
             onClick={handleClose}
-            className="w-fit p-1 rounded-lg hover:bg-stone-100 transition-colors shrink-0"
+            disabled={loading}
+            className={clsx(
+              "w-fit p-1 rounded-lg transition-colors shrink-0",
+              loading ? "opacity-40 cursor-not-allowed" : "hover:bg-stone-100"
+            )}
           >
             <Icon icon="tabler:x" className="text-2xl" />
           </button>
@@ -271,17 +316,21 @@ const UploadExcelTemplateDialog = ({ refresh }: Props) => {
             /* ── Formulario ─────────────────────────────────────────────── */
             <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
               <CustomInput
-                placeholder="Nombre del formulario"
+                label="Nombre del formulario"
+                placeholder="Ej. Registro clientes marzo 2026"
                 {...register("name")}
                 error={errors.name as FieldError}
+                disabled={loading}
               />
 
               <div className="flex flex-col gap-1">
                 <CustomSelect
                   label="Plantilla de política"
                   options={policyTemplateOptions}
-                  value={watch("policyTemplateId")}
-                  onChange={(value) => setValue("policyTemplateId", value)}
+                  value={policyTemplateId}
+                  onChange={(value) =>
+                    setValue("policyTemplateId", value, { shouldValidate: true })
+                  }
                   unselectedText={
                     loadingTemplates ? "Cargando..." : "Selecciona una plantilla"
                   }
@@ -299,10 +348,32 @@ const UploadExcelTemplateDialog = ({ refresh }: Props) => {
                   Ruta de envío
                 </p>
                 <div className="flex items-center gap-6">
-                  <CustomCheckbox label="SMS" {...register("marketingChannels.SMS")} />
-                  <CustomCheckbox label="Email" {...register("marketingChannels.EMAIL")} />
-                  <CustomCheckbox label="WhatsApp" {...register("marketingChannels.WHATSAPP")} />
+                  <CustomCheckbox
+                    label="SMS"
+                    {...register("marketingChannels.SMS")}
+                    disabled={loading}
+                  />
+                  <CustomCheckbox
+                    label="Email"
+                    {...register("marketingChannels.EMAIL")}
+                    disabled={loading}
+                  />
+                  <CustomCheckbox
+                    label="WhatsApp"
+                    {...register("marketingChannels.WHATSAPP")}
+                    disabled={loading}
+                  />
                 </div>
+                {(errors.marketingChannels as FieldError)?.message && (
+                  <p className="text-sm text-red-500 pl-2">
+                    {(errors.marketingChannels as FieldError).message as string}
+                  </p>
+                )}
+                {!hasAtLeastOneChannel && (
+                  <p className="text-sm text-amber-600 pl-2">
+                    Debes activar al menos un canal de envío.
+                  </p>
+                )}
               </div>
 
               <CustomFileDropZone
@@ -314,8 +385,20 @@ const UploadExcelTemplateDialog = ({ refresh }: Props) => {
                 {...register("attachments")}
               />
 
-              <Button type="submit" className="w-full" loading={loading}>
-                Subir archivo
+              {!isFormComplete && !loading && (
+                <p className="text-xs text-stone-500 text-center leading-relaxed">
+                  Completa el nombre, la plantilla de política, al menos un canal
+                  y el archivo Excel para habilitar la subida.
+                </p>
+              )}
+
+              <Button
+                type="submit"
+                className="w-full"
+                loading={loading}
+                disabled={!isFormComplete || loading}
+              >
+                {loading ? "Subiendo archivo..." : "Subir archivo"}
               </Button>
             </form>
           )}

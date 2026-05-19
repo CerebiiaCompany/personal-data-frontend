@@ -14,10 +14,12 @@ import { useSessionStore } from "@/store/useSessionStore";
 import { usePermissionCheck } from "@/hooks/usePermissionCheck";
 import { useConfirm } from "@/components/dialogs/ConfirmProvider";
 import { APIResponse } from "@/types/api.types";
-import { parseDocTypeToString } from "@/types/user.types";
 import {
   CollectFormResponse,
+  isJuridicaDocType,
   OneTimeCodePopulated,
+  parseCollectFormDocTypeToString,
+  parseUserGenderToString,
 } from "@/types/collectFormResponse.types";
 
 interface Props {
@@ -77,6 +79,12 @@ function consentChipClass(status?: string) {
   if (s === "ACTIVE") return "bg-[#E8F8EE] text-[#1E8A52]";
   if (s === "REVOKED") return "bg-[#FDECEC] text-[#D84C4C]";
   return "bg-[#FDF4E6] text-[#A97711]";
+}
+
+function personKindChipClass(docType?: string) {
+  return isJuridicaDocType(docType)
+    ? "bg-[#EDE9FE] text-[#6D28D9] border border-[#DDD6FE]"
+    : "bg-[#E0F2FE] text-[#0369A1] border border-[#BAE6FD]";
 }
 
 function prettyConsentStatus(status?: string) {
@@ -257,13 +265,17 @@ const FormResponsesTable = ({
       {!loading && items?.length ? (
         <>
           <div className="w-full overflow-x-auto overflow-y-auto flex-1 min-h-0 rounded-t-2xl border-b border-[#E5EAF2]">
-            <table className="w-full min-w-[1480px] border-separate border-spacing-0">
+            <table className="w-full min-w-[1680px] border-separate border-spacing-0">
               <thead className="sticky top-0 bg-[#F4F6FA] z-10">
                 <tr>
                   {[
-                    "CC",
-                    "Nombre completo",
+                    "Tipo",
+                    "Documento",
+                    "Razón social",
+                    "Nombres",
+                    "Apellidos",
                     "Edad",
+                    "Género",
                     "Correo",
                     "Teléfono",
                     "Registrado por",
@@ -302,7 +314,7 @@ const FormResponsesTable = ({
                     otp?.status ?? (item.consent?.otp?.verified ? "VERIFIED" : "—");
                   const obtainedVia = prettyObtainedVia(item.consent?.obtainedVia);
                   const consentStatus = item.consent?.status ?? "PENDIENTE";
-                  const fullName = `${item.user.name || ""} ${item.user.lastName || ""}`.trim();
+                  const isJuridica = isJuridicaDocType(item.user.docType);
                   const createdAt = splitDateTime(item.createdAt);
                   const createdByName = item.createdBy?.name || item.createdBy?.lastName
                     ? `${item.createdBy?.name || ""}${
@@ -329,14 +341,43 @@ const FormResponsesTable = ({
                   return (
                     <React.Fragment key={item._id}>
                     <tr className="align-middle border-b border-[#EDF1F7] hover:bg-[#F9FBFF] transition-colors">
-                      <td className="py-3 px-3 text-[11px] text-[#3A4B70] whitespace-nowrap">
-                        {parseDocTypeToString(item.user.docType)} {item.user.docNumber}
+                      <td className="py-3 px-3 text-[11px]">
+                        <span
+                          className={clsx(
+                            "inline-flex items-center px-2 py-[2px] rounded-full text-[10px] font-semibold whitespace-nowrap",
+                            personKindChipClass(item.user.docType)
+                          )}
+                        >
+                          {isJuridica ? "Jurídica" : "Natural"}
+                        </span>
                       </td>
-                      <td className="py-3 px-3 text-[12px] font-semibold text-[#0B1737]">
-                        <div className="max-w-[210px] truncate">{fullName || "—"}</div>
+                      <td className="py-3 px-3 text-[11px] text-[#3A4B70] whitespace-nowrap">
+                        {parseCollectFormDocTypeToString(item.user.docType)}{" "}
+                        {item.user.docNumber}
+                      </td>
+                      <td className="py-3 px-3 text-[12px] font-semibold text-[#0B1737] max-w-[200px]">
+                        <div className="truncate" title={item.user.razonSocial || undefined}>
+                          {isJuridica ? item.user.razonSocial || "—" : "—"}
+                        </div>
+                      </td>
+                      <td className="py-3 px-3 text-[11px] text-[#3A4B70] max-w-[140px]">
+                        <div
+                          className="truncate"
+                          title={isJuridica ? "Representante legal" : undefined}
+                        >
+                          {item.user.name || "—"}
+                        </div>
+                      </td>
+                      <td className="py-3 px-3 text-[11px] text-[#3A4B70] max-w-[140px]">
+                        <div className="truncate">{item.user.lastName || "—"}</div>
                       </td>
                       <td className="py-3 px-3 text-[11px] text-[#3A4B70] whitespace-nowrap">
-                        {item.user.age ?? "—"}
+                        {!isJuridica && item.user.age != null ? item.user.age : "—"}
+                      </td>
+                      <td className="py-3 px-3 text-[11px] text-[#3A4B70] whitespace-nowrap">
+                        {!isJuridica && item.user.gender
+                          ? parseUserGenderToString(item.user.gender)
+                          : "—"}
                       </td>
                       <td className="py-3 px-3 text-[11px] text-[#3A4B70] max-w-[240px]">
                         <div className="flex items-center gap-1.5 truncate">
@@ -515,8 +556,28 @@ const FormResponsesTable = ({
                     </tr>
                     {expandedId === item._id && (
                       <tr>
-                        <td colSpan={20} className="px-3 pb-3">
+                        <td colSpan={25} className="px-3 pb-3">
                           <div className="rounded-xl border border-[#E7ECF4] bg-[#FAFCFF] p-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 text-[11px]">
+                            <div>
+                              <p className="text-[#7A869D] font-semibold">Tipo de persona</p>
+                              <p className="text-[#1E2D4E]">
+                                {isJuridica ? "Jurídica (NIT)" : "Natural"}
+                              </p>
+                            </div>
+                            {isJuridica && (
+                              <div>
+                                <p className="text-[#7A869D] font-semibold">Razón social</p>
+                                <p className="text-[#1E2D4E]">{item.user.razonSocial || "—"}</p>
+                              </div>
+                            )}
+                            <div>
+                              <p className="text-[#7A869D] font-semibold">
+                                {isJuridica ? "Representante legal" : "Titular"}
+                              </p>
+                              <p className="text-[#1E2D4E]">
+                                {[item.user.name, item.user.lastName].filter(Boolean).join(" ") || "—"}
+                              </p>
+                            </div>
                             <div>
                               <p className="text-[#7A869D] font-semibold">OTP destino</p>
                               <p className="text-[#1E2D4E] break-all">

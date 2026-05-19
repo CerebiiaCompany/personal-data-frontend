@@ -10,10 +10,15 @@ import { toast } from "sonner";
 import { parseApiError } from "@/utils/parseApiError";
 import {
   CollectFormResponseUser,
-  CreateCollectFormResponse,
+  PersonKind,
+  personKindOptions,
   UserGender,
   userGendersOptions,
 } from "@/types/collectFormResponse.types";
+import {
+  buildCollectFormUserPayload,
+  parseNitDocNumber,
+} from "@/utils/collectFormUser.utils";
 import { DocType, docTypesOptions } from "@/types/user.types";
 import { CustomSelectOption } from "@/types/forms.types";
 import CustomInput from "../forms/CustomInput";
@@ -53,6 +58,7 @@ const phoneCountryCodeOptions: CustomSelectOption<PhoneCountryCode>[] = [
 ];
 
 const PublicCollectForm = ({ data, initialValues }: Props) => {
+  const [personKind, setPersonKind] = useState<PersonKind>("NATURAL");
   const [pendingOtpId, setPendingOtpId] = useState<string | null>(null);
   const [fullName, setFullName] = useState<string>("");
   const [policyUrl, setPolicyUrl] = useState<string | null>(null);
@@ -140,37 +146,64 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
   // Memoize schema and default values from `fields`
   const schema = React.useMemo(() => buildSchemaFromFields(fields), [data]);
 
-  const validationSchema = z.object({
-    data: schema,
-    user: z.object({
-      docType: z.string<DocType>(),
-      docNumber: z.preprocess(
-        (v) => (v === "" ? undefined : v),
-        z.coerce.number("Número de documento inválido")
-      ),
-      name: z.string().min(1, "Este campo es obligatorio"),
-      lastName: z.string().min(1, "Este campo es obligatorio"),
-      age: z.preprocess(
-        (v) => (v === "" ? undefined : v),
-        z.coerce.number("Este campo es obligatorio").int("Edad inválida")
-      ),
-      gender: z.string<UserGender>(),
-      email: z.email("Correo inválido").min(1, "Este campo es obligatorio"),
-      phone: z.preprocess(
-        (v: string) =>
-          typeof v === "string" ? v.replace(/[^\d]/g, "") : (v as string),
-        z
-          .string()
-          .regex(/^\d{10}$/, "Ingresa 10 dígitos (solo números)")
-      ),
-      phoneCountryCode: z.string().min(1, "Código de país requerido"),
-    }),
-    dataProcessing: z.boolean().refine((val) => val === true, {
-      error: "Debes aceptar el tratamiento de datos",
-    }),
-    otpCode: z.string().min(1, "El código OTP es obligatorio"),
-    otpCodeId: z.string().optional(), // Se validará en el submit
-  });
+  const naturalDocNumber = z.preprocess(
+    (v) => (v === "" ? undefined : v),
+    z.coerce.number("Número de documento inválido")
+  );
+
+  const juridicaDocNumber = z.preprocess((v) => {
+    if (v === "" || v === undefined || v === null) return undefined;
+    const parsed = parseNitDocNumber(String(v));
+    return Number.isNaN(parsed) ? undefined : parsed;
+  }, z.number("Número de NIT inválido"));
+
+  const sharedUserFields = {
+    email: z.email("Correo inválido").min(1, "Este campo es obligatorio"),
+    phone: z.preprocess(
+      (v: string) =>
+        typeof v === "string" ? v.replace(/[^\d]/g, "") : (v as string),
+      z.string().regex(/^\d{10}$/, "Ingresa 10 dígitos (solo números)")
+    ),
+    phoneCountryCode: z.string().min(1, "Código de país requerido"),
+  };
+
+  const validationSchema = React.useMemo(() => {
+    const userSchema =
+      personKind === "JURIDICA"
+        ? z.object({
+            ...sharedUserFields,
+            docNumber: juridicaDocNumber,
+            docType: z.literal("NIT"),
+            razonSocial: z.string().min(1, "Este campo es obligatorio"),
+            name: z.string().min(1, "Este campo es obligatorio"),
+            lastName: z.string().min(1, "Este campo es obligatorio"),
+            age: z.any().optional(),
+            gender: z.any().optional(),
+          })
+        : z.object({
+            ...sharedUserFields,
+            docNumber: naturalDocNumber,
+            docType: z.enum(["CC", "TI", "OTHER"]),
+            name: z.string().min(1, "Este campo es obligatorio"),
+            lastName: z.string().min(1, "Este campo es obligatorio"),
+            age: z.preprocess(
+              (v) => (v === "" ? undefined : v),
+              z.coerce.number("Este campo es obligatorio").int("Edad inválida")
+            ),
+            gender: z.string<UserGender>(),
+            razonSocial: z.string().optional(),
+          });
+
+    return z.object({
+      data: schema,
+      user: userSchema,
+      dataProcessing: z.boolean().refine((val) => val === true, {
+        error: "Debes aceptar el tratamiento de datos",
+      }),
+      otpCode: z.string().min(1, "El código OTP es obligatorio"),
+      otpCodeId: z.string().optional(),
+    });
+  }, [personKind, schema]);
 
   const dynamicDefaultValues = React.useMemo(() => {
     return Object.fromEntries(
@@ -200,6 +233,11 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
     return { phone: "", phoneCountryCode: "57" };
   }, [initialValues]);
 
+  const resolver = React.useMemo(
+    () => zodResolver(validationSchema),
+    [validationSchema]
+  );
+
   const {
     register,
     handleSubmit,
@@ -208,7 +246,7 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
     setValue,
     watch,
   } = useForm({
-    resolver: zodResolver(validationSchema),
+    resolver,
     defaultValues: {
       data:
         (initialValues?.data as typeof dynamicDefaultValues) ||
@@ -223,17 +261,34 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
         : {
             docType: "CC",
             phoneCountryCode: "57",
+            razonSocial: "",
           },
       otpCode: "",
       otpCodeId: "",
     },
   });
 
+  const handlePersonKindChange = (kind: PersonKind) => {
+    setPersonKind(kind);
+    setPendingOtpId(null);
+    setOtpLastSentChannel(null);
+    setValue("otpCode", "");
+    setValue("otpCodeId", "");
+
+    if (kind === "JURIDICA") {
+      setValue("user.docType", "NIT" as unknown as DocType);
+      setValue("user.age", undefined as unknown as number);
+      setValue("user.gender", undefined as UserGender | undefined);
+    } else {
+      setValue("user.docType", "CC");
+      setValue("user.razonSocial", "");
+    }
+  };
+
   // Función para limpiar el formulario
   const resetForm = () => {
-    // Incrementar la clave para forzar el reseteo del formulario
-    setFormKey(prev => prev + 1);
-    // Restablecer el estado del formulario
+    setPersonKind("NATURAL");
+    setFormKey((prev) => prev + 1);
     reset({
       data: dynamicDefaultValues,
       dataProcessing: false,
@@ -247,11 +302,11 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
         age: undefined,
         email: "",
         gender: undefined as UserGender | undefined,
+        razonSocial: "",
       },
       otpCode: "",
       otpCodeId: "",
     });
-    // Resetear estados de OTP
     setPendingOtpId(null);
     setIsSendingOtp(false);
     setOtpChannel("SMS");
@@ -311,13 +366,12 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
           ? fullPhoneNumber
           : (formData.user.email as string);
 
-      // Registrar respuesta con OTP validado
+      const userPayload = buildCollectFormUserPayload(formData.user, personKind);
+
       const res = await registerCollectFormResponse(data._id, {
-        ...formData,
-        user: {
-          ...formData.user,
-          phone: fullPhoneNumber,
-        },
+        data: formData.data,
+        dataProcessing: formData.dataProcessing,
+        user: userPayload,
         otpCode: formData.otpCode,
         otpCodeId: otpValidation.data.id,
         recipientData: {
@@ -333,7 +387,11 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
       }
 
       toast.success("Respuesta registrada");
-      setFullName(`${formData.user.name} ${formData.user.lastName}`);
+      setFullName(
+        personKind === "JURIDICA"
+          ? `${formData.user.razonSocial} (${formData.user.name} ${formData.user.lastName})`
+          : `${formData.user.name} ${formData.user.lastName}`
+      );
       // No hacemos reset aquí, lo manejamos desde el modal
       showDialog(HTML_IDS_DATA.collectFormResponseSavedModal);
       setIsSubmitting(false);
@@ -517,6 +575,56 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
       <h1 className="font-bold text-2xl text-primary-900">{data.name}</h1>
 
       <div className="rounded-xl border border-disabled p-10 flex flex-col items-stretch gap-5">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <Icon
+              icon="material-symbols:info-outline"
+              className="text-2xl text-blue-600 flex-shrink-0 mt-0.5"
+            />
+            <div className="flex flex-col gap-2">
+              <h3 className="font-semibold text-blue-900 text-base">
+                ¿Quién realiza este registro?
+              </h3>
+              <p className="text-sm text-blue-800 leading-relaxed">
+                Indica si el titular es una{" "}
+                <span className="font-semibold">persona natural</span> (ciudadano)
+                o una{" "}
+                <span className="font-semibold">persona jurídica</span> (empresa
+                u organización). Los campos que verás a continuación dependen de
+                esa elección.
+              </p>
+              {personKind === "NATURAL" ? (
+                <p className="text-sm text-blue-800 leading-relaxed border-t border-blue-200/80 pt-2">
+                  <span className="font-semibold text-blue-900">
+                    Persona natural seleccionada:
+                  </span>{" "}
+                  completa tus nombres, apellidos, tipo y número de documento
+                  (C.C., T.I., etc.), género y edad. Debes ser tú quien autoriza
+                  el tratamiento de tus datos personales.
+                </p>
+              ) : (
+                <p className="text-sm text-blue-800 leading-relaxed border-t border-blue-200/80 pt-2">
+                  <span className="font-semibold text-blue-900">
+                    Persona jurídica seleccionada:
+                  </span>{" "}
+                  ingresa la razón social y el NIT de la empresa, y los nombres
+                  y apellidos del representante legal que registra el
+                  consentimiento en nombre de la organización.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <CustomSelect<PersonKind>
+          label="Tipo de persona"
+          options={personKindOptions}
+          value={personKind}
+          onChange={handlePersonKindChange}
+        />
+
+        {personKind === "NATURAL" ? (
+          <>
         <div className="flex gap-5">
           <CustomInput
             label="Nombres"
@@ -580,6 +688,46 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
             error={errors.user?.age as FieldError}
           />
         </div>
+          </>
+        ) : (
+          <>
+            <CustomInput
+              label="Razón social"
+              {...register("user.razonSocial")}
+              placeholder="Ej. Empresa XYZ S.A.S."
+              error={
+                errors.user && "razonSocial" in errors.user
+                  ? (errors.user as { razonSocial?: FieldError }).razonSocial
+                  : undefined
+              }
+            />
+            <div className="flex gap-5">
+              <CustomInput
+                label="Nombres del representante legal"
+                {...register("user.name")}
+                placeholder="Ej. Juan"
+                error={errors.user?.name}
+              />
+              <CustomInput
+                label="Apellidos del representante legal"
+                {...register("user.lastName")}
+                placeholder="Ej. Pérez"
+                error={errors.user?.lastName}
+              />
+            </div>
+            <CustomInput
+              label="NIT"
+              {...register("user.docNumber")}
+              placeholder="Ej. 900123456 o 900123456-7"
+              error={errors.user?.docNumber as FieldError}
+            />
+            <p className="text-xs text-stone-500 -mt-2 pl-2">
+              Ingresa el NIT con o sin dígito de verificación; se enviará solo
+              el número principal.
+            </p>
+          </>
+        )}
+
         <div className="flex gap-5">
           <CustomInput
             label="Correo"
