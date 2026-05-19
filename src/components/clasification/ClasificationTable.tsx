@@ -8,6 +8,7 @@ import LoadingCover from "../layout/LoadingCover";
 import { formatDateToString } from "@/utils/date.utils";
 import Link from "next/link";
 import clsx from "clsx";
+import CheckPermission from "@/components/checkers/CheckPermission";
 import { useConsentResponsesExport } from "@/hooks/useConsentResponsesExport";
 import { useSessionStore } from "@/store/useSessionStore";
 
@@ -20,6 +21,7 @@ interface Props {
   listSummary?: ClasificationListSummary | null;
   loading: boolean;
   error: string | null;
+  onCreateConsentCampaign?: (formId: string, formName: string) => void;
 }
 
 function formatNumberEs(n: number): string {
@@ -51,6 +53,7 @@ const ClasificationTable = ({
   listSummary,
   loading,
   error,
+  onCreateConsentCampaign,
 }: Props) => {
   const user = useSessionStore((store) => store.user);
   const companyId = user?.companyUserData?.companyId;
@@ -237,6 +240,20 @@ const ClasificationTable = ({
                     <Icon icon="tabler:file-text" className="text-xl" />
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
+                    {onCreateConsentCampaign && (
+                      <CheckPermission group="campaigns" permission="create">
+                        <button
+                          type="button"
+                          aria-label="Crear campaña de consentimiento"
+                          onClick={() =>
+                            onCreateConsentCampaign(item._id, item.name)
+                          }
+                          className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-transparent text-emerald-600 hover:bg-emerald-50 transition-colors"
+                        >
+                          <Icon icon="tabler:send" className="text-xl" />
+                        </button>
+                      </CheckPermission>
+                    )}
                     <button
                       type="button"
                       aria-label="Exportar a Excel"

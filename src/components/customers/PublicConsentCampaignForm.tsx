@@ -23,8 +23,10 @@ import { CustomSelectOption } from "@/types/forms.types";
 import { parseApiError } from "@/utils/parseApiError";
 import { buildCollectFormUserPayload, parseNitDocNumber } from "@/utils/collectFormUser.utils";
 import { registerConsentCampaignResponse } from "@/lib/collectFormResponse.api";
+import { checkCollectFormCctStatus } from "@/lib/cctStatus.api";
 import { getPublicCollectFormPolicyUrl } from "@/lib/collectForm.api";
 import LoadingCover from "@/components/layout/LoadingCover";
+import { isCctIdentityCheck } from "@/types/cctStatus.types";
 
 type PhoneCountryCode =
   | "57" | "58" | "1" | "52" | "51"
@@ -89,7 +91,91 @@ function companyDisplayName(form: CollectForm): string | null {
   return raw && raw.length > 0 ? raw : null;
 }
 
+type CctFlowStep =
+  | "validating_token"
+  | "invalid_link"
+  | "identity"
+  | "checking_identity"
+  | "already_registered"
+  | "full_form";
+
+type IdentityDocType = DocType | "NIT";
+
+const identityDocTypeOptions: CustomSelectOption<IdentityDocType>[] = [
+  ...docTypesOptions,
+  { value: "NIT", title: "NIT" },
+];
+
+function CctFlowLoading({ message }: { message: string }) {
+  return (
+    <div className="flex flex-col items-center gap-4 max-w-lg w-full text-center py-12 px-4">
+      <div className="relative w-14 h-14">
+        <LoadingCover />
+      </div>
+      <p className="text-sm text-[#64748B]">{message}</p>
+    </div>
+  );
+}
+
+function CctInvalidLinkScreen({ formName }: { formName: string }) {
+  return (
+    <div className="flex flex-col items-center gap-6 max-w-lg w-full text-center py-8 px-4">
+      <div className="w-20 h-20 rounded-full bg-red-100 flex items-center justify-center">
+        <Icon icon="tabler:link-off" className="text-5xl text-red-600" />
+      </div>
+      <div className="flex flex-col gap-2">
+        <h2 className="text-2xl font-bold text-[#0B1737]">Enlace inválido o expirado</h2>
+        <p className="text-[#64748B] leading-relaxed">
+          El enlace de consentimiento para{" "}
+          <span className="font-semibold text-[#0B1737]">«{formName}»</span> ya no
+          está disponible. Solicita un nuevo enlace a quien te envió la invitación.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function CctAlreadyRegisteredScreen({
+  formName,
+  companyName,
+}: {
+  formName: string;
+  companyName: string | null;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-6 max-w-lg w-full text-center py-8 px-4">
+      <div className="w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center">
+        <Icon icon="tabler:circle-check" className="text-5xl text-emerald-600" />
+      </div>
+      <div className="flex flex-col gap-2">
+        <h2 className="text-2xl font-bold text-[#0B1737]">
+          Ya completaste tu registro
+        </h2>
+        <p className="text-[#64748B] leading-relaxed">
+          El documento ingresado ya tiene un consentimiento registrado para{" "}
+          <span className="font-semibold text-[#0B1737]">«{formName}»</span>
+          {companyName ? (
+            <>
+              {" "}
+              de <span className="font-semibold text-[#0B1737]">{companyName}</span>
+            </>
+          ) : null}
+          .
+        </p>
+      </div>
+      <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-5 py-4 text-sm text-emerald-800 w-full text-left flex gap-3">
+        <Icon icon="tabler:info-circle" className="text-emerald-600 text-lg shrink-0 mt-0.5" />
+        <p>No es necesario volver a enviar el formulario. Puedes cerrar esta ventana.</p>
+      </div>
+    </div>
+  );
+}
+
 export default function PublicConsentCampaignForm({ data, cct }: Props) {
+  const [cctFlowStep, setCctFlowStep] = useState<CctFlowStep>("validating_token");
+  const [identityDocType, setIdentityDocType] = useState<IdentityDocType>("CC");
+  const [identityDocNumber, setIdentityDocNumber] = useState("");
+  const [identityError, setIdentityError] = useState<string | null>(null);
   const [personKind, setPersonKind] = useState<PersonKind>("NATURAL");
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -99,7 +185,31 @@ export default function PublicConsentCampaignForm({ data, cct }: Props) {
   const companyName = companyDisplayName(data);
 
   React.useEffect(() => {
-    if (!data?._id) return;
+    let cancelled = false;
+
+    async function validateToken() {
+      setCctFlowStep("validating_token");
+      const res = await checkCollectFormCctStatus(data._id, { cct });
+
+      if (cancelled) return;
+
+      if (res.error || !res.data?.tokenValid) {
+        setCctFlowStep("invalid_link");
+        return;
+      }
+
+      setCctFlowStep("identity");
+    }
+
+    validateToken();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [data._id, cct]);
+
+  React.useEffect(() => {
+    if (!data?._id || cctFlowStep !== "full_form") return;
 
     let cancelled = false;
     setPolicyLoading(true);
@@ -125,7 +235,7 @@ export default function PublicConsentCampaignForm({ data, cct }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [data._id]);
+  }, [data._id, cctFlowStep]);
 
   const fields: Record<string, FieldConfig> = {};
   data.questions.forEach((q) => {
@@ -181,7 +291,9 @@ export default function PublicConsentCampaignForm({ data, cct }: Props) {
               (v) => (v === "" ? undefined : v),
               z.coerce.number("Este campo es obligatorio").int("Edad inválida")
             ),
-            gender: z.string<UserGender>(),
+            gender: z.enum(["MALE", "FEMALE", "OTHER"], {
+              message: "Selecciona el género",
+            }),
             razonSocial: z.string().optional(),
           });
 
@@ -212,6 +324,8 @@ export default function PublicConsentCampaignForm({ data, cct }: Props) {
     watch,
   } = useForm({
     resolver,
+    mode: "onChange",
+    reValidateMode: "onChange",
     defaultValues: {
       user: {
         docType: "CC" as DocType,
@@ -230,17 +344,90 @@ export default function PublicConsentCampaignForm({ data, cct }: Props) {
     },
   });
 
+  const formValues = watch();
+
+  const isFullFormValid = React.useMemo(
+    () => schema.safeParse(formValues).success,
+    [formValues, schema]
+  );
+
+  const identityDocNumberFilled = identityDocNumber.trim().length > 0;
+  const identityCanContinue =
+    identityDocNumberFilled && cctFlowStep !== "checking_identity";
+
   const handlePersonKindChange = (kind: PersonKind) => {
     setPersonKind(kind);
     if (kind === "JURIDICA") {
-      setValue("user.docType", "NIT" as unknown as DocType);
-      setValue("user.age", undefined as unknown as number);
-      setValue("user.gender", undefined as UserGender | undefined);
+      setValue("user.docType", "NIT" as unknown as DocType, { shouldValidate: true });
+      setValue("user.age", undefined as unknown as number, { shouldValidate: true });
+      setValue("user.gender", undefined as UserGender | undefined, {
+        shouldValidate: true,
+      });
     } else {
-      setValue("user.docType", "CC");
-      setValue("user.razonSocial", "");
+      setValue("user.docType", "CC", { shouldValidate: true });
+      setValue("user.razonSocial", "", { shouldValidate: true });
     }
   };
+
+  async function handleIdentityContinue() {
+    setIdentityError(null);
+    const trimmed = identityDocNumber.trim();
+    if (!trimmed) {
+      setIdentityError("Ingresa tu número de documento");
+      return;
+    }
+
+    let docNumber: number;
+    if (identityDocType === "NIT") {
+      docNumber = parseNitDocNumber(trimmed);
+      if (Number.isNaN(docNumber)) {
+        setIdentityError("Número de NIT inválido");
+        return;
+      }
+    } else {
+      const digits = trimmed.replace(/\D/g, "");
+      docNumber = Number(digits);
+      if (!digits || Number.isNaN(docNumber)) {
+        setIdentityError("Número de documento inválido");
+        return;
+      }
+    }
+
+    setCctFlowStep("checking_identity");
+
+    const res = await checkCollectFormCctStatus(data._id, {
+      cct,
+      docType: identityDocType,
+      docNumber,
+    });
+
+    if (res.error || !res.data?.tokenValid) {
+      setCctFlowStep("invalid_link");
+      return;
+    }
+
+    if (!isCctIdentityCheck(res.data)) {
+      setCctFlowStep("identity");
+      setIdentityError("No se pudo verificar el documento. Intenta de nuevo.");
+      return;
+    }
+
+    if (res.data.alreadyRegistered) {
+      setCctFlowStep("already_registered");
+      return;
+    }
+
+    if (identityDocType === "NIT") {
+      setPersonKind("JURIDICA");
+      setValue("user.docType", "NIT" as unknown as DocType);
+    } else {
+      setPersonKind("NATURAL");
+      setValue("user.docType", identityDocType);
+    }
+    setValue("user.docNumber", docNumber as unknown as number);
+
+    setCctFlowStep("full_form");
+  }
 
   async function onSubmit(formData: any) {
     setSubmitting(true);
@@ -271,6 +458,114 @@ export default function PublicConsentCampaignForm({ data, cct }: Props) {
     }
 
     setSubmitted(true);
+  }
+
+  if (cctFlowStep === "validating_token") {
+    return <CctFlowLoading message="Verificando enlace de consentimiento…" />;
+  }
+
+  if (cctFlowStep === "invalid_link") {
+    return <CctInvalidLinkScreen formName={data.name} />;
+  }
+
+  if (cctFlowStep === "already_registered") {
+    return (
+      <CctAlreadyRegisteredScreen
+        formName={data.name}
+        companyName={companyName}
+      />
+    );
+  }
+
+  if (cctFlowStep === "identity" || cctFlowStep === "checking_identity") {
+    return (
+      <div className="flex flex-col gap-5 max-w-2xl items-stretch w-full">
+        <div className="flex flex-col gap-1">
+          <h1 className="font-bold text-2xl text-[#0B1737]">{data.name}</h1>
+          {data.description && (
+            <p className="text-[#64748B] text-sm leading-relaxed">
+              {data.description}
+            </p>
+          )}
+        </div>
+
+        {companyName && (
+          <div className="rounded-xl border border-primary-200 bg-primary-50 px-4 py-3 text-sm text-primary-900">
+            Responsable del tratamiento:{" "}
+            <span className="font-semibold">{companyName}</span>
+          </div>
+        )}
+
+        <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-4 flex gap-3">
+          <Icon
+            icon="tabler:id"
+            className="text-blue-600 text-xl shrink-0 mt-0.5"
+          />
+          <p className="text-sm text-blue-900 leading-relaxed">
+            Para continuar, confirma tu tipo y número de documento. Así
+            verificamos si ya registraste tu consentimiento con este enlace.
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-[#E4E9F2] bg-white p-6 flex flex-col gap-5">
+          <h2 className="font-semibold text-[#0B1737] text-base">
+            Identificación
+          </h2>
+          <div className="flex gap-5">
+            <div className="flex-1">
+              <CustomSelect<IdentityDocType>
+                label="Tipo de documento"
+                options={identityDocTypeOptions}
+                value={identityDocType}
+                onChange={setIdentityDocType}
+              />
+            </div>
+            <div className="flex-1">
+              <CustomInput
+                label="Número de documento"
+                value={identityDocNumber}
+                onChange={(e) => {
+                  setIdentityDocNumber(e.target.value);
+                  if (identityError) setIdentityError(null);
+                }}
+                placeholder={
+                  identityDocType === "NIT"
+                    ? "Ej. 900123456"
+                    : "Ej. 1234567890"
+                }
+                error={
+                  identityError
+                    ? ({ message: identityError } as FieldError)
+                    : undefined
+                }
+              />
+            </div>
+          </div>
+          {identityDocType === "NIT" && (
+            <p className="text-xs text-stone-500 -mt-2 pl-2">
+              Puedes ingresar el NIT con o sin dígito de verificación.
+            </p>
+          )}
+          {!identityDocNumberFilled && cctFlowStep === "identity" && (
+            <p className="text-xs text-center text-stone-500 -mt-1">
+              Ingresa tu número de documento para continuar.
+            </p>
+          )}
+          <Button
+            type="button"
+            className="w-full"
+            loading={cctFlowStep === "checking_identity"}
+            disabled={!identityCanContinue}
+            onClick={handleIdentityContinue}
+            startContent={<Icon icon="tabler:arrow-right" />}
+          >
+            {cctFlowStep === "checking_identity"
+              ? "Verificando…"
+              : "Continuar"}
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   if (submitted) {
@@ -470,7 +765,11 @@ export default function PublicConsentCampaignForm({ data, cct }: Props) {
                       shouldTouch: true,
                     })
                   }
-                  className="rounded-lg gap-2 w-full text-primary-900 border border-primary-900 flex-1 relative px-3 py-2 bg-primary-50"
+                  className={`rounded-lg gap-2 w-full text-primary-900 border flex-1 relative px-3 py-2 bg-primary-50 ${
+                    errors.user?.gender
+                      ? "border-red-400"
+                      : "border-primary-900"
+                  }`}
                 >
                   <option value="" disabled>
                     Seleccionar opción
@@ -481,6 +780,11 @@ export default function PublicConsentCampaignForm({ data, cct }: Props) {
                     </option>
                   ))}
                 </select>
+                {errors.user?.gender && (
+                  <span className="text-red-400 text-sm font-semibold pl-2">
+                    {(errors.user.gender as FieldError).message}
+                  </span>
+                )}
               </div>
               <CustomInput
                 type="number"
@@ -656,11 +960,17 @@ export default function PublicConsentCampaignForm({ data, cct }: Props) {
         )}
       </div>
 
+      {!isFullFormValid && !submitting && !policyLoading && (
+        <p className="text-xs text-center text-stone-500">
+          Completa todos los campos obligatorios y acepta la política de
+          tratamiento de datos para enviar.
+        </p>
+      )}
       <Button
         type="submit"
         className="w-full"
         loading={submitting}
-        disabled={submitting || policyLoading}
+        disabled={!isFullFormValid || submitting || policyLoading}
         startContent={<Icon icon="tabler:check" />}
       >
         {submitting ? "Enviando..." : "Aceptar y registrar consentimiento"}

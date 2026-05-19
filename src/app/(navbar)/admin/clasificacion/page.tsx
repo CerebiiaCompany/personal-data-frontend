@@ -5,6 +5,7 @@ import SectionSearchBar from "@/components/base/SectionSearchBar";
 import DataOfficerCard from "@/components/administration/DataOfficerCard";
 import ClasificationTable from "@/components/clasification/ClasificationTable";
 import UploadExcelTemplateDialog from "@/components/dialogs/UploadExcelTemplateFile";
+import ConsentCampaignDialog from "@/components/dialogs/ConsentCampaignDialog";
 import CheckPermission from "@/components/checkers/CheckPermission";
 import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import { useCollectFormClasifications } from "@/hooks/useCollectFormClasifications";
@@ -15,7 +16,8 @@ import { downloadExcelTemplate } from "@/utils/downloadExcelTemplate";
 import { Icon } from "@iconify/react";
 import Link from "next/link";
 import clsx from "clsx";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { toast } from "sonner";
 import type { CollectFormClasification } from "@/types/collectForm.types";
 
 const topCardClass =
@@ -43,11 +45,17 @@ function filterByFormName(
 
 export default function ClassificationPage() {
   const user = useSessionStore((store) => store.user);
+  const companyId = user?.companyUserData?.companyId;
   const { shouldFetch } = usePermissionCheck();
   const [search, setSearch] = useState("");
+  const [consentCampaignTarget, setConsentCampaignTarget] = useState<{
+    formId: string;
+    formName: string;
+  } | null>(null);
+  const [formPickerOpen, setFormPickerOpen] = useState(false);
   const { data, summary, loading, error, refresh } =
     useCollectFormClasifications({
-      companyId: user?.companyUserData?.companyId,
+      companyId,
       enabled: shouldFetch("classification.view"),
     });
 
@@ -56,9 +64,87 @@ export default function ClassificationPage() {
     [data, search]
   );
 
+  const openConsentCampaign = useCallback(
+    (formId: string, formName: string) => {
+      setFormPickerOpen(false);
+      setConsentCampaignTarget({ formId, formName });
+      requestAnimationFrame(() => {
+        showDialog(HTML_IDS_DATA.consentCampaignDialog);
+      });
+    },
+    []
+  );
+
+  const handleCreateConsentCampaignClick = useCallback(() => {
+    if (!filteredItems?.length) {
+      toast.error("No hay formularios disponibles para crear una campaña.");
+      return;
+    }
+    if (filteredItems.length === 1) {
+      openConsentCampaign(filteredItems[0]._id, filteredItems[0].name);
+      return;
+    }
+    setFormPickerOpen(true);
+  }, [filteredItems, openConsentCampaign]);
+
   return (
     <div className="flex flex-col h-full min-h-0 min-w-0 w-full bg-[#F9FBFF]">
       <UploadExcelTemplateDialog refresh={refresh} />
+
+      {consentCampaignTarget && companyId && (
+        <ConsentCampaignDialog
+          companyId={companyId}
+          formId={consentCampaignTarget.formId}
+          formName={consentCampaignTarget.formName}
+        />
+      )}
+
+      {formPickerOpen && filteredItems && filteredItems.length > 1 && (
+        <div
+          className="fixed inset-0 z-30 flex items-center justify-center bg-stone-900/50 p-4"
+          onClick={() => setFormPickerOpen(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-xl bg-white shadow-xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-[#E8EDF7] px-5 py-4">
+              <h3 className="font-bold text-[#0B1737] text-lg">
+                Elegir formulario
+              </h3>
+              <button
+                type="button"
+                onClick={() => setFormPickerOpen(false)}
+                className="p-1 rounded-lg hover:bg-stone-100"
+                aria-label="Cerrar"
+              >
+                <Icon icon="tabler:x" className="text-xl" />
+              </button>
+            </div>
+            <p className="px-5 pt-3 text-sm text-[#64748B]">
+              Selecciona el formulario para la campaña de consentimiento.
+            </p>
+            <ul className="max-h-72 overflow-y-auto p-3 flex flex-col gap-2">
+              {filteredItems.map((item) => (
+                <li key={item._id}>
+                  <button
+                    type="button"
+                    onClick={() => openConsentCampaign(item._id, item.name)}
+                    className="w-full text-left rounded-xl border border-[#E8EDF7] px-4 py-3 hover:bg-[#F0FDF4] hover:border-emerald-200 transition-colors"
+                  >
+                    <span className="font-semibold text-[#0B1737] text-sm block truncate">
+                      {item.name}
+                    </span>
+                    <span className="text-xs text-[#64748B] mt-0.5">
+                      {item.totalResponses ?? 0} registros
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
 
       <div className="px-5 md:px-6 pt-4 shrink-0">
         <div className="max-w-[1200px] mx-auto w-full">
@@ -90,6 +176,18 @@ export default function ClassificationPage() {
                       }
                     >
                       Subir Excel
+                    </Button>
+                  </CheckPermission>
+                  <CheckPermission group="campaigns" permission="create">
+                    <Button
+                      onClick={handleCreateConsentCampaignClick}
+                      hierarchy="secondary"
+                      className="rounded-xl! border-emerald-200! bg-emerald-50! text-emerald-800! text-[13px]! px-4! py-2.5! hover:bg-emerald-100!"
+                      startContent={
+                        <Icon icon="tabler:send" className="text-lg" />
+                      }
+                    >
+                      Crear campaña de consentimiento
                     </Button>
                   </CheckPermission>
                 </div>
@@ -132,6 +230,7 @@ export default function ClassificationPage() {
             listSummary={summary}
             loading={loading}
             error={error}
+            onCreateConsentCampaign={openConsentCampaign}
           />
         </div>
       </div>
