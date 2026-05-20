@@ -6,6 +6,7 @@ import FormResponsesTable from "@/components/clasification/FormResponsesTable";
 import { useCollectFormResponses } from "@/hooks/useCollectFormResponses";
 import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import { useConsentResponsesExport } from "@/hooks/useConsentResponsesExport";
+import { usePermissionCheck } from "@/hooks/usePermissionCheck";
 import { useSessionStore } from "@/store/useSessionStore";
 import { Icon } from "@iconify/react";
 import Link from "next/link";
@@ -20,6 +21,8 @@ type FormResponseSummary = {
 
 export default function FormClassificationPage() {
   const user = useSessionStore((store) => store.user);
+  const { isCompanyAdmin } = usePermissionCheck();
+  const canExportExcel = isCompanyAdmin;
   const formId = useParams().formId?.toString();
   const { debouncedValue, search, setSearch } = useDebouncedSearch();
   const [currentPage, setCurrentPage] = useState(1);
@@ -161,26 +164,28 @@ export default function FormClassificationPage() {
               onSearchChange={setSearch}
               placeholder="Buscar por nombre, NIT, razón social, documento, correo..."
             />
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                hierarchy="secondary"
-                className="rounded-xl! border-[#E3E9F4]! text-[13px]! px-4! py-2.5!"
-                onClick={exportAllToExcel}
-                disabled={exportingExcel}
-                loading={exportingExcel}
-              >
-                <span className="flex items-center gap-2">
-                  {!exportingExcel && (
-                    <Icon icon="tabler:file-export" className="text-base" />
-                  )}
-                  {exportingExcel
-                    ? exportProgress != null
-                      ? `Exportando... ${exportProgress}%`
-                      : "Exportando..."
-                    : "Exportar Excel"}
-                </span>
-              </Button>
-            </div>
+            {canExportExcel && (
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  hierarchy="secondary"
+                  className="rounded-xl! border-[#E3E9F4]! text-[13px]! px-4! py-2.5!"
+                  onClick={exportAllToExcel}
+                  disabled={exportingExcel}
+                  loading={exportingExcel}
+                >
+                  <span className="flex items-center gap-2">
+                    {!exportingExcel && (
+                      <Icon icon="tabler:file-export" className="text-base" />
+                    )}
+                    {exportingExcel
+                      ? exportProgress != null
+                        ? `Exportando... ${exportProgress}%`
+                        : "Exportando..."
+                      : "Exportar Excel"}
+                  </span>
+                </Button>
+              </div>
+            )}
           </div>
 
           <header className="rounded-2xl border border-[#E8EDF7] bg-white px-5 py-4">

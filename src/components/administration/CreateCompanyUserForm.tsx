@@ -20,6 +20,7 @@ import { createCollectForm, updateCollectForm } from "@/lib/collectForm.api";
 import { parseApiError } from "@/utils/parseApiError";
 import { toast } from "sonner";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   createCollectFormValidationSchema,
   createUserValidationSchema,
@@ -77,6 +78,37 @@ const CreateCompanyUserForm = ({
     useState<boolean>(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState<boolean>(false);
 
+  const isCreating = !initialValues;
+  const systemRole = watch("role");
+  const hasNoAreas =
+    isCreating &&
+    !areas.loading &&
+    Array.isArray(areas.data) &&
+    areas.data.length === 0;
+  const hasNoCustomRoles =
+    isCreating &&
+    systemRole === "USER" &&
+    !roles.loading &&
+    Array.isArray(roles.data) &&
+    roles.data.length === 0;
+  const cannotCreateUser = hasNoAreas || hasNoCustomRoles;
+  const areaOptions = useMemo(
+    () =>
+      (areas.data ?? []).map((area) => ({
+        value: area._id,
+        title: area.name,
+      })),
+    [areas.data]
+  );
+  const customRoleOptions = useMemo(
+    () =>
+      (roles.data ?? []).map((role) => ({
+        value: role._id,
+        title: role.position,
+      })),
+    [roles.data]
+  );
+
   useEffect(() => {
     const scrollContainer = document.getElementById("scrollContainer");
     if (!scrollContainer || !formRef.current) return;
@@ -107,6 +139,20 @@ const CreateCompanyUserForm = ({
 
   async function onSubmit(data: CreateUser | UpdateUser) {
     if (!user?.companyUserData?.companyId) return;
+
+    if (isCreating && hasNoAreas) {
+      toast.error(
+        "Es necesario crear al menos un área antes de asignarla a un nuevo usuario."
+      );
+      return;
+    }
+
+    if (isCreating && hasNoCustomRoles) {
+      toast.error(
+        "Es necesario crear al menos un rol personalizado antes de asignarlo a un nuevo usuario."
+      );
+      return;
+    }
 
     setLoading(true);
 
@@ -188,6 +234,7 @@ const CreateCompanyUserForm = ({
             <Button
               type="submit"
               loading={loading}
+              disabled={cannotCreateUser}
               className="rounded-xl! border-[#1A2B5B]! bg-[#1A2B5B]! px-5! py-2.5! text-[13px]! font-semibold! text-white!"
             >
               {initialValues ? "Guardar cambios" : "Crear usuario"}
@@ -259,7 +306,9 @@ const CreateCompanyUserForm = ({
             label="Rol del Sistema"
             options={userRoleOptions.filter(opt => opt.value !== "SUPERADMIN")}
             value={watch("role")}
-            onChange={(value) => setValue("role", value)}
+            onChange={(value) =>
+              setValue("role", value, { shouldValidate: true })
+            }
           />
           {errors.role && (
             <span className="text-red-400 text-sm font-semibold">
@@ -268,50 +317,104 @@ const CreateCompanyUserForm = ({
           )}
         </div>
 
-        {useMemo(() => {
-          if (!areas.data) return null;
-          
-          const areaOptions = areas.data.map((area) => ({
-            value: area._id,
-            title: area.name,
-          }));
+        {areas.loading && (
+          <p className="text-sm text-[#64748B]">Cargando áreas disponibles...</p>
+        )}
 
-          return (
+        {hasNoAreas && (
+          <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+            <Icon
+              icon="tabler:alert-triangle"
+              className="mt-0.5 shrink-0 text-xl text-amber-600"
+            />
+            <div className="space-y-2 text-sm text-amber-900">
+              <p>
+                No hay áreas registradas en tu compañía. Es necesario crear un
+                área para poder asignársela a este usuario.
+              </p>
+              <Link
+                href="/admin/administracion/areas/crear"
+                className="inline-flex items-center gap-1 font-semibold text-[#1A2B5B] underline hover:no-underline"
+              >
+                Crear área
+                <Icon icon="tabler:arrow-right" className="text-base" />
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {!areas.loading && areaOptions.length > 0 && (
+          <div className="flex flex-col gap-1">
             <CustomSelect
               onChange={(value) =>
-                setValue("companyUserData.companyAreaId", value)
+                setValue("companyUserData.companyAreaId", value, {
+                  shouldValidate: true,
+                })
               }
               options={areaOptions}
               label="Asignar Área"
               unselectedText="Seleccionar área"
               value={watch("companyUserData.companyAreaId")}
             />
-          );
-        }, [areas.data, setValue, watch])}
+            {errors.companyUserData?.companyAreaId && (
+              <span className="text-sm font-semibold text-red-400">
+                {errors.companyUserData.companyAreaId.message}
+              </span>
+            )}
+          </div>
+        )}
 
-        {/* Solo mostrar selector de rol personalizado si es USER */}
-        {useMemo(() => {
-          // ✅ Condición DENTRO del useMemo (no fuera)
-          if (watch("role") !== "USER") return null;
-          if (!roles.data) return null;
-          
-          const roleOptions = roles.data.map((role) => ({
-            value: role._id,
-            title: role.position,
-          }));
+        {systemRole === "USER" && roles.loading && (
+          <p className="text-sm text-[#64748B]">
+            Cargando roles personalizados...
+          </p>
+        )}
 
-          return (
-            <CustomSelect
-              onChange={(value) =>
-                setValue("companyUserData.companyRoleId", value)
-              }
-              options={roleOptions}
-              label="Asignar Rol Personalizado"
-              unselectedText="Seleccionar rol"
-              value={watch("companyUserData.companyRoleId")}
+        {hasNoCustomRoles && (
+          <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+            <Icon
+              icon="tabler:alert-triangle"
+              className="mt-0.5 shrink-0 text-xl text-amber-600"
             />
-          );
-        }, [roles.data, setValue, watch])}
+            <div className="space-y-2 text-sm text-amber-900">
+              <p>
+                No hay roles personalizados registrados en tu compañía. Es
+                necesario crear un rol personalizado para poder asignárselo a
+                este usuario.
+              </p>
+              <Link
+                href="/admin/administracion/roles/crear"
+                className="inline-flex items-center gap-1 font-semibold text-[#1A2B5B] underline hover:no-underline"
+              >
+                Crear rol personalizado
+                <Icon icon="tabler:arrow-right" className="text-base" />
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {systemRole === "USER" &&
+          !roles.loading &&
+          customRoleOptions.length > 0 && (
+            <div className="flex flex-col gap-1">
+              <CustomSelect
+                onChange={(value) =>
+                  setValue("companyUserData.companyRoleId", value, {
+                    shouldValidate: true,
+                  })
+                }
+                options={customRoleOptions}
+                label="Asignar Rol Personalizado"
+                unselectedText="Seleccionar rol"
+                value={watch("companyUserData.companyRoleId")}
+              />
+              {errors.companyUserData?.companyRoleId && (
+                <span className="text-sm font-semibold text-red-400">
+                  {errors.companyUserData.companyRoleId.message}
+                </span>
+              )}
+            </div>
+          )}
 
         <CustomTextarea
           {...register("companyUserData.note")}
@@ -402,6 +505,7 @@ const CreateCompanyUserForm = ({
         <Button
           type="submit"
           loading={loading}
+          disabled={cannotCreateUser}
           className="w-full rounded-xl! border-[#1A2B5B]! bg-[#1A2B5B]! px-6! py-3! text-[13px]! font-semibold! text-white! sm:w-auto sm:min-w-[200px]"
         >
           {initialValues ? "Guardar cambios" : "Crear usuario"}

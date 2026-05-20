@@ -245,12 +245,12 @@ export default function CompanyRolesCardsView({
         </section>
       </div>
 
-      <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col px-5 py-6 sm:px-6 sm:py-7 lg:px-8 lg:py-8 xl:px-10 2xl:px-12">
+      <div className="w-full shrink-0 px-5 py-6 sm:px-6 sm:py-7 lg:px-8 lg:py-8 xl:px-10 2xl:px-12">
         <section
           id={scrollAnchorId}
-          className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-[#E8EDF7] bg-white shadow-[0_2px_12px_rgba(15,35,70,0.04)]"
+          className="flex w-full min-w-0 flex-col rounded-2xl border border-[#E8EDF7] bg-white shadow-[0_2px_12px_rgba(15,35,70,0.04)]"
         >
-          <div className="relative min-h-0 flex-1 overflow-auto p-4 sm:p-5">
+          <div className="relative p-4 sm:p-5">
             {loading && <LoadingCover />}
 
             <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
@@ -395,7 +395,7 @@ function RoleCard({
           </div>
         </div>
 
-        <div className="mt-3 min-h-0 flex-1 space-y-1.5">
+        <div className="mt-3 space-y-1.5">
           {shown.map((m) => (
             <div
               key={m.key}

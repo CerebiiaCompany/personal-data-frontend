@@ -10,6 +10,7 @@ import Link from "next/link";
 import clsx from "clsx";
 import CheckPermission from "@/components/checkers/CheckPermission";
 import { useConsentResponsesExport } from "@/hooks/useConsentResponsesExport";
+import { usePermissionCheck } from "@/hooks/usePermissionCheck";
 import { useSessionStore } from "@/store/useSessionStore";
 
 interface Props {
@@ -57,6 +58,8 @@ const ClasificationTable = ({
 }: Props) => {
   const user = useSessionStore((store) => store.user);
   const companyId = user?.companyUserData?.companyId;
+  const { isCompanyAdmin } = usePermissionCheck();
+  const canExportExcel = isCompanyAdmin;
   const { startExport, exporting, isExportingForm } =
     useConsentResponsesExport(companyId);
 
@@ -254,27 +257,29 @@ const ClasificationTable = ({
                         </button>
                       </CheckPermission>
                     )}
-                    <button
-                      type="button"
-                      aria-label="Exportar a Excel"
-                      onClick={() => exportClassificationData(item._id)}
-                      disabled={exporting}
-                      className={clsx(
-                        "inline-flex h-10 w-10 items-center justify-center rounded-lg border border-transparent transition-colors",
-                        exporting
-                          ? "opacity-40 cursor-not-allowed text-[#94A3B8]"
-                          : "text-[#64748B] hover:bg-[#F1F5F9]"
-                      )}
-                    >
-                      {isExportingForm(item._id) ? (
-                        <span className="inline-block h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
-                      ) : (
-                        <Icon
-                          icon="material-symbols:export-notes-outline"
-                          className="text-xl"
-                        />
-                      )}
-                    </button>
+                    {canExportExcel && (
+                      <button
+                        type="button"
+                        aria-label="Exportar a Excel"
+                        onClick={() => exportClassificationData(item._id)}
+                        disabled={exporting}
+                        className={clsx(
+                          "inline-flex h-10 w-10 items-center justify-center rounded-lg border border-transparent transition-colors",
+                          exporting
+                            ? "opacity-40 cursor-not-allowed text-[#94A3B8]"
+                            : "text-[#64748B] hover:bg-[#F1F5F9]"
+                        )}
+                      >
+                        {isExportingForm(item._id) ? (
+                          <span className="inline-block h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                        ) : (
+                          <Icon
+                            icon="material-symbols:export-notes-outline"
+                            className="text-xl"
+                          />
+                        )}
+                      </button>
+                    )}
                     <Link
                       href={`/admin/clasificacion/${item._id}`}
                       aria-label="Ver datos del formulario"

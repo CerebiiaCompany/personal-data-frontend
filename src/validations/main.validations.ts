@@ -75,13 +75,24 @@ export const createUserValidationSchema = z.object({
     personalEmail: z
       .email("Correo inválido")
       .min(1, "Este campo es obligatorio"),
-    companyAreaId: z.string().optional(),
+    companyAreaId: z
+      .string()
+      .min(1, "Debes asignar un área al usuario"),
     companyRoleId: z.string().optional(),
     note: z.string().optional(),
     docNumber: z.coerce.number("Este campo es obligatorio"),
     docType: z.string<DocType>(),
   }),
-});
+}).refine(
+  (data) =>
+    data.role !== "USER" ||
+    (typeof data.companyUserData.companyRoleId === "string" &&
+      data.companyUserData.companyRoleId.length > 0),
+  {
+    message: "Debes asignar un rol personalizado al usuario",
+    path: ["companyUserData", "companyRoleId"],
+  }
+);
 
 export const createCompanyAreaValidationSchema = z.object({
   name: z
