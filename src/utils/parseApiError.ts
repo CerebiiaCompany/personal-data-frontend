@@ -12,8 +12,15 @@ export const ERROR_DICTIONARY = {
   "auth/invalid-credentials": "Credenciales inválidas",
   "auth/unauthorized": "No estás autorizado para esta acción",
   "auth/unauthenticated": "Error en la autenticación",
+  "auth/forbidden": "No tienes permiso para esta acción",
   "otp/pending-code": "Ya hay un código pendiente para este usuario",
   "masivapp/error": "Error al enviar el mensaje",
+  "http/too-many-requests": "Demasiadas solicitudes. Intenta más tarde.",
+  "rate-limit/lookup": "Has superado el límite de búsquedas. Intenta más tarde.",
+  "rate-limit/verify": "Has superado el límite de verificaciones. Intenta más tarde.",
+  "rate-limit/otp-document":
+    "Se alcanzó el límite de códigos para este documento. Intenta más tarde.",
+  "rate-limit/exceeded": "Demasiadas solicitudes. Intenta más tarde.",
 };
 
 export function parseApiError(error: APIError): string {
@@ -23,8 +30,9 @@ export function parseApiError(error: APIError): string {
   }
 
   // Si no hay mensaje, usar el diccionario por código
-  if (error?.code && ERROR_DICTIONARY[error.code]) {
-    return ERROR_DICTIONARY[error.code];
+  const code = error?.code;
+  if (code && code in ERROR_DICTIONARY) {
+    return ERROR_DICTIONARY[code as keyof typeof ERROR_DICTIONARY];
   }
 
   // Fallback seguro

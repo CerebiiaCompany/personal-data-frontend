@@ -162,6 +162,10 @@ export const createCompanyRoleValidationSchema = z.object({
     audit: z.object({
       view: z.boolean(),
     }),
+    arcoRequests: z.object({
+      view: z.boolean(),
+      respond: z.boolean(),
+    }),
   }),
 });
 

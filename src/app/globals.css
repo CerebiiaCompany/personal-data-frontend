@@ -79,6 +79,61 @@ input:focus {
   animation: collectPageEnter 420ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+.personas-page-bg {
+  background-color: #fafafa;
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(0, 11, 80, 0.04) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+@keyframes personasFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes personasFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.personas-fade-up {
+  opacity: 0;
+  animation: personasFadeUp 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.personas-fade-in {
+  opacity: 0;
+  animation: personasFadeIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.personas-page-enter {
+  opacity: 0;
+  animation: personasFadeUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .personas-fade-up,
+  .personas-fade-in,
+  .personas-page-enter,
+  .collect-enter,
+  .collect-enter-delayed {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+}
+
 .text-ellipsis {
   text-overflow: ellipsis;
   white-space: nowrap;

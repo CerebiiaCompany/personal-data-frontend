@@ -75,6 +75,13 @@ export const NAVBAR_DATA: NavbarData = [
     requiredPermission: "audit.view",
   },
   {
+    title: "Solicitudes ARCO",
+    path: "/admin/arco",
+    icon: "tabler:scale",
+    minRole: "USER",
+    requiredPermission: "arcoRequests.view",
+  },
+  {
     title: "Crear Campaña",
     path: "/admin/campanas/crear",
     minRole: "USER",

@@ -18,6 +18,7 @@ const MODULE_NAMES: Record<keyof CompanyRolePermissions, string> = {
   classification: "Clasificación",
   campaigns: "Campañas",
   audit: "Auditoría",
+  arcoRequests: "Solicitudes ARCO",
 };
 
 /** Etiquetas cortas para listados en tabla (densidad sin perder sentido). */
@@ -28,6 +29,7 @@ const MODULE_SHORT: Record<keyof CompanyRolePermissions, string> = {
   classification: "Clasif.",
   campaigns: "Campañas",
   audit: "Auditoría",
+  arcoRequests: "ARCO",
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -36,6 +38,7 @@ const ACTION_LABELS: Record<string, string> = {
   edit: "Editar",
   delete: "Eliminar",
   send: "Enviar",
+  respond: "Responder",
 };
 
 function countActive(modulePerms: Record<string, boolean>) {

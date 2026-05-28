@@ -6,10 +6,10 @@ import { toast } from "sonner";
 import CustomInput from "@/components/forms/CustomInput";
 import ProfileSectionCard from "./ProfileSectionCard";
 import CompanyUserMultiSelect from "./CompanyUserMultiSelect";
-import { updateCompanyRightsAttention } from "@/lib/company.api";
+import { fetchArcoOfficers, updateArcoOfficers } from "@/lib/arcoAdmin.api";
 import { CompanyProfile, CompanyUserSummary } from "@/types/company.types";
 import { useCompanyUsers } from "@/hooks/useCompanyUsers";
-import { parseApiError } from "@/utils/parseApiError";
+import { showApiErrorToast } from "@/components/feedback/ApiErrorToast";
 
 interface Props {
   companyId: string;
@@ -56,6 +56,18 @@ const RightsAttentionSection = ({ companyId, profile }: Props) => {
     setPhoneLine(profile.rightsAttentionPhoneLine ?? "");
   }, [profile]);
 
+  useEffect(() => {
+    if (!companyId) return;
+    fetchArcoOfficers(companyId).then((res) => {
+      if (res.data?.officers?.length) {
+        setSelectedIds(res.data.officers.map((o) => o.userId));
+      }
+      if (res.data?.phoneLine) {
+        setPhoneLine(res.data.phoneLine);
+      }
+    });
+  }, [companyId]);
+
   const hasMore = !!meta && (meta.page ?? 1) < (meta.totalPages ?? 1);
   const isInitialLoading = loading && allUsers.length === 0;
   const isLoadingMore = loading && allUsers.length > 0;
@@ -63,12 +75,12 @@ const RightsAttentionSection = ({ companyId, profile }: Props) => {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-    const res = await updateCompanyRightsAttention(companyId, {
-      user_ids: selectedIds,
-      phone_line: phoneLine,
+    const res = await updateArcoOfficers(companyId, {
+      userIds: selectedIds,
+      phoneLine: phoneLine.trim() || undefined,
     });
     setSaving(false);
-    if (res.error) return toast.error(parseApiError(res.error));
+    if (res.error) return showApiErrorToast(res.error, res.error.status);
     toast.success("Atención de derechos ARCO actualizada");
   }
 
@@ -76,7 +88,7 @@ const RightsAttentionSection = ({ companyId, profile }: Props) => {
     <ProfileSectionCard
       icon="tabler:help-circle"
       title="Atención de derechos ARCO"
-      description="Responsables de atender solicitudes de acceso, rectificación, cancelación u oposición."
+      description="Usuarios designados como encargados ARCO. Deben tener el permiso «Solicitudes ARCO» en su rol y figurar aquí."
       onSubmit={handleSubmit}
       loading={saving}
     >

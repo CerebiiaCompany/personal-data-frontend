@@ -3,8 +3,9 @@ import { CampaignAudienceGender } from "./campaign.types";
 import { UserRole } from "./user.types";
 
 export interface APIError {
-  code: keyof typeof ERROR_DICTIONARY;
+  code?: keyof typeof ERROR_DICTIONARY | (string & {});
   message?: string;
+  status?: number;
 }
 
 export interface APIResponse<T = any> {

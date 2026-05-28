@@ -28,6 +28,10 @@ export type CompanyRolePermissions = {
   audit: {
     view: boolean;
   };
+  arcoRequests: {
+    view: boolean;
+    respond: boolean;
+  };
 };
 
 export interface CreateCompanyRole {

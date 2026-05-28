@@ -36,7 +36,7 @@ export default function RootLayout({
         className={`${interFont.variable} antialiased font-sans bg-white h-dvh`}
       >
         <ErrorBoundary>
-          <Toaster />
+          <Toaster position="top-center" offset={16} gap={12} visibleToasts={4} />
           <AuthHydrator />
           <GridWrapper>
             <CheckActiveSession />

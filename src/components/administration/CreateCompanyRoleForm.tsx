@@ -108,6 +108,14 @@ const permissionsGroup = [
     groupName: "audit",
     permissions: [{ title: "Ver auditoría", name: "view" }],
   }),
+  definePermissionGroup({
+    title: "Solicitudes ARCO",
+    groupName: "arcoRequests",
+    permissions: [
+      { title: "Ver solicitudes ARCO", name: "view" },
+      { title: "Gestionar y responder solicitudes", name: "respond" },
+    ],
+  }),
 ];
 
 const defaultPermissions: CompanyRolePermissions =
@@ -126,11 +134,22 @@ const CreateCompanyRoleForm = ({ initialValues }: Props) => {
     watch,
   } = useForm<CreateCompanyRole>({
     resolver: zodResolver(createCompanyRoleValidationSchema),
-    defaultValues: initialValues || {
-      position: "",
-      description: "",
-      permissions: defaultPermissions,
-    },
+    defaultValues: initialValues
+      ? {
+          ...initialValues,
+          permissions: {
+            ...defaultPermissions,
+            ...initialValues.permissions,
+            arcoRequests:
+              initialValues.permissions.arcoRequests ??
+              defaultPermissions.arcoRequests,
+          },
+        }
+      : {
+          position: "",
+          description: "",
+          permissions: defaultPermissions,
+        },
   });
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);

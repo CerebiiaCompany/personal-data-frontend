@@ -3,6 +3,7 @@ const PUBLIC_ROUTE_PREFIXES = [
   "/formulario/",
   "/formularios/",
   "/consentimiento/",
+  "/personas",
 ] as const;
 
 export function isPublicAppRoute(pathname: string): boolean {
