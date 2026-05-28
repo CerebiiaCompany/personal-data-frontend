@@ -27,7 +27,8 @@ export function useCompanyCampaignsDeliveries<T = CampaignDelivery[]>(
     }
 
     setLoading(false);
-    setData(fetchedData.data);
+    const list = Array.isArray(fetchedData.data) ? fetchedData.data : null;
+    setData((list ?? null) as T | null);
   }
 
   useEffect(() => {

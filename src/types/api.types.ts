@@ -52,4 +52,9 @@ export interface QueryParams {
   type?: string;
   targetModel?: string;
   searchUser?: string;
+
+  // campaign deliveries audit
+  status?: string;
+  from?: string;
+  to?: string;
 }

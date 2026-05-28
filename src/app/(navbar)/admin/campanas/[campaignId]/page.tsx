@@ -1,28 +1,33 @@
 "use client";
 
-import SectionHeader from "@/components/base/SectionHeader";
+import Button from "@/components/base/Button";
+import CampaignDeliveriesSection from "@/components/campaigns/CampaignDeliveriesSection";
+import CampaignDetailOverview from "@/components/campaigns/CampaignDetailOverview";
 import LoadingCover from "@/components/layout/LoadingCover";
 import { fetchCampaigns } from "@/lib/campaign.api";
 import { useSessionStore } from "@/store/useSessionStore";
-import { Campaign, campaignGoalLabels, deliveryChannelLabels } from "@/types/campaign.types";
-import { formatDateToString } from "@/utils/date.utils";
+import { Campaign } from "@/types/campaign.types";
 import { parseApiError } from "@/utils/parseApiError";
 import { Icon } from "@iconify/react/dist/iconify.js";
+import Link from "next/link";
 import { useParams } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function CampaignDetailPage() {
   const { campaignId } = useParams<{ campaignId: string }>();
   const user = useSessionStore((s) => s.user);
+  const companyId = user?.companyUserData?.companyId;
+
   const [data, setData] = useState<Campaign | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
-      if (!user?.companyUserData?.companyId || !campaignId) return;
+      if (!companyId || !campaignId) return;
       setLoading(true);
-      const res = await fetchCampaigns({ companyId: user.companyUserData.companyId, id: campaignId });
+      setError(null);
+      const res = await fetchCampaigns({ companyId, id: campaignId });
       if (res.error) {
         setError(parseApiError(res.error));
         setLoading(false);
@@ -31,102 +36,75 @@ export default function CampaignDetailPage() {
       setData(res.data as Campaign);
       setLoading(false);
     })();
-  }, [user?.companyUserData?.companyId, campaignId]);
+  }, [companyId, campaignId]);
 
-  const getScheduledDate = (item?: Campaign): string => {
-    if (!item) return "";
-    if (item.scheduledFor) return formatDateToString({ date: item.scheduledFor });
-    if (item.scheduling?.scheduledDateTime) return formatDateToString({ date: item.scheduling.scheduledDateTime });
-    if (item.scheduling?.startDate && item.scheduling?.endDate) {
-      return `${formatDateToString({ date: item.scheduling.startDate })} - ${formatDateToString({ date: item.scheduling.endDate })}`;
-    }
-    return "—";
-  };
+  if (loading && !data) {
+    return (
+      <div className="relative min-h-[50vh]">
+        <LoadingCover wholePage />
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col relative">
-      <SectionHeader />
-      <div className="px-8 py-6 flex flex-col gap-6 items-stretch">
-        {loading && <LoadingCover wholePage={true} />}
-        {error && <p className="text-red-500">{error}</p>}
-        {data && (
-          <div className="grid gap-6">
-            <h4 className="font-bold text-2xl text-primary-900">Detalle de campaña</h4>
+    <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col bg-[#F8FAFC]">
+      <div className="w-full px-5 pt-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
+        <header className="rounded-2xl border border-[#E8EDF7] bg-white px-5 py-5 shadow-[0_2px_12px_rgba(15,35,70,0.04)] sm:px-6 sm:py-6">
+          <nav className="mb-3 flex flex-wrap items-center gap-2 text-sm text-[#64748B]">
+            <Link href="/admin" className="hover:underline">
+              Inicio
+            </Link>
+            <Icon icon="tabler:chevron-right" className="text-base" />
+            <Link href="/admin/campanas" className="hover:underline">
+              Campañas
+            </Link>
+            <Icon icon="tabler:chevron-right" className="text-base" />
+            <span className="line-clamp-1 font-semibold text-[#1A2B5B]">
+              {data?.name ?? "Detalle"}
+            </span>
+          </nav>
 
-            <div className="grid gap-4 rounded-xl border border-disabled p-6 bg-white">
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-stone-500">Nombre</p>
-                  <p className="font-semibold text-primary-900">{data.name}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-stone-500">Objetivo</p>
-                  <p className="font-semibold text-primary-900">{campaignGoalLabels[data.goal] || data.goal}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-stone-500">Fecha programada</p>
-                  <p className="font-semibold text-primary-900">{getScheduledDate(data)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-stone-500">Hora</p>
-                  <p className="font-semibold text-primary-900">
-                    {data.scheduling?.scheduledDateTime
-                      ? new Date(data.scheduling.scheduledDateTime).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" })
-                      : "—"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-stone-500">Ruta de envío</p>
-                  <p className="font-semibold text-primary-900 flex items-center gap-1">
-                    <Icon icon={data.deliveryChannel === "SMS" ? "tabler:device-mobile-message" : "tabler:mail"} className="text-lg" />
-                    {deliveryChannelLabels[data.deliveryChannel] || data.deliveryChannel}
-                  </p>
-                </div>
-              </div>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1">
+              <h1 className="text-[26px] font-bold tracking-tight text-[#1A2B5B] sm:text-[28px]">
+                {data?.name ?? "Detalle de campaña"}
+              </h1>
+              <p className="max-w-2xl text-sm text-[#64748B]">
+                Revisa la configuración de la campaña y el historial de envíos a cada
+                titular de la lista del formulario.
+              </p>
             </div>
-
-            <div className="grid gap-4 rounded-xl border border-disabled p-6 bg-white">
-              <h6 className="text-primary-900 font-semibold">Audiencia</h6>
-              <div className="grid sm:grid-cols-3 gap-4">
-                <div>
-                  <p className="text-sm text-stone-500">Rango de edad</p>
-                  <p className="font-semibold text-primary-900">{data.audience.minAge} - {data.audience.maxAge}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-stone-500">Género</p>
-                  <p className="font-semibold text-primary-900">{data.audience.gender}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-stone-500">Total / Entregados</p>
-                  <p className="font-semibold text-primary-900">{(data.audience.total ?? data.audience.count) || 0} / {data.audience.delivered ?? 0}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid gap-4 rounded-xl border border-disabled p-6 bg-white">
-              <h6 className="text-primary-900 font-semibold">Contenido</h6>
-              <div className="grid gap-2">
-                <div>
-                  <p className="text-sm text-stone-500">Nombre</p>
-                  <p className="font-semibold text-primary-900">{data.content?.name}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-stone-500">Mensaje</p>
-                  <p className="text-primary-900 whitespace-pre-wrap">{data.content?.bodyText}</p>
-                </div>
-                {data.content?.link && (
-                  <div>
-                    <p className="text-sm text-stone-500">Enlace</p>
-                    <a href={data.content.link} target="_blank" className="text-primary-600 underline break-all">{data.content.link}</a>
-                  </div>
-                )}
-              </div>
-            </div>
+            <Link href="/admin/campanas" className="shrink-0">
+              <Button
+                hierarchy="tertiary"
+                startContent={<Icon icon="tabler:arrow-left" />}
+              >
+                Volver
+              </Button>
+            </Link>
           </div>
+        </header>
+      </div>
+
+      <div className="flex min-h-0 w-full flex-1 flex-col gap-6 px-5 py-6 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
+        {error && (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+
+        {data && companyId && (
+          <>
+            <CampaignDetailOverview campaign={data} />
+            <CampaignDeliveriesSection
+              companyId={companyId}
+              campaignId={campaignId}
+              audienceTotal={data.audience.total ?? data.audience.count}
+              audienceDelivered={data.audience.delivered}
+            />
+          </>
         )}
       </div>
     </div>
   );
 }
-
-
