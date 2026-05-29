@@ -7,6 +7,7 @@ import UserActionLogsTable from "@/components/dashboard/UserActionLogsTable";
 import CompanyCreditsCard from "@/components/dashboard/CompanyCreditsCard";
 import DataOfficerCard from "@/components/administration/DataOfficerCard";
 import CustomSelect from "@/components/forms/CustomSelect";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { useCollectFormClasifications } from "@/hooks/useCollectFormClasifications";
 import { useCompanyActionLogs } from "@/hooks/useCompanyActionLogs";
@@ -50,6 +51,7 @@ const dateRange = useMemo(
   [month, yearNumber, currentYear]
 );
         const user = useSessionStore((store) => store.user);
+        const companyId = useActiveCompanyId();
         const companyPlanName = (user?.company?.plan?.name || "Plan actual").toLocaleUpperCase("es-CO");
         const companyPlanDescription =
           "Mejora tu plan o adquiere más beneficios para desbloquear todas las funciones.";
@@ -57,7 +59,7 @@ const dateRange = useMemo(
         
         // Solo cargar datos si tiene permisos
         const collectFormsClasifications = useCollectFormClasifications({
-        companyId: user?.companyUserData?.companyId,
+        companyId: companyId,
         pageSize: 6,
         startDate: dateRange.startDate.toISOString(),
         endDate: dateRange.endDate.toISOString(),
@@ -65,12 +67,12 @@ const dateRange = useMemo(
         });
         // Query global para acumulados históricos (sin filtro de mes)
         const collectFormsTotals = useCollectFormClasifications({
-        companyId: user?.companyUserData?.companyId,
+        companyId: companyId,
         pageSize: 200,
         enabled: shouldFetch('classification.view'),
         });
         const campaigns = useCampaigns({
-        companyId: user?.companyUserData?.companyId,
+        companyId: companyId,
         pageSize: 5,
         active: true,
         startDate: dateRange.startDate.toISOString(),
@@ -80,7 +82,7 @@ const dateRange = useMemo(
 
         // ⭐ IMPORTANTE: Solo cargar actionLogs si es COMPANY_ADMIN o SUPERADMIN
         const userActionLogs = useCompanyActionLogs({
-        companyId: user?.companyUserData?.companyId,
+        companyId: companyId,
         startDate: dateRange.startDate.toISOString(),
         endDate: dateRange.endDate.toISOString(),
         pageSize: 3,

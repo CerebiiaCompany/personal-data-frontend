@@ -1,7 +1,7 @@
 "use client";
 
-import { useSessionStore } from "@/store/useSessionStore";
 import { useRouter } from "next/navigation";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useCompanyPayments } from "@/hooks/useCompanyPayments";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import { usePlans } from "@/hooks/usePlans";
@@ -17,18 +17,18 @@ import { useCompanyCampaignsDeliveries } from "@/hooks/useCompanyCampaignsDelive
 import { useCompanyOtpCodes } from "@/hooks/useCompanyOtpCodes";
 
 export default function ProfilePlansPage() {
-  const user = useSessionStore((store) => store.user);
+  const companyId = useActiveCompanyId();
   const router = useRouter();
   const { data, loading, error } = usePlans({});
   const company = useOwnCompanyStore((store) => store.company);
 
   const campaignsDeliveries = useCompanyCampaignsDeliveries({
-    companyId: user?.companyUserData?.companyId,
+    companyId: companyId,
     /* startDate: new Date().toISOString(), */
   });
 
   const companyOtpCodes = useCompanyOtpCodes({
-    companyId: user?.companyUserData?.companyId,
+    companyId: companyId,
     /* startDate: new Date().toISOString(), */
   });
 

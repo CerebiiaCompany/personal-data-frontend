@@ -9,7 +9,7 @@ import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import { hideDialog } from "@/utils/dialogs.utils";
 import { CompanyAreaUser } from "@/types/companyArea.types";
 import { useCompanyAreaUsers } from "@/hooks/useCompanyAreaUsers";
-import { useSessionStore } from "@/store/useSessionStore";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import LoadingCover from "../layout/LoadingCover";
 
 interface Props {
@@ -18,9 +18,9 @@ interface Props {
 }
 
 const CompanyAreaUsersModal = ({ companyAreaId, companyAreaName }: Props) => {
-  const user = useSessionStore((store) => store.user);
+  const companyId = useActiveCompanyId();
   const { data, loading, error } = useCompanyAreaUsers({
-    companyId: user?.companyUserData?.companyId,
+    companyId: companyId,
     areaId: companyAreaId,
   });
   const id = HTML_IDS_DATA.companyAreaUsersModal;

@@ -3,6 +3,7 @@
 import AdministrationFormPageLayout from "@/components/administration/AdministrationFormPageLayout";
 import CreateCompanyRoleForm from "@/components/administration/CreateCompanyRoleForm";
 import LoadingCover from "@/components/layout/LoadingCover";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useCompanyRoles } from "@/hooks/useCompanyRoles";
 import { useSessionStore } from "@/store/useSessionStore";
 import { CompanyRole } from "@/types/companyRole.types";
@@ -11,6 +12,7 @@ import { useEffect } from "react";
 
 export default function AdministrationUpdateRolePage() {
   const user = useSessionStore((store) => store.user);
+  const companyId = useActiveCompanyId();
   const router = useRouter();
   const roleId = useParams().roleId?.toString();
 
@@ -21,7 +23,7 @@ export default function AdministrationUpdateRolePage() {
   }, [user, router]);
 
   const { data, loading, error } = useCompanyRoles<CompanyRole>({
-    companyId: user?.companyUserData?.companyId,
+    companyId: companyId,
     id: roleId,
   });
 

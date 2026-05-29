@@ -43,6 +43,8 @@ export interface CollectForm extends CreateCollectForm {
   /** Alternativa: nombre comercial en raíz (según contrato del API) */
   companyName?: string;
   _id: string;
+  /** Alias de `_id`. El backend envía ambos con el mismo valor. */
+  id?: string;
   createdAt: Date;
   isImported: boolean;
   totalResponses: number;
@@ -84,6 +86,8 @@ export interface CollectFormClasification {
 
 export interface CollectFormWithResponses {
   _id: string;
+  /** Alias de `_id`. El backend envía ambos con el mismo valor. */
+  id?: string;
   name: string;
   responses: CollectFormResponse[];
 }

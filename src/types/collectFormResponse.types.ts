@@ -10,6 +10,15 @@ export const parseCollectFormDocTypeToString = (type: CollectFormDocType): strin
   );
 };
 
+/** Estados de consentimiento soportados por el backend (endpoint de respuestas). */
+export type ConsentStatus = "ACTIVE" | "PENDING" | "REVOKED";
+
+export const consentStatusOptions: { value: ConsentStatus; title: string }[] = [
+  { value: "ACTIVE", title: "Activo" },
+  { value: "PENDING", title: "Pendiente" },
+  { value: "REVOKED", title: "Revocado" },
+];
+
 export type PersonKind = "NATURAL" | "JURIDICA";
 
 export const personKindOptions: CustomSelectOption<PersonKind>[] = [
@@ -155,7 +164,7 @@ export interface ConsentInfo {
   };
   ipAddress?: string;
   userAgent?: string;
-  status?: string;
+  status?: ConsentStatus | (string & {});
   statusUpdatedAt?: string;
   revokedAt?: string | null;
   revokeReason?: string | null;
@@ -164,6 +173,8 @@ export interface ConsentInfo {
 
 export interface CollectFormResponse {
   _id: string;
+  /** Alias de `_id`. El backend envía ambos con el mismo valor. */
+  id?: string;
   companyId?: string;
   collectFormId: string;
   user: CollectFormResponseUser;

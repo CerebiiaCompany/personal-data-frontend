@@ -55,7 +55,19 @@ export function useCollectForms<T = CollectForm[]>(params: UseCollectFormsParams
     if (!enabled || !queryParams.companyId) return;
 
     fetch();
-  }, [enabled, queryParams.companyId, queryParams.search, fetch]);
+    // Refetch ante cualquier parámetro documentado del endpoint:
+    // paginación, búsqueda, rango de fechas y detalle por id.
+  }, [
+    enabled,
+    queryParams.companyId,
+    queryParams.id,
+    queryParams.search,
+    queryParams.page,
+    queryParams.pageSize,
+    queryParams.startDate,
+    queryParams.endDate,
+    fetch,
+  ]);
 
   return {
     data,

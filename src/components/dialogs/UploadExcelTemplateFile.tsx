@@ -17,7 +17,6 @@ import { FieldError, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { parseApiError } from "@/utils/parseApiError";
 import { createCollectFormFromTemplate } from "@/lib/collectForm.api";
-import { useSessionStore } from "@/store/useSessionStore";
 import {
   CreateCollectFormFromTemplate,
   ImportTemplateResult,
@@ -26,6 +25,7 @@ import { toast } from "sonner";
 import { CollectFormResponseUser } from "@/types/collectFormResponse.types";
 import { parseExcelTemplate } from "@/utils/parseExcelTemplate";
 import { usePolicyTemplates } from "@/hooks/usePolicyTemplates";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import CustomSelect from "../forms/CustomSelect";
 import clsx from "clsx";
 
@@ -64,7 +64,7 @@ interface Props {
 }
 
 const UploadExcelTemplateDialog = ({ refresh }: Props) => {
-  const user = useSessionStore((store) => store.user);
+  const companyId = useActiveCompanyId();
   const {
     formState: { errors },
     register,
@@ -107,7 +107,7 @@ const UploadExcelTemplateDialog = ({ refresh }: Props) => {
   const id = HTML_IDS_DATA.uploadExcelTemplateDialog;
 
   const { data: policyTemplates, loading: loadingTemplates } = usePolicyTemplates({
-    companyId: user?.companyUserData?.companyId,
+    companyId: companyId,
   });
 
   const policyTemplateOptions = React.useMemo(() => {
@@ -133,7 +133,6 @@ const UploadExcelTemplateDialog = ({ refresh }: Props) => {
   async function onSubmit(data: any) {
     if (loading || !isFormComplete) return;
 
-    const companyId = user?.companyUserData?.companyId;
     if (!companyId) return;
 
     const file: File | undefined = data.attachments?.[0];

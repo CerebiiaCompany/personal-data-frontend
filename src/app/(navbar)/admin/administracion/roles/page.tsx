@@ -1,6 +1,7 @@
 "use client";
 
 import CompanyRolesCardsView from "@/components/administration/CompanyRolesCardsView";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useCompanyRoles } from "@/hooks/useCompanyRoles";
 import { useSessionStore } from "@/store/useSessionStore";
 import { useRouter } from "next/navigation";
@@ -8,6 +9,7 @@ import { useEffect, useState } from "react";
 
 export default function AdministrationRolesPage() {
   const user = useSessionStore((store) => store.user);
+  const companyId = useActiveCompanyId();
   const router = useRouter();
 
   useEffect(() => {
@@ -20,7 +22,7 @@ export default function AdministrationRolesPage() {
   const [pageSize, setPageSize] = useState<number>(12);
 
   const { data, meta, loading, error, refresh } = useCompanyRoles({
-    companyId: user?.companyUserData?.companyId,
+    companyId: companyId,
     page,
     pageSize,
   });

@@ -10,7 +10,7 @@ import { showDialog } from "@/utils/dialogs.utils";
 import Button from "../base/Button";
 import Link from "next/link";
 import { deleteCompanyArea } from "@/lib/companyArea.api";
-import { useSessionStore } from "@/store/useSessionStore";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { toast } from "sonner";
 import { parseApiError } from "@/utils/parseApiError";
 
@@ -22,7 +22,7 @@ interface Props {
 }
 
 const CompanyAreasTable = ({ items, loading, error, refresh }: Props) => {
-  const user = useSessionStore((store) => store.user);
+  const companyId = useActiveCompanyId();
   const [selectedArea, setSelectedArea] = useState<{
     id?: string;
     name?: string;
@@ -34,7 +34,6 @@ const CompanyAreasTable = ({ items, loading, error, refresh }: Props) => {
   }
 
   async function deleteArea(id: string) {
-    const companyId = user?.companyUserData?.companyId;
     if (!companyId) return;
     const res = await deleteCompanyArea(companyId, id);
 

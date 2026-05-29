@@ -10,6 +10,7 @@ import CheckPermission from "@/components/checkers/CheckPermission";
 import LoadingCover from "@/components/layout/LoadingCover";
 import { showApiErrorToast } from "@/components/feedback/ApiErrorToast";
 import { patchArcoRequestStatus } from "@/lib/arcoAdmin.api";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useCompanyArcoRequestDetail } from "@/hooks/useCompanyArcoRequestDetail";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useSessionStore } from "@/store/useSessionStore";
@@ -41,7 +42,7 @@ export default function ArcoRequestDetailPage() {
   const requestId = params.requestId as string;
   const router = useRouter();
   const user = useSessionStore((store) => store.user);
-  const companyId = user?.companyUserData?.companyId;
+  const companyId = useActiveCompanyId();
   const { hasPermission } = usePermissions();
   const canView = hasPermission("arcoRequests", "view");
   const canRespond = hasPermission("arcoRequests", "respond");

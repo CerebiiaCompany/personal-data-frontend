@@ -15,7 +15,6 @@ import CustomCheckbox from "../forms/CustomCheckbox";
 import CustomInput from "../forms/CustomInput";
 import CustomSelect from "../forms/CustomSelect";
 import CustomTextarea from "../forms/CustomTextarea";
-import { useSessionStore } from "@/store/useSessionStore";
 import { createCollectForm, updateCollectForm } from "@/lib/collectForm.api";
 import { parseApiError } from "@/utils/parseApiError";
 import { toast } from "sonner";
@@ -32,18 +31,19 @@ import { useCompanyAreas } from "@/hooks/useCompanyAreas";
 import { countriesOptions, CreateCompanyArea } from "@/types/companyArea.types";
 import { createCompanyArea, updateCompanyArea } from "@/lib/companyArea.api";
 import { useCompanyUsers } from "@/hooks/useCompanyUsers";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 
 interface Props {
   initialValues?: CreateCompanyArea;
 }
 
 const CreateCompanyAreaForm = ({ initialValues }: Props) => {
-  const user = useSessionStore((store) => store.user);
+  const companyId = useActiveCompanyId();
   const [loading, setLoading] = useState<boolean>(false);
   const [tagInput, setTagInput] = useState<string>("");
   const params = useParams();
   const companyUsers = useCompanyUsers({
-    companyId: user?.companyUserData?.companyId,
+    companyId: companyId,
   });
 
   const {
@@ -85,7 +85,7 @@ const CreateCompanyAreaForm = ({ initialValues }: Props) => {
   }, []);
 
   async function onSubmit(data: CreateCompanyArea) {
-    if (!user?.companyUserData?.companyId) return;
+    if (!companyId) return;
 
     setLoading(true);
 
@@ -94,13 +94,13 @@ const CreateCompanyAreaForm = ({ initialValues }: Props) => {
     if (initialValues) {
       //? handle updating
       res = await updateCompanyArea(
-        user?.companyUserData?.companyId,
+        companyId,
         params.areaId as string,
         data
       );
     } else {
       //? handle creating
-      res = await createCompanyArea(user?.companyUserData?.companyId, data);
+      res = await createCompanyArea(companyId, data);
     }
     setLoading(false);
 
@@ -110,6 +110,7 @@ const CreateCompanyAreaForm = ({ initialValues }: Props) => {
 
     toast.success(initialValues ? "Área actualizado" : "Área creado");
 
+    router.refresh();
     router.push("/admin/administracion/areas");
   }
 

@@ -7,7 +7,6 @@ import { Controller, FieldError, useForm } from "react-hook-form";
 import CustomInput from "../forms/CustomInput";
 import CustomSelect from "../forms/CustomSelect";
 import CustomTextarea from "../forms/CustomTextarea";
-import { useSessionStore } from "@/store/useSessionStore";
 import { parseApiError } from "@/utils/parseApiError";
 import { toast } from "sonner";
 import { useParams, useRouter } from "next/navigation";
@@ -32,6 +31,7 @@ import {
 } from "@/utils/date.utils";
 import { useCampaignAudience } from "@/hooks/useCampaignAudience";
 import { useAppSetting } from "@/hooks/useAppSetting";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import {
   asFiniteNumber,
   getCreditsPerMessage,
@@ -44,7 +44,7 @@ interface Props {
 }
 
 const CreateCampaignForm = ({ initialValues }: Props) => {
-  const user = useSessionStore((store) => store.user);
+  const companyId = useActiveCompanyId();
   const trmCopSetting = useAppSetting("TRM_COP");
   const smsCampaignPriceSetting = useAppSetting(
     "SMS_CAMPAIGN_PRICE_PER_MESSAGE_MASIVAPP"
@@ -95,7 +95,7 @@ const CreateCampaignForm = ({ initialValues }: Props) => {
 
   const router = useRouter();
   const campaignAudience = useCampaignAudience({
-    companyId: user?.companyUserData?.companyId,
+    companyId: companyId,
     sourceForms: watch("sourceFormIds").join(","),
     gender: watch("audience.gender"),
     minAge: Number(watch("audience.minAge")),
@@ -107,7 +107,7 @@ const CreateCampaignForm = ({ initialValues }: Props) => {
   const [floatingNavbarToggle, setFloatingNavbarToggle] =
     useState<boolean>(false);
   const collectForms = useCollectForms({
-    companyId: user?.companyUserData?.companyId,
+    companyId: companyId,
   });
 
   useEffect(() => {
@@ -131,7 +131,7 @@ const CreateCampaignForm = ({ initialValues }: Props) => {
   }, []);
 
   async function onSubmit(data: CreateCampaign) {
-    if (!user?.companyUserData?.companyId) return;
+    if (!companyId) return;
     if (submitLockRef.current) return;
     submitLockRef.current = true;
     setLoading(true);
@@ -149,7 +149,7 @@ const CreateCampaignForm = ({ initialValues }: Props) => {
       if (initialValues) {
         //? handle updating
         res = await updateCampaign(
-          user?.companyUserData?.companyId,
+          companyId,
           params.campaignId as string,
           {
             ...data,
@@ -167,7 +167,7 @@ const CreateCampaignForm = ({ initialValues }: Props) => {
         );
       } else {
         //? handle creating
-        res = await createCampaign(user?.companyUserData?.companyId, {
+        res = await createCampaign(companyId, {
           ...data,
           content: {
             ...data.content,
@@ -188,6 +188,7 @@ const CreateCampaignForm = ({ initialValues }: Props) => {
 
       toast.success(initialValues ? "Campaña actualizada" : "Campaña creada");
 
+      router.refresh();
       router.push("/admin/campanas");
     } finally {
       submitLockRef.current = false;

@@ -20,12 +20,13 @@ interface Props {
   companyId: string;
   formId: string;
   formName?: string;
+  onSuccess?: () => void;
 }
 
 const DEFAULT_BODY =
   "Estimado cliente, lo invitamos a aceptar la política de tratamiento de datos personales. Llene el formulario en el siguiente enlace:";
 
-export default function ConsentCampaignDialog({ companyId, formId, formName }: Props) {
+export default function ConsentCampaignDialog({ companyId, formId, formName, onSuccess }: Props) {
   const id = HTML_IDS_DATA.consentCampaignDialog;
 
   const [audienceCount, setAudienceCount] = useState<number | null>(null);
@@ -97,6 +98,7 @@ export default function ConsentCampaignDialog({ companyId, formId, formName }: P
       setSubmitting(false);
       toast.success("Campaña de consentimiento creada y programada");
       hideDialog(id);
+      onSuccess?.();
       return;
     }
 
@@ -110,6 +112,7 @@ export default function ConsentCampaignDialog({ companyId, formId, formName }: P
 
     toast.success("Campaña de consentimiento creada y activada");
     hideDialog(id);
+    onSuccess?.();
   }
 
   const maxChars = channel === "SMS" ? 160 : 1000;

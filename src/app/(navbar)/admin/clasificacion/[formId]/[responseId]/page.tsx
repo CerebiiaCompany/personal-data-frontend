@@ -2,9 +2,9 @@
 
 import PublicCollectForm from "@/components/customers/PublicCollectForm";
 import LoadingCover from "@/components/layout/LoadingCover";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useCollectFormResponses } from "@/hooks/useCollectFormResponses";
 import { useCollectForms } from "@/hooks/useCollectForms";
-import { useSessionStore } from "@/store/useSessionStore";
 import { CollectForm } from "@/types/collectForm.types";
 import { CollectFormResponse } from "@/types/collectFormResponse.types";
 import { Icon } from "@iconify/react";
@@ -12,18 +12,18 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
 export default function FormClassificationUpdateResponse() {
-  const user = useSessionStore((store) => store.user);
+  const companyId = useActiveCompanyId();
   const router = useRouter();
   const formId = useParams().formId?.toString();
   const responseId = useParams().responseId?.toString();
 
   const collectFormResponse = useCollectForms<CollectForm>({
-    companyId: user?.companyUserData?.companyId,
+    companyId: companyId,
     id: formId,
   });
   const { data, loading, error } = useCollectFormResponses<CollectFormResponse>(
     {
-      companyId: user?.companyUserData?.companyId,
+      companyId: companyId,
       id: formId,
       responseId: responseId,
     }

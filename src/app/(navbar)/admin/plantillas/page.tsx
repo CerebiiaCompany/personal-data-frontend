@@ -8,7 +8,7 @@ import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import { usePolicyTemplates } from "@/hooks/usePolicyTemplates";
 import { deletePolicyTemplate } from "@/lib/policyTemplate.api";
 import { getPolicyTemplateFileUrl } from "@/lib/policyTemplate.api";
-import { useSessionStore } from "@/store/useSessionStore";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { parseApiError } from "@/utils/parseApiError";
 import { showDialog } from "@/utils/dialogs.utils";
 import { Icon } from "@iconify/react";
@@ -29,15 +29,14 @@ const topCardClass =
   "bg-white border border-[#E8EDF7] rounded-2xl shadow-[0_2px_10px_rgba(15,35,70,0.03)]";
 
 export default function TemplatesPage() {
-  const user = useSessionStore((store) => store.user);
+  const companyId = useActiveCompanyId();
   const { can } = usePermissionCheck();
   const confirm = useConfirm();
   const { data, loading, error, refresh } = usePolicyTemplates({
-    companyId: user?.companyUserData?.companyId,
+    companyId: companyId,
   });
 
   async function viewInWeb(policyTemplateId: string, download?: string) {
-    const companyId = user?.companyUserData?.companyId;
     if (!companyId) {
       toast.error("No se pudo obtener la información de la compañía");
       return;
@@ -97,7 +96,6 @@ export default function TemplatesPage() {
 
     if (!confirmed) return;
 
-    const companyId = user?.companyUserData?.companyId;
     if (!companyId) return;
 
     const res = await deletePolicyTemplate(companyId, policyId);

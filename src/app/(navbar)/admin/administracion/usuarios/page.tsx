@@ -4,9 +4,9 @@ import CompanyUsersTable from "@/components/administration/CompanyUsersTable";
 import Button from "@/components/base/Button";
 import Pagination from "@/components/base/Pagination";
 import SectionSearchBar from "@/components/base/SectionSearchBar";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useCompanyUsers } from "@/hooks/useCompanyUsers";
 import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
-import { useSessionStore } from "@/store/useSessionStore";
 import { Icon } from "@iconify/react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -18,13 +18,13 @@ const topCardClass =
 const NAVY = "#1A2B5B";
 
 export default function AdministrationUsersPage() {
-  const user = useSessionStore((store) => store.user);
+  const companyId = useActiveCompanyId();
   const { debouncedValue, search, setSearch } = useDebouncedSearch();
   const [page, setPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
 
   const { data, meta, loading, error, refresh } = useCompanyUsers({
-    companyId: user?.companyUserData?.companyId,
+    companyId: companyId,
     search: debouncedValue,
     page,
     pageSize,
@@ -110,12 +110,12 @@ export default function AdministrationUsersPage() {
         </section>
       </div>
 
-      <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col px-5 py-6 sm:px-6 sm:py-7 lg:px-8 lg:py-8 xl:px-10 2xl:px-12">
+      <div className="w-full min-w-0 px-5 py-6 sm:px-6 sm:py-7 lg:px-8 lg:py-8 xl:px-10 2xl:px-12">
         <section
           id="users-table-container"
-          className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-[#E8EDF7] bg-white shadow-[0_2px_12px_rgba(15,35,70,0.04)]"
+          className="flex w-full min-w-0 flex-col overflow-hidden rounded-2xl border border-[#E8EDF7] bg-white shadow-[0_2px_12px_rgba(15,35,70,0.04)]"
         >
-          <div className="min-h-0 flex-1 overflow-auto p-4 sm:p-5">
+          <div className="w-full p-4 sm:p-5">
             <CompanyUsersTable
               refresh={refresh}
               items={data}

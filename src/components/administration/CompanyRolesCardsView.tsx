@@ -5,12 +5,10 @@ import SectionSearchBar from "@/components/base/SectionSearchBar";
 import Button from "@/components/base/Button";
 import Pagination from "@/components/base/Pagination";
 import RolePermissionsDrawer from "@/components/administration/RolePermissionsDrawer";
-import { useCompanyUsers } from "@/hooks/useCompanyUsers";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { deleteCompanyRole } from "@/lib/companyRole.api";
-import { useSessionStore } from "@/store/useSessionStore";
 import type { APIResponse } from "@/types/api.types";
-import type { CompanyRole } from "@/types/companyRole.types";
-import type { SessionUser } from "@/types/user.types";
+import type { CompanyRole, RoleAssignedUser } from "@/types/companyRole.types";
 import { parseApiError } from "@/utils/parseApiError";
 import {
   formatRelativeEs,
@@ -28,7 +26,7 @@ const topCardClass =
 const NAVY = "#1A2B5B";
 const CONFIGURABLE_MODULES = 6;
 
-function initials(u: SessionUser) {
+function initials(u: RoleAssignedUser) {
   const a = (u.name ?? "").trim()[0] ?? "";
   const b = (u.lastName ?? "").trim()[0] ?? "";
   return `${a}${b}`.toUpperCase() || "?";
@@ -39,21 +37,6 @@ function avatarColor(seed: string) {
   let h = 0;
   for (let i = 0; i < seed.length; i++) h += seed.charCodeAt(i);
   return hues[h % hues.length];
-}
-
-function buildRoleUserMaps(users: SessionUser[] | null) {
-  const counts = new Map<string, number>();
-  const samples = new Map<string, SessionUser[]>();
-  if (!users) return { counts, samples };
-  for (const u of users) {
-    const rid = u.companyUserData?.companyRole?._id;
-    if (!rid) continue;
-    counts.set(rid, (counts.get(rid) ?? 0) + 1);
-    const arr = samples.get(rid) ?? [];
-    if (arr.length < 4) arr.push(u);
-    samples.set(rid, arr);
-  }
-  return { counts, samples };
 }
 
 interface Props {
@@ -77,28 +60,17 @@ export default function CompanyRolesCardsView({
   onPageSizeChange,
   scrollAnchorId = "roles-cards-container",
 }: Props) {
-  const user = useSessionStore((s) => s.user);
-  const companyId = user?.companyUserData?.companyId;
+  const companyId = useActiveCompanyId();
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<CompanyRole | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const { data: usersData } = useCompanyUsers({
-    companyId,
-    page: 1,
-    pageSize: 500,
-  });
-
-  const { counts: usersPerRole, samples: userSamples } = useMemo(
-    () => buildRoleUserMaps(usersData ?? null),
-    [usersData]
+  // Los usuarios asignados ahora vienen embebidos en cada rol (endpoint de roles),
+  // así que no se requiere un fetch adicional de usuarios.
+  const usersWithRoleTotal = useMemo(
+    () => (items ?? []).reduce((sum, r) => sum + (r.users?.length ?? 0), 0),
+    [items]
   );
-
-  const usersWithRoleTotal = useMemo(() => {
-    if (!usersData) return 0;
-    return usersData.filter((u) => u.companyUserData?.companyRole?._id)
-      .length;
-  }, [usersData]);
 
   const filteredItems = useMemo(() => {
     if (!items) return null;
@@ -287,8 +259,8 @@ export default function CompanyRolesCardsView({
                   <RoleCard
                     key={role._id}
                     role={role}
-                    userCount={usersPerRole.get(role._id) ?? 0}
-                    sampleUsers={userSamples.get(role._id) ?? []}
+                    userCount={role.users?.length ?? 0}
+                    sampleUsers={role.users ?? []}
                     onOpen={() => {
                       setSelected(role);
                       setDrawerOpen(true);
@@ -319,7 +291,7 @@ export default function CompanyRolesCardsView({
           setDrawerOpen(false);
           setSelected(null);
         }}
-        userCount={selected ? (usersPerRole.get(selected._id) ?? 0) : 0}
+        userCount={selected ? (selected.users?.length ?? 0) : 0}
       />
     </>
   );
@@ -334,7 +306,7 @@ function RoleCard({
 }: {
   role: CompanyRole;
   userCount: number;
-  sampleUsers: SessionUser[];
+  sampleUsers: RoleAssignedUser[];
   onOpen: () => void;
   onDelete: (e: React.MouseEvent) => void;
 }) {

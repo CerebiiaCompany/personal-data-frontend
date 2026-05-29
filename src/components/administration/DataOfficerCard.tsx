@@ -3,6 +3,7 @@
 import Button from "@/components/base/Button";
 import { useCompanyDataOfficer } from "@/hooks/useCompanyDataOfficer";
 import { useCompanyUsers } from "@/hooks/useCompanyUsers";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useSessionStore } from "@/store/useSessionStore";
 import { Icon } from "@iconify/react";
 import Link from "next/link";
@@ -28,7 +29,7 @@ export default function DataOfficerCard({
   hideWhenAssigned = true,
 }: Props) {
   const user = useSessionStore((store) => store.user);
-  const companyId = user?.companyUserData?.companyId;
+  const companyId = useActiveCompanyId();
   const canAssign = user?.role === "COMPANY_ADMIN";
   const [selectedUserId, setSelectedUserId] = useState("");
   const shouldLoadUsers = !compact && canAssign;

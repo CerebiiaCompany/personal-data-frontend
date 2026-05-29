@@ -4,8 +4,8 @@ import Button from "@/components/base/Button";
 import CampaignDeliveriesSection from "@/components/campaigns/CampaignDeliveriesSection";
 import CampaignDetailOverview from "@/components/campaigns/CampaignDetailOverview";
 import LoadingCover from "@/components/layout/LoadingCover";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { fetchCampaigns } from "@/lib/campaign.api";
-import { useSessionStore } from "@/store/useSessionStore";
 import { Campaign } from "@/types/campaign.types";
 import { parseApiError } from "@/utils/parseApiError";
 import { Icon } from "@iconify/react/dist/iconify.js";
@@ -15,8 +15,7 @@ import { useEffect, useState } from "react";
 
 export default function CampaignDetailPage() {
   const { campaignId } = useParams<{ campaignId: string }>();
-  const user = useSessionStore((s) => s.user);
-  const companyId = user?.companyUserData?.companyId;
+  const companyId = useActiveCompanyId();
 
   const [data, setData] = useState<Campaign | null>(null);
   const [loading, setLoading] = useState(true);

@@ -3,6 +3,7 @@
 import AuditLogsTable from "@/components/audit/AuditLogsTable";
 import Button from "@/components/base/Button";
 import Pagination from "@/components/base/Pagination";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useCompanyActionLogs } from "@/hooks/useCompanyActionLogs";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useSessionStore } from "@/store/useSessionStore";
@@ -18,6 +19,7 @@ import Link from "next/link";
 
 export default function AuditoriaPage() {
   const user = useSessionStore((store) => store.user);
+  const companyId = useActiveCompanyId();
   const router = useRouter();
   const { hasPermission } = usePermissions();
   const [page, setPage] = useState(1);
@@ -37,7 +39,7 @@ export default function AuditoriaPage() {
   }, [user, canViewAudit, router]);
 
   const { data, meta, loading, error, refresh } = useCompanyActionLogs({
-    companyId: user?.companyUserData?.companyId,
+    companyId: companyId,
     page,
     pageSize,
     startDate: startDate || undefined,

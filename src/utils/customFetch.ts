@@ -124,6 +124,10 @@ export async function customFetch<T>(
     try {
       const req = await fetchWithTimeout(`${API_BASE_URL}${localEndpoint}`, {
         credentials: "include",
+        // Evita que el navegador/Next sirvan respuestas cacheadas: tras una
+        // mutación (crear/editar/eliminar) el refetch siempre debe traer datos
+        // frescos del backend.
+        cache: "no-store",
         headers: {
           ...headers,
           ...options.headers,

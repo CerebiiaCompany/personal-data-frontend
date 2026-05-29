@@ -3,7 +3,6 @@
 import Button from "@/components/base/Button";
 import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import { updatePassword } from "@/lib/auth.api";
-import { useSessionStore } from "@/store/useSessionStore";
 import { parseUserRoleToString } from "@/types/user.types";
 import { hideDialog, showDialog } from "@/utils/dialogs.utils";
 import { parseApiError } from "@/utils/parseApiError";
@@ -16,14 +15,15 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import * as z from "zod";
 import CustomInput from "@/components/forms/CustomInput";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useCompanyPayments } from "@/hooks/useCompanyPayments";
 import CompanyPaymentsTable from "@/components/profile/payments/CompanyPaymentsTable";
 
 export default function ProfilePaymentsHistoryPage() {
-  const user = useSessionStore((store) => store.user);
+  const companyId = useActiveCompanyId();
   const router = useRouter();
   const { data, loading, error, refresh } = useCompanyPayments({
-    companyId: user?.companyUserData?.companyId,
+    companyId: companyId,
   });
 
   return (

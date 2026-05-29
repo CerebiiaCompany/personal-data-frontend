@@ -4,32 +4,37 @@ import { customFetch } from "@/utils/customFetch";
 import { API_BASE_URL } from "@/utils/env.utils";
 
 type AuthSessionPayload = {
-user: SessionUser;
-company?: SessionUser["company"];
+  user: SessionUser;
+  company?: SessionUser["company"];
+  companyUserData?: SessionUser["companyUserData"];
 };
 
 export async function getSession(): Promise<APIResponse<SessionUser>> {
-    const res = await customFetch<SessionUser | AuthSessionPayload>("/auth", {
-        method: "GET",
-        });
+  const res = await customFetch<SessionUser | AuthSessionPayload>("/auth", {
+    method: "GET",
+  });
 
-        if (!res.data) return res as APIResponse<SessionUser>;
+  if (!res.data) return res as APIResponse<SessionUser>;
 
-            // Compatibilidad: backend nuevo retorna { data: { user, company } }
-            const payload = res.data as AuthSessionPayload;
-            if ("user" in payload && payload.user) {
-            return {
-            ...res,
-            data: {
-            ...payload.user,
-            company: payload.company,
-            },
-            };
-            }
+  // Compatibilidad: backend nuevo retorna { data: { user, company, companyUserData } }
+  // como objetos hermanos. Los fusionamos en un único SessionUser para que tanto
+  // `companyUserData.companyId` (fuente primaria) como `company._id` (fallback)
+  // queden disponibles para useActiveCompanyId().
+  const payload = res.data as AuthSessionPayload;
+  if ("user" in payload && payload.user) {
+    return {
+      ...res,
+      data: {
+        ...payload.user,
+        company: payload.company ?? payload.user.company,
+        companyUserData: payload.companyUserData ?? payload.user.companyUserData,
+      },
+    };
+  }
 
-            // Compatibilidad con formato anterior (data = SessionUser)
-            return res as APIResponse<SessionUser>;
-                }
+  // Compatibilidad con formato anterior (data = SessionUser)
+  return res as APIResponse<SessionUser>;
+}
 
                 /**
                 * Obtiene los permisos del usuario actual desde el backend

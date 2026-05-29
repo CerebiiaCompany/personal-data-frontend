@@ -3,10 +3,10 @@ import React from "react";
 import CollectFormCard from "./CollectFormCard";
 import LoadingCover from "../layout/LoadingCover";
 import { deleteCollectForm } from "@/lib/collectForm.api";
-import { useSessionStore } from "@/store/useSessionStore";
 import { toast } from "sonner";
 import { parseApiError } from "@/utils/parseApiError";
 import { useConfirm } from "@/components/dialogs/ConfirmProvider";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 
 interface Props {
   items: CollectForm[] | null;
@@ -16,7 +16,7 @@ interface Props {
 }
 
 const CollectFormsList = ({ items, loading, error, refresh }: Props) => {
-  const user = useSessionStore((store) => store.user);
+  const companyId = useActiveCompanyId();
   const confirm = useConfirm();
 
   async function deleteForm(id: string) {
@@ -55,7 +55,6 @@ const CollectFormsList = ({ items, loading, error, refresh }: Props) => {
 
     if (!confirmed) return;
 
-    const companyId = user?.companyUserData?.companyId;
     if (!companyId) return;
     
     const res = await deleteCollectForm(companyId, id, reason || undefined);

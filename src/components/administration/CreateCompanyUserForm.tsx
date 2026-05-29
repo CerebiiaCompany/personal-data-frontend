@@ -31,6 +31,7 @@ import { createCompanyUser, updateCompanyUser } from "@/lib/user.api";
 import { useCompanyAreas } from "@/hooks/useCompanyAreas";
 import { useCompanyRoles } from "@/hooks/useCompanyRoles";
 import { usePermissionCheck } from "@/hooks/usePermissionCheck";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 
 interface Props {
   initialValues?: CreateUser | UpdateUser;
@@ -45,11 +46,12 @@ const CreateCompanyUserForm = ({
 }: Props) => {
   const { user, setUser } = useSessionStore();
   const { isCompanyAdmin, isSuperAdmin } = usePermissionCheck();
+  const companyId = useActiveCompanyId();
   const areas = useCompanyAreas({
-    companyId: user?.companyUserData?.companyId,
+    companyId: companyId,
   });
   const roles = useCompanyRoles({
-    companyId: user?.companyUserData?.companyId,
+    companyId: companyId,
   });
   const [loading, setLoading] = useState<boolean>(false);
   const params = useParams();
@@ -138,7 +140,7 @@ const CreateCompanyUserForm = ({
   }, []);
 
   async function onSubmit(data: CreateUser | UpdateUser) {
-    if (!user?.companyUserData?.companyId) return;
+    if (!companyId) return;
 
     if (isCreating && hasNoAreas) {
       toast.error(
@@ -170,14 +172,14 @@ const CreateCompanyUserForm = ({
       }
       
       res = await updateCompanyUser(
-        user?.companyUserData?.companyId,
+        companyId,
         userId || (params.userId as string),
         updateData
       );
     } else {
       //? handle creating
       res = await createCompanyUser(
-        user?.companyUserData?.companyId,
+        companyId,
         data as CreateUser
       );
     }
@@ -186,13 +188,14 @@ const CreateCompanyUserForm = ({
     if (res.error) {
       return toast.error(parseApiError(res.error));
     }
-    if (res.data.id && res.data._id === user._id) {
+    if (res.data.id && res.data._id === user?._id) {
       // user updated its own document
       setUser(res.data);
     }
 
     toast.success(initialValues ? "Usuario actualizado" : "Usuario creado");
 
+    router.refresh();
     router.push(callbackUrl || "/admin/administracion/usuarios");
   }
 

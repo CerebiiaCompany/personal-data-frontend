@@ -38,7 +38,7 @@ export type ModulePermissionStat = {
 };
 
 export function summarizeRolePermissions(
-  permissions: CompanyRolePermissions
+  permissions?: CompanyRolePermissions | null
 ): {
   active: number;
   total: number;
@@ -51,7 +51,9 @@ export function summarizeRolePermissions(
   const modules: ModulePermissionStat[] = [];
 
   for (const key of ROLE_MODULE_ORDER) {
-    const block = permissions[key] as Record<string, boolean>;
+    // El backend puede devolver roles sin `permissions` o con módulos faltantes;
+    // tratamos cualquier bloque ausente como sin permisos para no romper la UI.
+    const block = (permissions?.[key] as Record<string, boolean> | undefined) ?? {};
     const keys = Object.keys(block);
     let a = 0;
     for (const k of keys) {

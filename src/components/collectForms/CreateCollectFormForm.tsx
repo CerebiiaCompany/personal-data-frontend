@@ -17,7 +17,6 @@ import SelectTemplateDialog from "../dialogs/SelectTemplateDialog";
 import ConsentCampaignDialog from "../dialogs/ConsentCampaignDialog";
 import CustomInput from "../forms/CustomInput";
 import CustomSelect from "../forms/CustomSelect";
-import { useSessionStore } from "@/store/useSessionStore";
 import { createCollectForm, updateCollectForm } from "@/lib/collectForm.api";
 import { parseApiError } from "@/utils/parseApiError";
 import { toast } from "sonner";
@@ -25,6 +24,7 @@ import { useParams, useRouter } from "next/navigation";
 import { createCollectFormValidationSchema } from "@/validations/main.validations";
 import { showDialog } from "@/utils/dialogs.utils";
 import { usePolicyTemplates } from "@/hooks/usePolicyTemplates";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import LoadingCover from "../layout/LoadingCover";
 import Link from "next/link";
 
@@ -106,9 +106,9 @@ const CreateCollectFormForm = ({ initialValues }: Props) => {
   }, []);
 
   const router = useRouter();
-  const user = useSessionStore((store) => store.user);
+  const companyId = useActiveCompanyId();
   const policyTemplates = usePolicyTemplates({
-    companyId: user?.companyUserData?.companyId,
+    companyId: companyId,
   });
 
   const marketingChannels = watch("marketingChannels");
@@ -159,7 +159,7 @@ const CreateCollectFormForm = ({ initialValues }: Props) => {
   }
 
   async function onSubmit(data: CreateCollectForm) {
-    if (!user?.companyUserData?.companyId) return;
+    if (!companyId) return;
 
     setLoading(true);
     const payload = toApiPayload(data);
@@ -167,12 +167,12 @@ const CreateCollectFormForm = ({ initialValues }: Props) => {
     let res;
     if (isEdit && params.formId) {
       res = await updateCollectForm(
-        user.companyUserData.companyId,
+        companyId,
         params.formId as string,
         payload
       );
     } else {
-      res = await createCollectForm(user.companyUserData.companyId, payload);
+      res = await createCollectForm(companyId, payload);
     }
     setLoading(false);
 
@@ -181,6 +181,7 @@ const CreateCollectFormForm = ({ initialValues }: Props) => {
     }
 
     toast.success(isEdit ? "Formulario actualizado" : "Formulario creado");
+    router.refresh();
     router.push("/admin/recoleccion");
   }
 
@@ -687,7 +688,7 @@ const CreateCollectFormForm = ({ initialValues }: Props) => {
               </div>
             </div>
 
-            {isEdit && formIdForLink && user?.companyUserData?.companyId && (
+            {isEdit && formIdForLink && companyId && (
               <>
                 <div className="rounded-2xl border border-emerald-200 bg-[#F0FDF4] px-5 py-5 flex flex-col gap-3 shadow-[0_2px_12px_rgba(16,185,129,0.08)]">
                   <div className="flex items-start gap-3">
@@ -715,7 +716,7 @@ const CreateCollectFormForm = ({ initialValues }: Props) => {
                 </div>
 
                 <ConsentCampaignDialog
-                  companyId={user.companyUserData.companyId}
+                  companyId={companyId}
                   formId={formIdForLink}
                   formName={watch("name")}
                 />

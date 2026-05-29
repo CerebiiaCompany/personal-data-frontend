@@ -4,6 +4,7 @@ import ArcoRequestsTable from "@/components/arco/ArcoRequestsTable";
 import ArcoSummaryCards from "@/components/arco/ArcoSummaryCards";
 import Button from "@/components/base/Button";
 import Pagination from "@/components/base/Pagination";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useCompanyArcoRequests } from "@/hooks/useCompanyArcoRequests";
 import { useCompanyArcoSummary } from "@/hooks/useCompanyArcoSummary";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -23,7 +24,7 @@ export default function ArcoAdminPage() {
   const user = useSessionStore((store) => store.user);
   const router = useRouter();
   const { hasPermission } = usePermissions();
-  const companyId = user?.companyUserData?.companyId;
+  const companyId = useActiveCompanyId();
 
   const canView = hasPermission("arcoRequests", "view");
 

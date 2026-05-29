@@ -5,10 +5,10 @@ import SectionSearchBar from "@/components/base/SectionSearchBar";
 import DataOfficerCard from "@/components/administration/DataOfficerCard";
 import CollectFormsList from "@/components/collectForms/CollectFormsList";
 import CheckPermission from "@/components/checkers/CheckPermission";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useCollectForms } from "@/hooks/useCollectForms";
 import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import { usePermissionCheck } from "@/hooks/usePermissionCheck";
-import { useSessionStore } from "@/store/useSessionStore";
 import { Icon } from "@iconify/react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -24,7 +24,7 @@ function normalizeText(value: string) {
 }
 
 export default function CollectPage() {
-  const user = useSessionStore((store) => store.user);
+  const companyId = useActiveCompanyId();
   const { shouldFetch } = usePermissionCheck();
   const { debouncedValue, setSearch, search } = useDebouncedSearch();
   const [activeFilter, setActiveFilter] = useState<CollectFilter>("ALL");
@@ -34,7 +34,7 @@ export default function CollectPage() {
     error,
     refresh,
   } = useCollectForms({
-    companyId: user?.companyUserData?.companyId,
+    companyId,
     search: debouncedValue,
     enabled: shouldFetch('collect.view'),
   });

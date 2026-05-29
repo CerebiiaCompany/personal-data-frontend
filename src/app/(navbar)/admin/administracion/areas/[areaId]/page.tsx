@@ -3,17 +3,17 @@
 import AdministrationFormPageLayout from "@/components/administration/AdministrationFormPageLayout";
 import CreateCompanyAreaForm from "@/components/administration/CreateCompanyAreaForm";
 import LoadingCover from "@/components/layout/LoadingCover";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useCompanyAreas } from "@/hooks/useCompanyAreas";
-import { useSessionStore } from "@/store/useSessionStore";
 import { CompanyArea } from "@/types/companyArea.types";
 import { useParams } from "next/navigation";
 
 export default function AdministrationUpdateAreaPage() {
-  const user = useSessionStore((store) => store.user);
+  const companyId = useActiveCompanyId();
   const areaId = useParams().areaId?.toString();
 
   const { data, loading, error } = useCompanyAreas<CompanyArea>({
-    companyId: user?.companyUserData?.companyId,
+    companyId: companyId,
     id: areaId,
   });
 

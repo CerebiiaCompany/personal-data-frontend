@@ -10,7 +10,6 @@ import { formatDateToString } from "@/utils/date.utils";
 import Button from "../base/Button";
 import CustomToggle from "../forms/CustomToggle";
 import { updateCampaign } from "@/lib/campaign.api";
-import { useSessionStore } from "@/store/useSessionStore";
 import { toast } from "sonner";
 import { parseApiError } from "@/utils/parseApiError";
 import { useAppSetting } from "@/hooks/useAppSetting";
@@ -22,12 +21,14 @@ import {
 } from "@/utils/campaignCredits.utils";
 import { creditsFormatter, priceFormatter } from "@/utils/formatters";
 import { usePermissionCheck } from "@/hooks/usePermissionCheck";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useConfirm } from "../dialogs/ConfirmProvider";
 
 interface Props {
   items: Campaign[] | null;
   loading: boolean;
   error: string | null;
+  refresh?: () => void;
 }
 
 function goalPill(goal: CampaignGoal): { label: string; className: string; icon: string } {
@@ -116,11 +117,11 @@ function channelIcon(ch: string): string {
   return "tabler:send";
 }
 
-const CampaignsTable = ({ items, loading, error }: Props) => {
+const CampaignsTable = ({ items, loading, error, refresh }: Props) => {
   const confirm = useConfirm();
   const { can } = usePermissionCheck();
   const [localItems, setLocalItems] = useState<Campaign[] | null>(null);
-  const user = useSessionStore((store) => store.user);
+  const companyId = useActiveCompanyId();
 
   useEffect(() => {
     setLocalItems(items);
@@ -152,9 +153,9 @@ const CampaignsTable = ({ items, loading, error }: Props) => {
         "Una vez activada, la campaña se enviará a la audiencia y no podrás desactivarla hasta finalizar su programación.",
     });
     if (!ok) return;
-    if (!localItems?.length || !user?.companyUserData?.companyId) return;
+    if (!localItems?.length || !companyId) return;
 
-    const res = await updateCampaign(user.companyUserData.companyId, id, {
+    const res = await updateCampaign(companyId, id, {
       active: value,
     });
     if (res.error) {
@@ -167,6 +168,8 @@ const CampaignsTable = ({ items, loading, error }: Props) => {
         : prev
     );
     toast.success("Campaña activada");
+    // Revalida contra el servidor para reflejar estado/programación reales.
+    refresh?.();
   }
 
   const thClass =

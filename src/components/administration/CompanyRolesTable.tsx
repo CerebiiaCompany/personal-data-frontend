@@ -2,7 +2,7 @@ import React from "react";
 import LoadingCover from "../layout/LoadingCover";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import { CompanyRole } from "@/types/companyRole.types";
-import { useSessionStore } from "@/store/useSessionStore";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { deleteCompanyRole } from "@/lib/companyRole.api";
 import { parseApiError } from "@/utils/parseApiError";
 import { toast } from "sonner";
@@ -17,10 +17,9 @@ interface Props {
 }
 
 const CompanyRolesTable = ({ items, loading, error, refresh }: Props) => {
-  const user = useSessionStore((store) => store.user);
+  const companyId = useActiveCompanyId();
 
   async function deleteRole(id: string) {
-    const companyId = user?.companyUserData?.companyId;
     if (!companyId) return;
     const res = await deleteCompanyRole(companyId, id);
 

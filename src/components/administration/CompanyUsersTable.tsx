@@ -5,6 +5,7 @@ import { Icon } from "@iconify/react/dist/iconify.js";
 import Link from "next/link";
 import { deleteCompanyUser } from "@/lib/user.api";
 import { useSessionStore } from "@/store/useSessionStore";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { toast } from "sonner";
 import { parseApiError } from "@/utils/parseApiError";
 
@@ -24,12 +25,13 @@ const CompanyUsersTable = ({
   editActions = true,
 }: Props) => {
   const user = useSessionStore((store) => store.user);
+  const companyId = useActiveCompanyId();
 
   async function deleteUser(userId: string) {
-    if (!user?.companyUserData?.companyId) return;
+    if (!companyId) return;
 
     const res = await deleteCompanyUser(
-      user?.companyUserData?.companyId,
+      companyId,
       userId
     );
 

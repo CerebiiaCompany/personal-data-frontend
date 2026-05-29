@@ -8,9 +8,9 @@ import UploadExcelTemplateDialog from "@/components/dialogs/UploadExcelTemplateF
 import ConsentCampaignDialog from "@/components/dialogs/ConsentCampaignDialog";
 import CheckPermission from "@/components/checkers/CheckPermission";
 import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useCollectFormClasifications } from "@/hooks/useCollectFormClasifications";
 import { usePermissionCheck } from "@/hooks/usePermissionCheck";
-import { useSessionStore } from "@/store/useSessionStore";
 import { showDialog } from "@/utils/dialogs.utils";
 import { downloadExcelTemplate } from "@/utils/downloadExcelTemplate";
 import { Icon } from "@iconify/react";
@@ -44,8 +44,7 @@ function filterByFormName(
 }
 
 export default function ClassificationPage() {
-  const user = useSessionStore((store) => store.user);
-  const companyId = user?.companyUserData?.companyId;
+  const companyId = useActiveCompanyId();
   const { shouldFetch } = usePermissionCheck();
   const [search, setSearch] = useState("");
   const [consentCampaignTarget, setConsentCampaignTarget] = useState<{

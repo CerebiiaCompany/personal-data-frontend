@@ -5,10 +5,10 @@ import SectionSearchBar from "@/components/base/SectionSearchBar";
 import CampaignsSummaryCards from "@/components/campaigns/CampaignsSummaryCards";
 import CampaignsTable from "@/components/campaigns/CampaignsTable";
 import CheckPermission from "@/components/checkers/CheckPermission";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import { usePermissionCheck } from "@/hooks/usePermissionCheck";
-import { useSessionStore } from "@/store/useSessionStore";
 import { Campaign } from "@/types/campaign.types";
 import {
   asFiniteNumber,
@@ -53,14 +53,14 @@ function matchesStatusFilter(item: Campaign, tab: StatusFilterTab): boolean {
 }
 
 export default function CampaignsPage() {
-  const user = useSessionStore((store) => store.user);
+  const companyId = useActiveCompanyId();
   const { shouldFetch } = usePermissionCheck();
   const { search, debouncedValue, setSearch } = useDebouncedSearch();
   const [statusTab, setStatusTab] = useState<StatusFilterTab>("ALL");
   const [typeTab, setTypeTab] = useState<TypeFilterTab>("ALL");
 
-  const { data, loading, error } = useCampaigns({
-    companyId: user?.companyUserData?.companyId,
+  const { data, loading, error, refresh } = useCampaigns({
+    companyId: companyId,
     search: debouncedValue,
     type: typeTab !== "ALL" ? typeTab : undefined,
     enabled: shouldFetch("campaigns.view"),
@@ -259,6 +259,7 @@ export default function CampaignsPage() {
             items={filteredItems}
             loading={loading}
             error={error}
+            refresh={refresh}
           />
         </div>
       </div>

@@ -10,7 +10,7 @@ import { showDialog } from "@/utils/dialogs.utils";
 import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import { parseApiError } from "@/utils/parseApiError";
 import { deleteCollectFormResponse } from "@/lib/collectFormResponse.api";
-import { useSessionStore } from "@/store/useSessionStore";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { usePermissionCheck } from "@/hooks/usePermissionCheck";
 import { useConfirm } from "@/components/dialogs/ConfirmProvider";
 import { APIResponse } from "@/types/api.types";
@@ -191,7 +191,7 @@ const FormResponsesTable = ({
   onPageChange,
   onPageSizeChange,
 }: Props) => {
-  const user = useSessionStore((store) => store.user);
+  const companyId = useActiveCompanyId();
   const { can } = usePermissionCheck();
   const confirm = useConfirm();
   const formId = useParams().formId!.toString();
@@ -205,7 +205,6 @@ const FormResponsesTable = ({
   };
 
   async function deleteResponse(id: string) {
-    const companyId = user?.companyUserData?.companyId;
     if (!companyId) return;
 
     let reason = "";
@@ -257,7 +256,7 @@ const FormResponsesTable = ({
 
       <SendConsentInvitationDialog
         response={selectedResponse}
-        companyId={user?.companyUserData?.companyId || ""}
+        companyId={companyId || ""}
         collectFormId={formId}
         onSent={refresh}
       />

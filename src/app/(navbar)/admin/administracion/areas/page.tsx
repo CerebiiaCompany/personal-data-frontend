@@ -3,8 +3,8 @@
 import CompanyAreasTable from "@/components/administration/CompanyAreasTable";
 import Button from "@/components/base/Button";
 import Pagination from "@/components/base/Pagination";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useCompanyAreas } from "@/hooks/useCompanyAreas";
-import { useSessionStore } from "@/store/useSessionStore";
 import { Icon } from "@iconify/react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -16,12 +16,12 @@ const topCardClass =
 const NAVY = "#1A2B5B";
 
 export default function AdministrationAreasPage() {
-  const user = useSessionStore((store) => store.user);
+  const companyId = useActiveCompanyId();
   const [page, setPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
 
   const { data, meta, loading, error, refresh } = useCompanyAreas({
-    companyId: user?.companyUserData?.companyId,
+    companyId: companyId,
     page,
     pageSize,
   });

@@ -3,17 +3,17 @@
 import AdministrationFormPageLayout from "@/components/administration/AdministrationFormPageLayout";
 import CreateCompanyUserForm from "@/components/administration/CreateCompanyUserForm";
 import LoadingCover from "@/components/layout/LoadingCover";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useCompanyUsers } from "@/hooks/useCompanyUsers";
-import { useSessionStore } from "@/store/useSessionStore";
 import { SessionUser } from "@/types/user.types";
 import { useParams } from "next/navigation";
 
 export default function AdministrationUpdateUserPage() {
-  const user = useSessionStore((store) => store.user);
+  const companyId = useActiveCompanyId();
   const userId = useParams().userId?.toString();
 
   const { data, loading, error } = useCompanyUsers<SessionUser>({
-    companyId: user?.companyUserData?.companyId,
+    companyId: companyId,
     id: userId,
   });
 
@@ -60,11 +60,19 @@ export default function AdministrationUpdateUserPage() {
     >
       <CreateCompanyUserForm
         initialValues={{
-          ...data,
+          name: data.name,
+          lastName: data.lastName,
+          username: data.username,
+          role: data.role,
           companyUserData: {
-            ...data.companyUserData!,
-            companyAreaId: data.companyUserData!.companyArea._id,
-            companyRoleId: data.companyUserData!.companyRole?._id,
+            position: data.companyUserData?.position ?? "",
+            phone: data.companyUserData?.phone ?? "",
+            personalEmail: data.companyUserData?.personalEmail ?? "",
+            companyAreaId: data.companyUserData?.companyArea?._id,
+            companyRoleId: data.companyUserData?.companyRole?._id,
+            note: data.companyUserData?.note,
+            docNumber: data.companyUserData?.docNumber ?? 0,
+            docType: data.companyUserData?.docType ?? "CC",
           },
         }}
         userId={userId}

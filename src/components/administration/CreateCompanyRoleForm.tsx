@@ -15,7 +15,6 @@ import CustomCheckbox from "../forms/CustomCheckbox";
 import CustomInput from "../forms/CustomInput";
 import CustomSelect from "../forms/CustomSelect";
 import CustomTextarea from "../forms/CustomTextarea";
-import { useSessionStore } from "@/store/useSessionStore";
 import { createCollectForm, updateCollectForm } from "@/lib/collectForm.api";
 import { parseApiError } from "@/utils/parseApiError";
 import { toast } from "sonner";
@@ -33,6 +32,7 @@ import { useCompanyAreas } from "@/hooks/useCompanyAreas";
 import { countriesOptions, CreateCompanyArea } from "@/types/companyArea.types";
 import { createCompanyArea, updateCompanyArea } from "@/lib/companyArea.api";
 import { useCompanyUsers } from "@/hooks/useCompanyUsers";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import {
   CompanyRolePermissions,
   CreateCompanyRole,
@@ -122,7 +122,7 @@ const defaultPermissions: CompanyRolePermissions =
   generatePermissionsInitialValues(permissionsGroup) as CompanyRolePermissions;
 
 const CreateCompanyRoleForm = ({ initialValues }: Props) => {
-  const user = useSessionStore((store) => store.user);
+  const companyId = useActiveCompanyId();
   const [loading, setLoading] = useState<boolean>(false);
   const params = useParams();
 
@@ -178,7 +178,7 @@ const CreateCompanyRoleForm = ({ initialValues }: Props) => {
   }, []);
 
   async function onSubmit(data: CreateCompanyRole) {
-    if (!user?.companyUserData?.companyId) return;
+    if (!companyId) return;
 
     setLoading(true);
 
@@ -187,13 +187,13 @@ const CreateCompanyRoleForm = ({ initialValues }: Props) => {
     if (initialValues) {
       //? handle updating
       res = await updateCompanyRole(
-        user?.companyUserData?.companyId,
+        companyId,
         params.roleId as string,
         data
       );
     } else {
       //? handle creating
-      res = await createCompanyRole(user?.companyUserData?.companyId, data);
+      res = await createCompanyRole(companyId, data);
     }
     setLoading(false);
 
@@ -203,6 +203,7 @@ const CreateCompanyRoleForm = ({ initialValues }: Props) => {
 
     toast.success(initialValues ? "Rol actualizado" : "Rol creado");
 
+    router.refresh();
     router.push("/admin/administracion/roles");
   }
 

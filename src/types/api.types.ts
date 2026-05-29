@@ -1,5 +1,6 @@
 import { ERROR_DICTIONARY } from "@/utils/parseApiError";
 import { CampaignAudienceGender } from "./campaign.types";
+import { ConsentStatus } from "./collectFormResponse.types";
 import { UserRole } from "./user.types";
 
 export interface APIError {
@@ -37,6 +38,9 @@ export interface QueryParams {
   //for date range filtering
   startDate?: string;
   endDate?: string;
+
+  // filtro de estado de consentimiento (respuestas de formularios)
+  consentStatus?: ConsentStatus;
 
   //for calc audience
   sourceForms?: string;

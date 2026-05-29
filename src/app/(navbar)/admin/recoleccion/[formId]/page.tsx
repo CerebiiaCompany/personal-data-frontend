@@ -2,17 +2,17 @@
 
 import CreateCollectFormForm from "@/components/collectForms/CreateCollectFormForm";
 import LoadingCover from "@/components/layout/LoadingCover";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useCollectForms } from "@/hooks/useCollectForms";
-import { useSessionStore } from "@/store/useSessionStore";
 import { CollectForm } from "@/types/collectForm.types";
 import { useParams } from "next/navigation";
 
 export default function EditCollectPage() {
-  const user = useSessionStore((store) => store.user);
+  const companyId = useActiveCompanyId();
   const param = useParams();
 
   const collectForm = useCollectForms<CollectForm>({
-    companyId: user?.companyUserData?.companyId,
+    companyId: companyId,
     id: param.formId!.toString(),
   });
 

@@ -11,7 +11,7 @@ import {
 } from "../forms/CustomFileDropZone";
 import { FieldError, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useSessionStore } from "@/store/useSessionStore";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { toast } from "sonner";
 import CustomInput from "../forms/CustomInput";
 import { useState } from "react";
@@ -39,7 +39,7 @@ interface Props {
 }
 
 const UploadTemplateDialog = ({ refresh }: Props) => {
-  const user = useSessionStore((store) => store.user);
+  const companyId = useActiveCompanyId();
   const [loading, setLoading] = useState<boolean>(false);
   const {
     formState: { errors },
@@ -66,7 +66,6 @@ const UploadTemplateDialog = ({ refresh }: Props) => {
 
   async function onSubmit(data: any) {
     console.log("📤 onSubmit called", { data, errors });
-    const companyId = user?.companyUserData?.companyId;
     if (!companyId) {
       console.error("❌ No companyId found");
       toast.error("No se pudo obtener la información de la compañía");

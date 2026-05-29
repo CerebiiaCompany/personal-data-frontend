@@ -37,6 +37,18 @@ export function usePermissionCheck() {
     [user?.role, isSuperAdmin]
   );
 
+  // Permisos efectivos: priorizar los del store (getPermissions) y, si no se
+  // cargaron (p. ej. el endpoint falló o aún no respondió), usar los del rol
+  // embebido en la sesión. Alinea este hook con usePermissions y evita bloquear
+  // peticiones cuando los permisos granulares no están disponibles.
+  const effectivePermissions = useMemo(
+    () =>
+      permissions?.permissions ||
+      user?.companyUserData?.companyRole?.permissions ||
+      null,
+    [permissions?.permissions, user?.companyUserData?.companyRole?.permissions]
+  );
+
   /**
    * Verifica si el usuario tiene un permiso específico
    * 
@@ -45,18 +57,23 @@ export function usePermissionCheck() {
    */
   const can = useCallback(
     (permission: string): boolean => {
-      if (!permissions) return false;
+      // Los admins/superadmins tienen acceso completo, incluso si los permisos
+      // granulares aún no se cargaron. Este chequeo DEBE ir antes del guard de
+      // `effectivePermissions` para no bloquear sus peticiones.
       if (isSuperAdmin || isCompanyAdmin) return true;
+
+      if (!effectivePermissions) return false;
 
       const [module, action] = permission.split(".");
       if (!module || !action) return false;
 
-      const modulePerms = permissions.permissions[module as keyof typeof permissions.permissions];
+      const modulePerms =
+        effectivePermissions[module as keyof typeof effectivePermissions];
       if (!modulePerms) return false;
 
       return (modulePerms as Record<string, boolean>)[action] === true;
     },
-    [permissions, isSuperAdmin, isCompanyAdmin]
+    [effectivePermissions, isSuperAdmin, isCompanyAdmin]
   );
 
   /**

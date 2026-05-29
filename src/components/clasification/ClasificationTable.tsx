@@ -11,7 +11,7 @@ import clsx from "clsx";
 import CheckPermission from "@/components/checkers/CheckPermission";
 import { useConsentResponsesExport } from "@/hooks/useConsentResponsesExport";
 import { usePermissionCheck } from "@/hooks/usePermissionCheck";
-import { useSessionStore } from "@/store/useSessionStore";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 
 interface Props {
   /** Filas mostradas (p. ej. filtradas por búsqueda en cliente) */
@@ -56,8 +56,7 @@ const ClasificationTable = ({
   error,
   onCreateConsentCampaign,
 }: Props) => {
-  const user = useSessionStore((store) => store.user);
-  const companyId = user?.companyUserData?.companyId;
+  const companyId = useActiveCompanyId();
   const { isCompanyAdmin } = usePermissionCheck();
   const canExportExcel = isCompanyAdmin;
   const { startExport, exporting, isExportingForm } =

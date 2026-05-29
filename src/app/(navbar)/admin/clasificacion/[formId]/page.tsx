@@ -3,15 +3,22 @@
 import Button from "@/components/base/Button";
 import SectionSearchBar from "@/components/base/SectionSearchBar";
 import FormResponsesTable from "@/components/clasification/FormResponsesTable";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useCollectFormResponses } from "@/hooks/useCollectFormResponses";
 import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import { useConsentResponsesExport } from "@/hooks/useConsentResponsesExport";
 import { usePermissionCheck } from "@/hooks/usePermissionCheck";
-import { useSessionStore } from "@/store/useSessionStore";
+import {
+  ConsentStatus,
+  consentStatusOptions,
+} from "@/types/collectFormResponse.types";
 import { Icon } from "@iconify/react";
+import clsx from "clsx";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+
+type ConsentStatusFilter = "ALL" | ConsentStatus;
 
 type FormResponseSummary = {
   verifiedResponses?: number;
@@ -20,14 +27,14 @@ type FormResponseSummary = {
 };
 
 export default function FormClassificationPage() {
-  const user = useSessionStore((store) => store.user);
   const { isCompanyAdmin } = usePermissionCheck();
   const canExportExcel = isCompanyAdmin;
   const formId = useParams().formId?.toString();
   const { debouncedValue, search, setSearch } = useDebouncedSearch();
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const companyId = user?.companyUserData?.companyId;
+  const [consentFilter, setConsentFilter] = useState<ConsentStatusFilter>("ALL");
+  const companyId = useActiveCompanyId();
   const { startExport, exporting: exportingExcel, progress: exportProgress } =
     useConsentResponsesExport(companyId);
 
@@ -49,12 +56,13 @@ export default function FormClassificationPage() {
     search: apiSearch,
     page: currentPage,
     pageSize: pageSize,
+    consentStatus: consentFilter === "ALL" ? undefined : consentFilter,
   });
 
   const typedSummary = (summary || {}) as FormResponseSummary;
   useEffect(() => {
     setCurrentPage(1);
-  }, [apiSearch]);
+  }, [apiSearch, consentFilter]);
 
   const kpis = useMemo(() => {
     const responses = data?.responses || [];
@@ -164,6 +172,28 @@ export default function FormClassificationPage() {
               onSearchChange={setSearch}
               placeholder="Buscar por nombre, NIT, razón social, documento, correo..."
             />
+            <div className="flex flex-wrap items-center gap-1.5">
+              {(
+                [
+                  { value: "ALL", title: "Todos" },
+                  ...consentStatusOptions,
+                ] as { value: ConsentStatusFilter; title: string }[]
+              ).map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setConsentFilter(option.value)}
+                  className={clsx(
+                    "px-3.5 py-2 rounded-xl text-[12px] font-semibold border transition-colors whitespace-nowrap",
+                    consentFilter === option.value
+                      ? "bg-[#133C95] text-white border-[#133C95]"
+                      : "bg-white text-[#5C6D91] border-[#E3E9F5] hover:bg-[#F4F7FE]"
+                  )}
+                >
+                  {option.title}
+                </button>
+              ))}
+            </div>
             {canExportExcel && (
               <div className="flex flex-wrap items-center gap-2">
                 <Button

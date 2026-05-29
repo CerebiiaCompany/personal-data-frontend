@@ -5,7 +5,6 @@ import { Icon } from "@iconify/react/dist/iconify.js";
 import clsx from "clsx";
 import { FieldError, useForm } from "react-hook-form";
 import CustomInput from "../forms/CustomInput";
-import { useSessionStore } from "@/store/useSessionStore";
 import { parseApiError } from "@/utils/parseApiError";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -21,6 +20,7 @@ import { createCampaign } from "@/lib/campaign.api";
 import { useCollectForms } from "@/hooks/useCollectForms";
 import { useCampaignAudience } from "@/hooks/useCampaignAudience";
 import { useAppSetting } from "@/hooks/useAppSetting";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import {
   asFiniteNumber,
   getCreditsPerMessage,
@@ -69,7 +69,7 @@ function minScheduledDateTimeLocalString() {
 }
 
 const CreateScheduledCampaignForm = () => {
-  const user = useSessionStore((store) => store.user);
+  const companyId = useActiveCompanyId();
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState<boolean>(false);
@@ -122,7 +122,7 @@ const CreateScheduledCampaignForm = () => {
   const genderValue = watch("audience.gender") || "ALL";
 
   const campaignAudience = useCampaignAudience({
-    companyId: user?.companyUserData?.companyId,
+    companyId: companyId,
     sourceForms: sourceFormsValue,
     gender: genderValue,
     minAge: minAge,
@@ -130,7 +130,7 @@ const CreateScheduledCampaignForm = () => {
   });
 
   const collectForms = useCollectForms({
-    companyId: user?.companyUserData?.companyId,
+    companyId: companyId,
   });
 
   const trmCop = asFiniteNumber(trmCopSetting.data?.value);
@@ -295,7 +295,7 @@ const CreateScheduledCampaignForm = () => {
   }
 
   async function onSubmit(data: any) {
-    if (!user?.companyUserData?.companyId) return;
+    if (!companyId) return;
     if (submitLockRef.current) return;
     submitLockRef.current = true;
     setLoading(true);
@@ -325,7 +325,7 @@ const CreateScheduledCampaignForm = () => {
       };
 
       const res = await createCampaign(
-        user?.companyUserData?.companyId,
+        companyId,
         payload
       );
 
@@ -335,6 +335,7 @@ const CreateScheduledCampaignForm = () => {
       }
 
       toast.success("Campaña programada creada");
+      router.refresh();
       router.push("/admin/campanas");
     } finally {
       submitLockRef.current = false;
