@@ -1,16 +1,22 @@
 "use client";
 
 import CompanyUsersTable from "@/components/administration/CompanyUsersTable";
+import ImportUsersDialog from "@/components/administration/ImportUsersDialog";
 import Button from "@/components/base/Button";
 import Pagination from "@/components/base/Pagination";
 import SectionSearchBar from "@/components/base/SectionSearchBar";
+import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useCompanyUsers } from "@/hooks/useCompanyUsers";
 import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
+import { downloadUsersImportTemplate } from "@/lib/user.api";
+import { parseApiError } from "@/utils/parseApiError";
+import { showDialog } from "@/utils/dialogs.utils";
 import { Icon } from "@iconify/react";
 import Link from "next/link";
 import clsx from "clsx";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 
 const topCardClass =
   "bg-white border border-[#E8EDF7] rounded-2xl shadow-[0_2px_12px_rgba(15,35,70,0.04)]";
@@ -45,6 +51,18 @@ export default function AdministrationUsersPage() {
   const handlePageSizeChange = (newPageSize: number) => {
     setPageSize(newPageSize);
     setPage(1);
+  };
+
+  const [downloadingTemplate, setDownloadingTemplate] = useState(false);
+
+  const handleDownloadTemplate = async () => {
+    if (!companyId || downloadingTemplate) return;
+    setDownloadingTemplate(true);
+    const res = await downloadUsersImportTemplate(companyId);
+    setDownloadingTemplate(false);
+    if (res.error) {
+      toast.error(parseApiError(res.error));
+    }
   };
 
   return (
@@ -96,6 +114,29 @@ export default function AdministrationUsersPage() {
               </div>
               <div className="flex shrink-0 flex-wrap items-center gap-2 sm:pt-1">
                 <Button
+                  hierarchy="secondary"
+                  onClick={handleDownloadTemplate}
+                  loading={downloadingTemplate}
+                  disabled={!companyId}
+                  className="rounded-xl! border-[#E2E8F0]! px-4! py-2.5! text-[13px]! font-semibold! text-[#1A2B5B]!"
+                  startContent={
+                    <Icon icon="tabler:file-download" className="text-lg" />
+                  }
+                >
+                  Descargar plantilla
+                </Button>
+                <Button
+                  hierarchy="secondary"
+                  onClick={() => showDialog(HTML_IDS_DATA.importUsersDialog)}
+                  disabled={!companyId}
+                  className="rounded-xl! border-[#E2E8F0]! px-4! py-2.5! text-[13px]! font-semibold! text-[#1A2B5B]!"
+                  startContent={
+                    <Icon icon="tabler:file-spreadsheet" className="text-lg" />
+                  }
+                >
+                  Importar Excel
+                </Button>
+                <Button
                   href="/admin/administracion/usuarios/crear"
                   className="rounded-xl! border-[#1A2B5B]! bg-[#1A2B5B]! px-5! py-2.5! text-[13px]! font-semibold! text-white!"
                   startContent={
@@ -134,6 +175,8 @@ export default function AdministrationUsersPage() {
           ) : null}
         </section>
       </div>
+
+      <ImportUsersDialog refresh={refresh} />
     </div>
   );
 }

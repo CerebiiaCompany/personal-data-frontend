@@ -1,6 +1,78 @@
-import { APIResponse, QueryParams } from "@/types/api.types";
-import { CreateUser, SessionUser, UpdateUser } from "@/types/user.types";
+import { APIError, APIResponse, QueryParams } from "@/types/api.types";
+import {
+  CreateUser,
+  DocType,
+  ImportUsersResult,
+  SessionUser,
+  UpdateUser,
+  UserRole,
+} from "@/types/user.types";
 import { customFetch } from "@/utils/customFetch";
+import { API_BASE_URL } from "@/utils/env.utils";
+
+/**
+ * Contrato real que espera el backend en POST/PATCH /companies/:id/users:
+ * los datos del colaborador van "planos" en la raíz (no anidados en
+ * `companyUserData`, que es el modelo interno del formulario).
+ */
+interface CompanyUserPayload {
+  name: string;
+  lastName: string;
+  username?: string;
+  password?: string;
+  role?: UserRole;
+  position?: string;
+  phone?: string;
+  personalEmail?: string;
+  companyAreaId?: string;
+  companyRoleId?: string;
+  note?: string;
+  docNumber?: number | null;
+  docType?: DocType;
+}
+
+function isFilledString(value: unknown): value is string {
+  return typeof value === "string" && value.trim() !== "";
+}
+
+/**
+ * Aplana el modelo del formulario (con `companyUserData` anidado) al contrato
+ * plano del backend, omitiendo campos vacíos para no enviar "" donde el backend
+ * espera ausencia o null.
+ */
+function buildCompanyUserPayload(
+  data: CreateUser | UpdateUser
+): CompanyUserPayload {
+  const cud = data.companyUserData ?? ({} as CreateUser["companyUserData"]);
+
+  const payload: CompanyUserPayload = {
+    name: data.name,
+    lastName: data.lastName,
+    role: data.role,
+    position: cud.position,
+    phone: cud.phone,
+    personalEmail: cud.personalEmail,
+    docType: cud.docType,
+  };
+
+  // username / password: solo si vienen con contenido (en edición son opcionales).
+  if (isFilledString(data.username)) payload.username = data.username.trim();
+  if (isFilledString(data.password)) payload.password = data.password;
+
+  // Relaciones y nota: omitir si están vacías (no enviar "").
+  if (isFilledString(cud.companyAreaId)) payload.companyAreaId = cud.companyAreaId;
+  if (isFilledString(cud.companyRoleId)) payload.companyRoleId = cud.companyRoleId;
+  if (isFilledString(cud.note)) payload.note = cud.note;
+
+  // docNumber: entero o null. Nunca "" ni NaN.
+  const docNumber = Number(cud.docNumber);
+  payload.docNumber =
+    cud.docNumber === undefined || cud.docNumber === null || Number.isNaN(docNumber)
+      ? null
+      : docNumber;
+
+  return payload;
+}
 
 /**
  * El backend de /companies/:id/users (lista y detalle) devuelve los datos del
@@ -85,7 +157,7 @@ export async function createCompanyUser(
 ): Promise<APIResponse> {
   const res = await customFetch(`/companies/${companyId}/users`, {
     method: "POST",
-    body: JSON.stringify(data),
+    body: JSON.stringify(buildCompanyUserPayload(data)),
   });
 
   return res;
@@ -98,7 +170,7 @@ export async function updateCompanyUser(
 ): Promise<APIResponse> {
   const res = await customFetch(`/companies/${companyId}/users/${userId}`, {
     method: "PATCH",
-    body: JSON.stringify(data),
+    body: JSON.stringify(buildCompanyUserPayload(data)),
   });
 
   return res;
@@ -123,6 +195,102 @@ export async function restoreCompanyUser(
     `/companies/${companyId}/users/${userId}/restore`,
     { method: "PATCH" }
   );
+}
+
+/**
+ * Descarga la plantilla .xlsx para importar usuarios. Usa fetch directo (no
+ * customFetch) porque la respuesta es un binario, no JSON, y se dispara la
+ * descarga en el navegador.
+ */
+export async function downloadUsersImportTemplate(
+  companyId: string
+): Promise<{ error?: APIError }> {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/companies/${companyId}/users/import-template`,
+      { credentials: "include" }
+    );
+
+    if (!response.ok) {
+      let message = `No se pudo descargar la plantilla (${response.status})`;
+      try {
+        const body = await response.json();
+        message = body?.error?.message || message;
+      } catch {
+        // respuesta no-JSON: se conserva el mensaje por defecto
+      }
+      return { error: { code: "http/unknown-error", message } };
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "plantilla_usuarios.xlsx";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+
+    return {};
+  } catch (error) {
+    return {
+      error: {
+        code: "http/network-error",
+        message:
+          (error as Error)?.message || "Error de conexión al descargar la plantilla",
+      },
+    };
+  }
+}
+
+/**
+ * Importa usuarios masivamente desde un archivo Excel (.xlsx/.xls) usando
+ * multipart/form-data. No se fija Content-Type manualmente: el navegador agrega
+ * el boundary automáticamente.
+ */
+export async function importCompanyUsers(
+  companyId: string,
+  file: File
+): Promise<APIResponse<ImportUsersResult>> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/companies/${companyId}/users/import`,
+      {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      }
+    );
+
+    if (!response.ok) {
+      let errorBody: APIResponse<ImportUsersResult> | null = null;
+      try {
+        errorBody = (await response.json()) as APIResponse<ImportUsersResult>;
+      } catch {
+        // respuesta no-JSON
+      }
+      return {
+        error: errorBody?.error || {
+          code: "http/unknown-error",
+          message: `No se pudo importar el archivo (${response.status})`,
+        },
+      };
+    }
+
+    return (await response.json()) as APIResponse<ImportUsersResult>;
+  } catch (error) {
+    return {
+      error: {
+        code: "http/unknown-error",
+        message:
+          (error as Error)?.message || "Error desconocido al importar usuarios",
+      },
+    };
+  }
 }
 
 export async function updateMe(data: {

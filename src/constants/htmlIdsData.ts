@@ -4,6 +4,7 @@ export const HTML_IDS_DATA = {
   companyAreaUsersModal: "companyAreaUsersModalWrapper",
   updatePasswordDialog: "updatePasswordDialog",
   uploadExcelTemplateDialog: "uploadExcelTemplateDialog",
+  importUsersDialog: "importUsersDialog",
   collectFormResponseSavedModal: "collectFormResponseSavedModal",
   confirmCampaignActivationDialog: "confirmCampaignActivationDialog",
   editOwnCompanyDialog: "editOwnCompanyDialog",

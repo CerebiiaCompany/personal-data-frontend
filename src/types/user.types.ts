@@ -31,7 +31,7 @@ export const userRoleOptions: CustomSelectOption<UserRole>[] = [
 export const parseUserRoleToString = (role: UserRole): string =>
   userRoleOptions.find((e) => e.value === role)?.title || "Rol inválido";
 
-export type DocType = "CC" | "TI" | "OTHER";
+export type DocType = "CC" | "TI" | "NIT" | "OTHER";
 
 export const docTypesOptions: CustomSelectOption<DocType>[] = [
   {
@@ -41,6 +41,10 @@ export const docTypesOptions: CustomSelectOption<DocType>[] = [
   {
     value: "TI",
     title: "T.I.",
+  },
+  {
+    value: "NIT",
+    title: "NIT",
   },
   {
     value: "OTHER",
@@ -86,6 +90,28 @@ export interface UpdateUser {
     docNumber: number;
     docType: DocType;
   };
+}
+
+/**
+ * Resultado de la importación masiva de usuarios desde Excel
+ * (POST /companies/:companyId/users/import).
+ */
+export interface ImportUsersResult {
+  summary: {
+    total: number;
+    createdCount: number;
+    errorCount: number;
+  };
+  created: {
+    row: number;
+    username: string;
+    id: string;
+  }[];
+  errors: {
+    row: number;
+    username?: string;
+    error: string;
+  }[];
 }
 
 export interface SessionUser {
