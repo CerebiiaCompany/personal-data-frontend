@@ -35,6 +35,9 @@ export interface QueryParams {
   role?: UserRole;
   expiresIn?: string | number; // Para parámetros de query como expiresIn
 
+  // Tokens de campaña de consentimiento (formularios públicos)
+  qct?: string; // Quick Consent Token (por persona)
+
   //for date range filtering
   startDate?: string;
   endDate?: string;

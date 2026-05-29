@@ -26,7 +26,7 @@ import {
   createUserValidationSchema,
   updateUserValidationSchema,
 } from "@/validations/main.validations";
-import { CreateUser, docTypesOptions, UpdateUser, userRoleOptions } from "@/types/user.types";
+import { companyUserDocTypeOptions, CreateUser, UpdateUser, userRoleOptions } from "@/types/user.types";
 import { createCompanyUser, updateCompanyUser } from "@/lib/user.api";
 import { useCompanyAreas } from "@/hooks/useCompanyAreas";
 import { useCompanyRoles } from "@/hooks/useCompanyRoles";
@@ -290,7 +290,7 @@ const CreateCompanyUserForm = ({
           <div>
             <CustomSelect
               label="Tipo de documento"
-              options={docTypesOptions}
+              options={companyUserDocTypeOptions}
               value={watch("companyUserData.docType")}
               onChange={(value) => setValue("companyUserData.docType", value)}
             />

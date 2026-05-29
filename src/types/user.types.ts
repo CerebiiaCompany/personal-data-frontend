@@ -33,7 +33,30 @@ export const parseUserRoleToString = (role: UserRole): string =>
 
 export type DocType = "CC" | "TI" | "NIT" | "OTHER";
 
+/**
+ * Opciones de documento para persona natural (formularios públicos de
+ * consentimiento). No incluye NIT: ese caso se maneja como persona jurídica.
+ */
 export const docTypesOptions: CustomSelectOption<DocType>[] = [
+  {
+    value: "CC",
+    title: "C.C.",
+  },
+  {
+    value: "TI",
+    title: "T.I.",
+  },
+  {
+    value: "OTHER",
+    title: "Otro",
+  },
+];
+
+/**
+ * Opciones de documento para usuarios de empresa (módulo de administración).
+ * Incluye NIT, admitido por el contrato del backend.
+ */
+export const companyUserDocTypeOptions: CustomSelectOption<DocType>[] = [
   {
     value: "CC",
     title: "C.C.",
@@ -53,7 +76,7 @@ export const docTypesOptions: CustomSelectOption<DocType>[] = [
 ];
 
 export const parseDocTypeToString = (type: DocType): string =>
-  docTypesOptions.find((e) => e.value === type)?.title ||
+  companyUserDocTypeOptions.find((e) => e.value === type)?.title ||
   "Tipo de documento inválido";
 
 export interface CreateUser {

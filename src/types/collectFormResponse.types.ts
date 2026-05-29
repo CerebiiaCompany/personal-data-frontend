@@ -57,6 +57,37 @@ export const userGendersOptions: CustomSelectOption<UserGender>[] = [
 export const parseUserGenderToString = (role: UserGender): string =>
   userGendersOptions.find((e) => e.value === role)?.title || "Género inválido";
 
+/**
+ * Campos que el backend puede reportar como faltantes en el prefill de campaña
+ * (GET /public/collectForms/:id/prefill?qct=...). docType, docNumber, email y
+ * phone nunca aparecen aquí: siempre se conocen.
+ */
+export type CollectFormMissingField =
+  | "name"
+  | "lastName"
+  | "age"
+  | "gender"
+  | "razonSocial";
+
+/** Campos ya conocidos por el backend para una persona de la campaña. */
+export interface CollectFormPrefillKnownFields {
+  docType?: CollectFormDocType;
+  docNumber?: number;
+  email?: string;
+  phone?: string;
+  name?: string;
+  lastName?: string;
+  age?: number;
+  gender?: UserGender;
+  razonSocial?: string;
+}
+
+export interface CollectFormPrefill {
+  knownFields: CollectFormPrefillKnownFields;
+  missingFields: CollectFormMissingField[];
+  isComplete: boolean;
+}
+
 export interface CollectFormResponseUserNatural {
   docType: DocType;
   docNumber: number;

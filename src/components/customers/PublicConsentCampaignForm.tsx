@@ -14,17 +14,22 @@ import RenderQuestionInput from "@/components/forms/RenderQuestionInput";
 import { AnswerType, CollectForm } from "@/types/collectForm.types";
 import { DocType, docTypesOptions } from "@/types/user.types";
 import {
+  CollectFormPrefill,
+  getPersonKindFromDocType,
   PersonKind,
   personKindOptions,
   UserGender,
   userGendersOptions,
 } from "@/types/collectFormResponse.types";
 import { CustomSelectOption } from "@/types/forms.types";
-import { parseApiError } from "@/utils/parseApiError";
+import { parseApiError, resolvePublicConsentError } from "@/utils/parseApiError";
 import { buildCollectFormUserPayload, parseNitDocNumber } from "@/utils/collectFormUser.utils";
 import { registerConsentCampaignResponse } from "@/lib/collectFormResponse.api";
 import { checkCollectFormCctStatus } from "@/lib/cctStatus.api";
-import { getPublicCollectFormPolicyUrl } from "@/lib/collectForm.api";
+import {
+  getPublicCollectFormPolicyUrl,
+  getPublicCollectFormPrefill,
+} from "@/lib/collectForm.api";
 import LoadingCover from "@/components/layout/LoadingCover";
 import { isCctIdentityCheck } from "@/types/cctStatus.types";
 
@@ -48,6 +53,8 @@ const phoneCountryCodeOptions: CustomSelectOption<PhoneCountryCode>[] = [
 interface Props {
   data: CollectForm;
   cct: string;
+  /** Quick Consent Token (único por persona). Si viene, se activa el prefill. */
+  qct?: string | null;
 }
 
 type FieldConfig = { type: AnswerType; default: any };
@@ -93,10 +100,13 @@ function companyDisplayName(form: CollectForm): string | null {
 
 type CctFlowStep =
   | "validating_token"
+  | "loading_prefill"
   | "invalid_link"
   | "identity"
   | "checking_identity"
   | "already_registered"
+  | "already_complete"
+  | "submit_error"
   | "full_form";
 
 type IdentityDocType = DocType | "NIT";
@@ -117,20 +127,76 @@ function CctFlowLoading({ message }: { message: string }) {
   );
 }
 
-function CctInvalidLinkScreen({ formName }: { formName: string }) {
+function CctInvalidLinkScreen({
+  formName,
+  title,
+  description,
+}: {
+  formName: string;
+  title?: string;
+  description?: React.ReactNode;
+}) {
   return (
     <div className="flex flex-col items-center gap-6 max-w-lg w-full text-center py-8 px-4">
       <div className="w-20 h-20 rounded-full bg-red-100 flex items-center justify-center">
         <Icon icon="tabler:link-off" className="text-5xl text-red-600" />
       </div>
       <div className="flex flex-col gap-2">
-        <h2 className="text-2xl font-bold text-[#0B1737]">Enlace inválido o expirado</h2>
+        <h2 className="text-2xl font-bold text-[#0B1737]">
+          {title ?? "Enlace inválido o expirado"}
+        </h2>
         <p className="text-[#64748B] leading-relaxed">
-          El enlace de consentimiento para{" "}
-          <span className="font-semibold text-[#0B1737]">«{formName}»</span> ya no
-          está disponible. Solicita un nuevo enlace a quien te envió la invitación.
+          {description ?? (
+            <>
+              El enlace de consentimiento para{" "}
+              <span className="font-semibold text-[#0B1737]">«{formName}»</span> ya
+              no está disponible. Solicita un nuevo enlace a quien te envió la
+              invitación.
+            </>
+          )}
         </p>
       </div>
+    </div>
+  );
+}
+
+function CctErrorScreen({
+  title,
+  message,
+  onBack,
+}: {
+  title?: string;
+  message: string;
+  onBack?: () => void;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-6 max-w-lg w-full text-center py-8 px-4">
+      <div className="w-20 h-20 rounded-full bg-red-100 flex items-center justify-center">
+        <Icon icon="tabler:alert-triangle" className="text-5xl text-red-600" />
+      </div>
+      <div className="flex flex-col gap-2">
+        <h2 className="text-2xl font-bold text-[#0B1737]">
+          {title ?? "No pudimos completar tu registro"}
+        </h2>
+      </div>
+      <div className="rounded-xl bg-red-50 border border-red-200 px-5 py-4 text-sm text-red-800 w-full text-left flex gap-3">
+        <Icon
+          icon="tabler:info-circle"
+          className="text-red-600 text-lg shrink-0 mt-0.5"
+        />
+        <p className="leading-relaxed">{message}</p>
+      </div>
+      {onBack && (
+        <Button
+          type="button"
+          hierarchy="secondary"
+          className="w-full"
+          onClick={onBack}
+          startContent={<Icon icon="tabler:arrow-left" />}
+        >
+          Volver al formulario
+        </Button>
+      )}
     </div>
   );
 }
@@ -171,7 +237,94 @@ function CctAlreadyRegisteredScreen({
   );
 }
 
-export default function PublicConsentCampaignForm({ data, cct }: Props) {
+function CctAlreadyCompleteScreen({
+  formName,
+  companyName,
+}: {
+  formName: string;
+  companyName: string | null;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-6 max-w-lg w-full text-center py-8 px-4">
+      <div className="w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center">
+        <Icon icon="tabler:circle-check" className="text-5xl text-emerald-600" />
+      </div>
+      <div className="flex flex-col gap-2">
+        <h2 className="text-2xl font-bold text-[#0B1737]">
+          Tus datos ya están completos
+        </h2>
+        <p className="text-[#64748B] leading-relaxed">
+          No hay información pendiente por completar para{" "}
+          <span className="font-semibold text-[#0B1737]">«{formName}»</span>
+          {companyName ? (
+            <>
+              {" "}
+              de <span className="font-semibold text-[#0B1737]">{companyName}</span>
+            </>
+          ) : null}
+          .
+        </p>
+      </div>
+      <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-5 py-4 text-sm text-emerald-800 w-full text-left flex gap-3">
+        <Icon icon="tabler:info-circle" className="text-emerald-600 text-lg shrink-0 mt-0.5" />
+        <p>Puedes cerrar esta ventana de forma segura.</p>
+      </div>
+    </div>
+  );
+}
+
+function KnownDataSummary({
+  prefill,
+}: {
+  prefill: CollectFormPrefill;
+}) {
+  const k = prefill.knownFields;
+  const docTypeLabel =
+    k.docType === "NIT"
+      ? "NIT"
+      : identityDocTypeOptions.find((o) => o.value === k.docType)?.title ??
+        k.docType;
+
+  const rows: { label: string; value?: string | number }[] = [
+    { label: "Documento", value: k.docType ? `${docTypeLabel} ${k.docNumber ?? ""}`.trim() : undefined },
+    { label: "Nombre", value: k.name },
+    { label: "Apellido", value: k.lastName },
+    { label: "Razón social", value: k.razonSocial },
+    { label: "Correo", value: k.email },
+    { label: "Teléfono", value: k.phone },
+  ].filter((r) => r.value !== undefined && r.value !== "" && r.value !== null);
+
+  if (rows.length === 0) return null;
+
+  return (
+    <div className="rounded-xl border border-[#E4E9F2] bg-[#F8FAFC] p-4">
+      <div className="flex items-center gap-2 mb-3">
+        <Icon icon="tabler:user-check" className="text-primary-600 text-lg" />
+        <h3 className="font-semibold text-[#0B1737] text-sm">
+          Datos que ya tenemos registrados
+        </h3>
+      </div>
+      <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+        {rows.map((r) => (
+          <div key={r.label} className="flex flex-col">
+            <dt className="text-[11px] font-medium uppercase tracking-wide text-[#94A3B8]">
+              {r.label}
+            </dt>
+            <dd className="text-sm font-medium text-[#334155] break-words">
+              {r.value}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <p className="mt-3 text-xs text-[#64748B]">
+        Si algún dato es incorrecto, contacta a la empresa que te envió el
+        enlace.
+      </p>
+    </div>
+  );
+}
+
+export default function PublicConsentCampaignForm({ data, cct, qct }: Props) {
   const [cctFlowStep, setCctFlowStep] = useState<CctFlowStep>("validating_token");
   const [identityDocType, setIdentityDocType] = useState<IdentityDocType>("CC");
   const [identityDocNumber, setIdentityDocNumber] = useState("");
@@ -181,13 +334,16 @@ export default function PublicConsentCampaignForm({ data, cct }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [policyUrl, setPolicyUrl] = useState<string | null>(null);
   const [policyLoading, setPolicyLoading] = useState(false);
+  const [prefill, setPrefill] = useState<CollectFormPrefill | null>(null);
+  const [flowErrorMessage, setFlowErrorMessage] = useState<string | null>(null);
 
   const companyName = companyDisplayName(data);
+  const isPrefillMode = Boolean(qct);
 
   React.useEffect(() => {
     let cancelled = false;
 
-    async function validateToken() {
+    async function init() {
       setCctFlowStep("validating_token");
       const res = await checkCollectFormCctStatus(data._id, { cct });
 
@@ -198,15 +354,41 @@ export default function PublicConsentCampaignForm({ data, cct }: Props) {
         return;
       }
 
+      // Flujo de campaña personalizada: si hay qct, intentamos prefill para
+      // mostrar solo los campos faltantes y saltar el paso de identidad.
+      if (qct) {
+        setCctFlowStep("loading_prefill");
+        const pre = await getPublicCollectFormPrefill(data._id, qct);
+
+        if (cancelled) return;
+
+        if (pre.error) {
+          // Errores controlados del prefill: mostramos pantalla con mensaje.
+          setFlowErrorMessage(resolvePublicConsentError(pre.error));
+          setCctFlowStep("invalid_link");
+          return;
+        }
+
+        if (!pre.data) {
+          // Respuesta vacía inesperada: degradamos al flujo de identidad.
+          setCctFlowStep("identity");
+          return;
+        }
+
+        setPrefill(pre.data);
+        setCctFlowStep(pre.data.isComplete ? "already_complete" : "full_form");
+        return;
+      }
+
       setCctFlowStep("identity");
     }
 
-    validateToken();
+    init();
 
     return () => {
       cancelled = true;
     };
-  }, [data._id, cct]);
+  }, [data._id, cct, qct]);
 
   React.useEffect(() => {
     if (!data?._id || cctFlowStep !== "full_form") return;
@@ -237,8 +419,9 @@ export default function PublicConsentCampaignForm({ data, cct }: Props) {
     };
   }, [data._id, cctFlowStep]);
 
+  const questions = data.questions ?? [];
   const fields: Record<string, FieldConfig> = {};
-  data.questions.forEach((q) => {
+  questions.forEach((q) => {
     fields[q.title] = {
       type: q.answerType,
       default: q.answerType === "TEXT" ? "" : new Date(),
@@ -346,6 +529,51 @@ export default function PublicConsentCampaignForm({ data, cct }: Props) {
 
   const formValues = watch();
 
+  // Aplica los datos conocidos del prefill al estado del formulario y fija el
+  // tipo de persona según el documento. Los campos no incluidos en knownFields
+  // se dejan vacíos para que el usuario los complete (los de missingFields).
+  React.useEffect(() => {
+    if (!prefill) return;
+    const k = prefill.knownFields;
+
+    setPersonKind(getPersonKindFromDocType(k.docType));
+
+    if (k.docType) {
+      setValue("user.docType", k.docType as DocType, { shouldValidate: true });
+    }
+    if (k.docNumber !== undefined && k.docNumber !== null) {
+      setValue("user.docNumber", k.docNumber as unknown as number, {
+        shouldValidate: true,
+      });
+    }
+    if (k.email) setValue("user.email", k.email, { shouldValidate: true });
+    if (k.phone) {
+      const digits = k.phone.replace(/\D/g, "").slice(-10);
+      setValue("user.phone", digits, { shouldValidate: true });
+    }
+    if (k.name) setValue("user.name", k.name, { shouldValidate: true });
+    if (k.lastName) setValue("user.lastName", k.lastName, { shouldValidate: true });
+    if (k.age !== undefined && k.age !== null) {
+      setValue("user.age", k.age as unknown as number, { shouldValidate: true });
+    }
+    if (k.gender) setValue("user.gender", k.gender, { shouldValidate: true });
+    if (k.razonSocial) {
+      setValue("user.razonSocial", k.razonSocial, { shouldValidate: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefill]);
+
+  // En modo prefill solo se muestran los campos pendientes (missingFields).
+  // Fuera de prefill, se muestran todos (flujo estándar sin cambios).
+  const prefillReady = isPrefillMode && !!prefill && !prefill.isComplete;
+  const showField = React.useCallback(
+    (field: string): boolean => {
+      if (!prefillReady) return true;
+      return (prefill!.missingFields as string[]).includes(field);
+    },
+    [prefillReady, prefill]
+  );
+
   const isFullFormValid = React.useMemo(
     () => schema.safeParse(formValues).success,
     [formValues, schema]
@@ -443,17 +671,33 @@ export default function PublicConsentCampaignForm({ data, cct }: Props) {
     setSubmitting(false);
 
     if (res.error) {
-      const msg = parseApiError(res.error);
-      if (
-        res.error.code === "auth/unauthenticated" ||
-        (res.error as any).statusCode === 401
-      ) {
-        toast.error(
+      const code = res.error.code;
+      const status =
+        res.error.status ?? (res.error as { statusCode?: number }).statusCode;
+      const rawMessage = res.error.message?.toLowerCase() ?? "";
+
+      // Token expirado/inválido al enviar: error terminal, sin reintento.
+      if (code === "auth/unauthenticated" || status === 401) {
+        setFlowErrorMessage(
           "El enlace de consentimiento ha expirado o es inválido. Contacta a la empresa para obtener uno nuevo."
         );
-      } else {
-        toast.error(msg);
+        setCctFlowStep("submit_error");
+        return;
       }
+
+      // Ya había aceptado en esta campaña: pantalla dedicada de éxito previo.
+      if (
+        code === "db/duplicate-key" &&
+        (rawMessage.includes("ya completaste") ||
+          rawMessage.includes("consentimiento"))
+      ) {
+        setCctFlowStep("already_registered");
+        return;
+      }
+
+      // Resto de errores controlados: tarjeta con el mensaje específico.
+      setFlowErrorMessage(resolvePublicConsentError(res.error));
+      setCctFlowStep("submit_error");
       return;
     }
 
@@ -464,8 +708,17 @@ export default function PublicConsentCampaignForm({ data, cct }: Props) {
     return <CctFlowLoading message="Verificando enlace de consentimiento…" />;
   }
 
+  if (cctFlowStep === "loading_prefill") {
+    return <CctFlowLoading message="Preparando tu formulario…" />;
+  }
+
   if (cctFlowStep === "invalid_link") {
-    return <CctInvalidLinkScreen formName={data.name} />;
+    return (
+      <CctInvalidLinkScreen
+        formName={data.name}
+        description={flowErrorMessage ?? undefined}
+      />
+    );
   }
 
   if (cctFlowStep === "already_registered") {
@@ -473,6 +726,27 @@ export default function PublicConsentCampaignForm({ data, cct }: Props) {
       <CctAlreadyRegisteredScreen
         formName={data.name}
         companyName={companyName}
+      />
+    );
+  }
+
+  if (cctFlowStep === "already_complete") {
+    return (
+      <CctAlreadyCompleteScreen
+        formName={data.name}
+        companyName={companyName}
+      />
+    );
+  }
+
+  if (cctFlowStep === "submit_error") {
+    return (
+      <CctErrorScreen
+        message={flowErrorMessage ?? "Error inesperado. Intenta de nuevo."}
+        onBack={() => {
+          setFlowErrorMessage(null);
+          setCctFlowStep("full_form");
+        }}
       />
     );
   }
@@ -672,6 +946,22 @@ export default function PublicConsentCampaignForm({ data, cct }: Props) {
           Datos del titular
         </h2>
 
+        {prefillReady && prefill && <KnownDataSummary prefill={prefill} />}
+
+        {prefillReady && (
+          <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 flex gap-3">
+            <Icon
+              icon="tabler:edit"
+              className="text-blue-600 text-lg shrink-0 mt-0.5"
+            />
+            <p className="text-sm text-blue-900 leading-relaxed">
+              Solo necesitamos que completes los datos que faltan a continuación.
+            </p>
+          </div>
+        )}
+
+        {!prefillReady && (
+          <>
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-start gap-3">
             <Icon
@@ -719,157 +1009,191 @@ export default function PublicConsentCampaignForm({ data, cct }: Props) {
           value={personKind}
           onChange={handlePersonKindChange}
         />
-
-        {personKind === "NATURAL" ? (
-          <>
-            <div className="flex gap-5">
-              <CustomInput
-                label="Nombres"
-                {...register("user.name")}
-                placeholder="Ej. Juan"
-                error={errors.user?.name}
-              />
-              <CustomInput
-                label="Apellidos"
-                {...register("user.lastName")}
-                placeholder="Ej. Pérez"
-                error={errors.user?.lastName}
-              />
-            </div>
-            <div className="flex gap-5">
-              <div>
-                <CustomSelect
-                  label="Tipo de documento"
-                  options={docTypesOptions}
-                  value={watch("user.docType")}
-                  onChange={(v) => setValue("user.docType", v)}
-                />
-              </div>
-              <CustomInput
-                label="Número de documento"
-                {...register("user.docNumber")}
-                error={errors.user?.docNumber as FieldError}
-              />
-            </div>
-            <div className="flex gap-5">
-              <div className="flex flex-col items-start gap-1 text-left flex-1 relative h-fit">
-                <label className="font-medium w-full text-ellipsis pl-2 text-stone-500 text-sm">
-                  Género
-                </label>
-                <select
-                  value={watch("user.gender") || ""}
-                  onChange={(e) =>
-                    setValue("user.gender", e.target.value as UserGender, {
-                      shouldValidate: true,
-                      shouldDirty: true,
-                      shouldTouch: true,
-                    })
-                  }
-                  className={`rounded-lg gap-2 w-full text-primary-900 border flex-1 relative px-3 py-2 bg-primary-50 ${
-                    errors.user?.gender
-                      ? "border-red-400"
-                      : "border-primary-900"
-                  }`}
-                >
-                  <option value="" disabled>
-                    Seleccionar opción
-                  </option>
-                  {userGendersOptions.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.title}
-                    </option>
-                  ))}
-                </select>
-                {errors.user?.gender && (
-                  <span className="text-red-400 text-sm font-semibold pl-2">
-                    {(errors.user.gender as FieldError).message}
-                  </span>
-                )}
-              </div>
-              <CustomInput
-                type="number"
-                label="Edad"
-                {...register("user.age")}
-                error={errors.user?.age as FieldError}
-              />
-            </div>
-          </>
-        ) : (
-          <>
-            <CustomInput
-              label="Razón social"
-              {...register("user.razonSocial")}
-              placeholder="Ej. Empresa XYZ S.A.S."
-              error={
-                errors.user && "razonSocial" in errors.user
-                  ? (errors.user as { razonSocial?: FieldError }).razonSocial
-                  : undefined
-              }
-            />
-            <div className="flex gap-5">
-              <CustomInput
-                label="Nombres del representante legal"
-                {...register("user.name")}
-                placeholder="Ej. Juan"
-                error={errors.user?.name}
-              />
-              <CustomInput
-                label="Apellidos del representante legal"
-                {...register("user.lastName")}
-                placeholder="Ej. Pérez"
-                error={errors.user?.lastName}
-              />
-            </div>
-            <CustomInput
-              label="NIT"
-              {...register("user.docNumber")}
-              placeholder="Ej. 900123456 o 900123456-7"
-              error={errors.user?.docNumber as FieldError}
-            />
-            <p className="text-xs text-stone-500 -mt-2 pl-2">
-              Ingresa el NIT con o sin dígito de verificación; se enviará solo
-              el número principal.
-            </p>
           </>
         )}
 
-        <div className="flex gap-5">
-          <CustomInput
-            label="Correo electrónico"
-            type="email"
-            placeholder="Ej. juan@ejemplo.com"
-            {...register("user.email")}
-            error={errors.user?.email}
-          />
-          <div className="flex gap-2 flex-1">
-            <div className="w-32 flex-shrink-0">
-              <CustomSelect<PhoneCountryCode>
-                label="Código"
-                value={(watch("user.phoneCountryCode") || "57") as PhoneCountryCode}
-                onChange={(v) => setValue("user.phoneCountryCode", v)}
-                options={phoneCountryCodeOptions}
-                unselectedText="Código"
-              />
-            </div>
-            <div className="flex-1 min-w-0">
+        {personKind === "NATURAL" ? (
+          <>
+            {(showField("name") || showField("lastName")) && (
+              <div className="flex gap-5">
+                {showField("name") && (
+                  <CustomInput
+                    label="Nombres"
+                    {...register("user.name")}
+                    placeholder="Ej. Juan"
+                    error={errors.user?.name}
+                  />
+                )}
+                {showField("lastName") && (
+                  <CustomInput
+                    label="Apellidos"
+                    {...register("user.lastName")}
+                    placeholder="Ej. Pérez"
+                    error={errors.user?.lastName}
+                  />
+                )}
+              </div>
+            )}
+            {showField("docNumber") && (
+              <div className="flex gap-5">
+                <div>
+                  <CustomSelect
+                    label="Tipo de documento"
+                    options={docTypesOptions}
+                    value={watch("user.docType")}
+                    onChange={(v) => setValue("user.docType", v)}
+                  />
+                </div>
+                <CustomInput
+                  label="Número de documento"
+                  {...register("user.docNumber")}
+                  error={errors.user?.docNumber as FieldError}
+                />
+              </div>
+            )}
+            {(showField("gender") || showField("age")) && (
+              <div className="flex gap-5">
+                {showField("gender") && (
+                  <div className="flex flex-col items-start gap-1 text-left flex-1 relative h-fit">
+                    <label className="font-medium w-full text-ellipsis pl-2 text-stone-500 text-sm">
+                      Género
+                    </label>
+                    <select
+                      value={watch("user.gender") || ""}
+                      onChange={(e) =>
+                        setValue("user.gender", e.target.value as UserGender, {
+                          shouldValidate: true,
+                          shouldDirty: true,
+                          shouldTouch: true,
+                        })
+                      }
+                      className={`rounded-lg gap-2 w-full text-primary-900 border flex-1 relative px-3 py-2 bg-primary-50 ${
+                        errors.user?.gender
+                          ? "border-red-400"
+                          : "border-primary-900"
+                      }`}
+                    >
+                      <option value="" disabled>
+                        Seleccionar opción
+                      </option>
+                      {userGendersOptions.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.title}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.user?.gender && (
+                      <span className="text-red-400 text-sm font-semibold pl-2">
+                        {(errors.user.gender as FieldError).message}
+                      </span>
+                    )}
+                  </div>
+                )}
+                {showField("age") && (
+                  <CustomInput
+                    type="number"
+                    label="Edad"
+                    {...register("user.age")}
+                    error={errors.user?.age as FieldError}
+                  />
+                )}
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            {showField("razonSocial") && (
               <CustomInput
-                label="Teléfono"
-                {...register("user.phone")}
-                placeholder="Ej. 3001234567"
-                error={errors.user?.phone as FieldError}
+                label="Razón social"
+                {...register("user.razonSocial")}
+                placeholder="Ej. Empresa XYZ S.A.S."
+                error={
+                  errors.user && "razonSocial" in errors.user
+                    ? (errors.user as { razonSocial?: FieldError }).razonSocial
+                    : undefined
+                }
               />
-            </div>
+            )}
+            {(showField("name") || showField("lastName")) && (
+              <div className="flex gap-5">
+                {showField("name") && (
+                  <CustomInput
+                    label="Nombres del representante legal"
+                    {...register("user.name")}
+                    placeholder="Ej. Juan"
+                    error={errors.user?.name}
+                  />
+                )}
+                {showField("lastName") && (
+                  <CustomInput
+                    label="Apellidos del representante legal"
+                    {...register("user.lastName")}
+                    placeholder="Ej. Pérez"
+                    error={errors.user?.lastName}
+                  />
+                )}
+              </div>
+            )}
+            {showField("docNumber") && (
+              <>
+                <CustomInput
+                  label="NIT"
+                  {...register("user.docNumber")}
+                  placeholder="Ej. 900123456 o 900123456-7"
+                  error={errors.user?.docNumber as FieldError}
+                />
+                <p className="text-xs text-stone-500 -mt-2 pl-2">
+                  Ingresa el NIT con o sin dígito de verificación; se enviará solo
+                  el número principal.
+                </p>
+              </>
+            )}
+          </>
+        )}
+
+        {(showField("email") || showField("phone")) && (
+          <div className="flex gap-5">
+            {showField("email") && (
+              <CustomInput
+                label="Correo electrónico"
+                type="email"
+                placeholder="Ej. juan@ejemplo.com"
+                {...register("user.email")}
+                error={errors.user?.email}
+              />
+            )}
+            {showField("phone") && (
+              <div className="flex gap-2 flex-1">
+                <div className="w-32 flex-shrink-0">
+                  <CustomSelect<PhoneCountryCode>
+                    label="Código"
+                    value={(watch("user.phoneCountryCode") || "57") as PhoneCountryCode}
+                    onChange={(v) => setValue("user.phoneCountryCode", v)}
+                    options={phoneCountryCodeOptions}
+                    unselectedText="Código"
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <CustomInput
+                    label="Teléfono"
+                    {...register("user.phone")}
+                    placeholder="Ej. 3001234567"
+                    error={errors.user?.phone as FieldError}
+                  />
+                </div>
+              </div>
+            )}
           </div>
-        </div>
+        )}
       </div>
 
       {/* Preguntas personalizadas */}
-      {data.questions.length > 0 && (
+      {questions.length > 0 && (
         <div className="rounded-xl border border-[#E4E9F2] bg-white p-6 flex flex-col gap-5">
           <h2 className="font-semibold text-[#0B1737] text-base">
             Información adicional
           </h2>
-          {data.questions.map((q) => (
+          {questions.map((q) => (
             <RenderQuestionInput
               key={q._id}
               {...register(`data.${q.title}`)}

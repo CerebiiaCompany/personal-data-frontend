@@ -15,7 +15,7 @@ import {
 } from "../forms/CustomFileDropZone";
 import { FieldError, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { parseApiError } from "@/utils/parseApiError";
+import { resolveCollectFormImportError } from "@/utils/parseApiError";
 import { createCollectFormFromTemplate } from "@/lib/collectForm.api";
 import {
   CreateCollectFormFromTemplate,
@@ -104,6 +104,11 @@ const UploadExcelTemplateDialog = ({ refresh }: Props) => {
 
   const [loading, setLoading] = useState(false);
   const [importResult, setImportResult] = useState<ImportTemplateResult | null>(null);
+  const [errorView, setErrorView] = useState<{
+    title: string;
+    message: string;
+    rows?: { row: number; messages: string[] }[];
+  } | null>(null);
   const id = HTML_IDS_DATA.uploadExcelTemplateDialog;
 
   const { data: policyTemplates, loading: loadingTemplates } = usePolicyTemplates({
@@ -127,6 +132,7 @@ const UploadExcelTemplateDialog = ({ refresh }: Props) => {
     setTimeout(() => {
       reset();
       setImportResult(null);
+      setErrorView(null);
     }, 200);
   }
 
@@ -142,14 +148,20 @@ const UploadExcelTemplateDialog = ({ refresh }: Props) => {
     }
 
     setLoading(true);
+    setErrorView(null);
 
     try {
       const { rows, errors: parseErrors } = await parseExcelTemplate(file);
 
+      // Errores de validación local del Excel: se muestran en la tarjeta con el
+      // detalle por fila, no como toast genérico.
       if (parseErrors.length) {
-        toast.error(
-          `Hay ${parseErrors.length} fila(s) con errores. Corrige y vuelve a subir.`
-        );
+        setErrorView({
+          title: "El archivo tiene filas con errores",
+          message:
+            "Corrige las siguientes filas en el Excel y vuelve a subir el archivo.",
+          rows: parseErrors,
+        });
         return;
       }
 
@@ -160,18 +172,37 @@ const UploadExcelTemplateDialog = ({ refresh }: Props) => {
         responses: rows,
       } as CreateCollectFormFromTemplate);
 
+      // Errores controlados del backend: tarjeta con mensaje específico.
       if (res.error) {
-        toast.error(parseApiError(res.error));
+        setErrorView({
+          title: "No se pudo importar el archivo",
+          message: resolveCollectFormImportError(res.error),
+        });
         return;
       }
 
+      const result = res.data as ImportTemplateResult;
       refresh();
-      setImportResult(res.data as ImportTemplateResult);
+      setImportResult(result);
+
+      if ((result?.responsesSkipped ?? 0) > 0) {
+        toast.warning(
+          `${result.responsesSkipped} cliente(s) ya existían y fueron omitidos.`
+        );
+      }
     } catch {
-      toast.error("Ocurrió un error al procesar el archivo. Intenta nuevamente.");
+      setErrorView({
+        title: "No se pudo procesar el archivo",
+        message:
+          "Ocurrió un error al leer el archivo. Verifica que sea la plantilla correcta e intenta de nuevo.",
+      });
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleRetry() {
+    setErrorView(null);
   }
 
   const hasSkipped = (importResult?.responsesSkipped ?? 0) > 0;
@@ -187,16 +218,35 @@ const UploadExcelTemplateDialog = ({ refresh }: Props) => {
         <header className="border-b border-b-disabled flex items-center justify-between p-4 gap-6">
           <div className="rounded-full ml-4 border border-disabled p-2 shrink-0">
             <Icon
-              icon={importResult ? "tabler:circle-check" : "basil:cloud-upload-outline"}
-              className={clsx("text-5xl", importResult && "text-green-600")}
+              icon={
+                errorView
+                  ? "tabler:alert-triangle"
+                  : importResult
+                  ? "tabler:circle-check"
+                  : "basil:cloud-upload-outline"
+              }
+              className={clsx(
+                "text-5xl",
+                errorView
+                  ? "text-red-600"
+                  : importResult
+                  ? "text-green-600"
+                  : ""
+              )}
             />
           </div>
           <div className="flex flex-col items-start text-left flex-1 min-w-0">
             <h3 className="font-bold text-xl">
-              {importResult ? "Importación completada" : "Importar datos de formulario"}
+              {errorView
+                ? errorView.title
+                : importResult
+                ? "Importación completada"
+                : "Importar datos de formulario"}
             </h3>
             <p className="text-sm text-stone-500">
-              {importResult
+              {errorView
+                ? "Revisa el detalle del error antes de volver a intentar."
+                : importResult
                 ? "Revisa el resumen de registros procesados."
                 : "Sube la plantilla de Excel para crear un formulario con los usuarios."}
             </p>
@@ -216,7 +266,64 @@ const UploadExcelTemplateDialog = ({ refresh }: Props) => {
 
         {/* Body */}
         <div className="flex-1 px-5 py-4 flex flex-col gap-4 overflow-y-auto">
-          {importResult ? (
+          {errorView ? (
+            /* ── Vista de error ─────────────────────────────────────────── */
+            <div className="flex flex-col gap-4">
+              <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+                <Icon
+                  icon="tabler:alert-circle"
+                  className="mt-0.5 shrink-0 text-xl text-red-600"
+                />
+                <p className="text-sm leading-relaxed text-red-800">
+                  {errorView.message}
+                </p>
+              </div>
+
+              {errorView.rows && errorView.rows.length > 0 && (
+                <div className="rounded-xl border border-stone-200 overflow-hidden">
+                  <div className="grid grid-cols-[70px_1fr] gap-2 bg-stone-100 px-3 py-2">
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-stone-500">
+                      Fila
+                    </span>
+                    <span className="text-[11px] font-semibold uppercase tracking-wide text-stone-500">
+                      Errores
+                    </span>
+                  </div>
+                  <div className="max-h-60 overflow-y-auto divide-y divide-stone-100">
+                    {errorView.rows.map((r) => (
+                      <div
+                        key={r.row}
+                        className="grid grid-cols-[70px_1fr] gap-2 px-3 py-2.5 text-sm hover:bg-stone-50"
+                      >
+                        <span className="font-mono text-xs font-semibold text-stone-600">
+                          {r.row}
+                        </span>
+                        <ul className="flex flex-col gap-1">
+                          {r.messages.map((m, i) => (
+                            <li
+                              key={i}
+                              className="text-xs font-medium text-red-600"
+                            >
+                              {m}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <Button
+                type="button"
+                onClick={handleRetry}
+                className="w-full mt-1"
+                startContent={<Icon icon="tabler:arrow-left" />}
+              >
+                Volver a intentar
+              </Button>
+            </div>
+          ) : importResult ? (
             /* ── Vista de resultado ─────────────────────────────────────── */
             <div className="flex flex-col gap-4">
               {/* Métricas */}

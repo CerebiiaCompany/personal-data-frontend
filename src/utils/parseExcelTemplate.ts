@@ -5,7 +5,6 @@ import {
 } from "@/types/collectFormResponse.types";
 import { DocType } from "@/types/user.types";
 import ExcelJS from "exceljs";
-import * as z from "zod";
 
 type TemplateUserGender = "MASCULINO" | "FEMENINO" | "OTRO";
 
@@ -18,6 +17,7 @@ export interface ParsedUserRow {
   gender: TemplateUserGender; // MASCULINO / FEMENINO / Otro
   email: string;
   phone: string;
+  razonSocial: string; // solo NITs (persona jurídica)
 }
 
 export type ParseResult = {
@@ -46,39 +46,48 @@ const HEADER_MAP: Record<string, keyof ParsedUserRow> = {
   genero: "gender",
   correo: "email",
   telefono: "phone",
+  "razon social": "razonSocial",
 };
 
-const genderSchema = z.preprocess((val) => {
-  if (!val) return undefined;
-  const normalized = String(val).trim().toUpperCase();
-  switch (normalized) {
+/** Texto recortado o `undefined` si la celda está vacía. */
+function toTrimmedString(val: unknown): string | undefined {
+  if (val === undefined || val === null) return undefined;
+  const s = String(val).trim();
+  return s === "" ? undefined : s;
+}
+
+/** Número opcional: `undefined` si está vacío o no es numérico (no bloquea). */
+function toOptionalNumber(val: unknown): number | undefined {
+  const s = toTrimmedString(val);
+  if (s === undefined) return undefined;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+/** Entero opcional (edad, documento). */
+function toOptionalInt(val: unknown): number | undefined {
+  const n = toOptionalNumber(val);
+  return n === undefined ? undefined : Math.trunc(n);
+}
+
+/** Normaliza el género a la forma del backend; `undefined` si no se reconoce. */
+function normalizeGender(val: unknown): UserGender | undefined {
+  const s = toTrimmedString(val);
+  if (!s) return undefined;
+  switch (s.toUpperCase()) {
     case "MASCULINO":
+    case "MALE":
       return "MALE";
     case "FEMENINO":
+    case "FEMALE":
       return "FEMALE";
     case "OTRO":
+    case "OTHER":
       return "OTHER";
     default:
-      return normalized; // fallback, in case ya viene en formato inglés
+      return undefined;
   }
-}, z.string<UserGender>("Género inválido"));
-
-const rowSchema = z.object({
-  docType: z.string<DocType>("Tipo de documento inválido"),
-  docNumber: z.preprocess(
-    (v) => (v === "" ? undefined : v),
-    z.coerce.number("Número de documento inválido")
-  ),
-  name: z.string().min(1, "Nombres requeridos"),
-  lastName: z.string().min(1, "Apellidos requeridos"),
-  age: z.preprocess(
-    (v) => (v === "" ? undefined : v),
-    z.coerce.number("Edad inválida").int("Edad inválida")
-  ),
-  gender: genderSchema,
-  email: z.email("Correo inválido").min(1, "Correo inválido"),
-  phone: z.coerce.string().min(1, "Número inválido"),
-});
+}
 
 function isRowEmpty(obj: Record<string, unknown>) {
   return Object.values(obj).every(
@@ -115,30 +124,22 @@ export async function parseExcelTemplate(
     headers[colNumber - 1] = { key: mapped, text: raw };
   });
 
-  // Verifica que existan los headers mínimos
-  const requiredKeys: (keyof ParsedUserRow)[] = [
-    "docType",
-    "docNumber",
-    "name",
-    "lastName",
-    "age",
-    "email",
-    "gender",
-    "phone",
-  ];
   const presentKeys = new Set(
     headers.map((h) => h.key).filter(Boolean) as (keyof ParsedUserRow)[]
   );
-  const missing = requiredKeys.filter((k) => !presentKeys.has(k));
-  if (missing.length) {
+
+  // Los datos del cliente son opcionales: solo exigimos que el archivo tenga
+  // al menos una columna de contacto (Correo o Telefono), que es el único dato
+  // imprescindible para poder llegar al cliente.
+  if (!presentKeys.has("email") && !presentKeys.has("phone")) {
     return {
       rows: [],
       errors: [
         {
           row: 1,
           messages: [
-            `Faltan columnas requeridas: ${missing.join(", ")}. ` +
-              `Asegúrate de usar exactamente: Tipo de Documento, Numero de Documento, Nombres, Apellidos, Edad, Genero, Correo y Telefono.`,
+            "El archivo debe incluir al menos una columna de contacto: " +
+              "Correo o Telefono.",
           ],
         },
       ],
@@ -176,29 +177,41 @@ export async function parseExcelTemplate(
 
     if (isRowEmpty(draft)) continue;
 
-    const parsed = rowSchema.safeParse(draft);
+    // Todos los campos son opcionales salvo el contacto. Si falta algún dato,
+    // el cliente lo completa después en el formulario de consentimiento.
+    const docType = toTrimmedString(draft.docType) as DocType | undefined;
+    const docNumber = toOptionalInt(draft.docNumber);
+    const name = toTrimmedString(draft.name);
+    const lastName = toTrimmedString(draft.lastName);
+    const age = toOptionalInt(draft.age);
+    const gender = normalizeGender(draft.gender);
+    const email = toTrimmedString(draft.email);
+    const phone = toTrimmedString(draft.phone);
+    const razonSocial = toTrimmedString(draft.razonSocial);
 
-    if (!parsed.success) {
+    // Único error que bloquea: la fila no tiene ningún canal de contacto.
+    if (!email && !phone) {
       errors.push({
         row: r,
-        messages: parsed.error.issues.map(
-          (i) => `${i.path.join(".")}: ${i.message}`
-        ),
+        messages: [
+          "La fila no tiene correo ni teléfono. Indica al menos un medio de contacto.",
+        ],
       });
       continue;
     }
 
-    // Limpieza adicional: recorta strings
-    const clean: CollectFormResponseUser = {
-      docType: parsed.data.docType,
-      docNumber: parsed.data.docNumber,
-      name: parsed.data.name.trim(),
-      lastName: parsed.data.lastName.trim(),
-      gender: parsed.data.gender,
-      email: parsed.data.email.trim(),
-      phone: parsed.data.phone.trim(),
-      age: parsed.data.age,
-    };
+    // Solo incluimos los campos presentes (omitimos vacíos/indefinidos).
+    const clean = {
+      ...(docType ? { docType } : {}),
+      ...(docNumber !== undefined ? { docNumber } : {}),
+      ...(name ? { name } : {}),
+      ...(lastName ? { lastName } : {}),
+      ...(age !== undefined ? { age } : {}),
+      ...(gender ? { gender } : {}),
+      ...(email ? { email } : {}),
+      ...(phone ? { phone } : {}),
+      ...(razonSocial ? { razonSocial } : {}),
+    } as CollectFormResponseUser;
 
     rows.push(clean);
   }

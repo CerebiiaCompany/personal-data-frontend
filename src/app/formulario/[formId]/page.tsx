@@ -13,6 +13,7 @@ function ConsentFormContent() {
   const { formId } = useParams<{ formId: string }>();
   const searchParams = useSearchParams();
   const cct = searchParams.get("cct");
+  const qct = searchParams.get("qct");
 
   const { data, loading, error } = usePublicCollectForm({ id: formId });
 
@@ -60,7 +61,7 @@ function ConsentFormContent() {
 
   if (!data) return null;
 
-  return <PublicConsentCampaignForm data={data} cct={cct} />;
+  return <PublicConsentCampaignForm data={data} cct={cct} qct={qct} />;
 }
 
 export default function FormularioConsentPage() {

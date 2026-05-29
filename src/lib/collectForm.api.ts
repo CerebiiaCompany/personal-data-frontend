@@ -7,12 +7,29 @@ import {
 } from "@/types/collectForm.types";
 import { customFetch } from "@/utils/customFetch";
 import type { PolicyTemplateFileUrlResponse } from "@/lib/policyTemplate.api";
+import { CollectFormPrefill } from "@/types/collectFormResponse.types";
 
 export async function fetchPublicCollectForm(
   params: QueryParams
 ): Promise<APIResponse> {
   let res = await customFetch(`/public/collectForms/${params.id}`, {}, params);
   return res;
+}
+
+/**
+ * Prefill de campaña: devuelve los datos ya conocidos de la persona (knownFields)
+ * y los que faltan por capturar (missingFields). Solo aplica cuando la URL del
+ * formulario incluye un `qct` (Quick Consent Token, único por destinatario).
+ */
+export async function getPublicCollectFormPrefill(
+  collectFormId: string,
+  qct: string
+): Promise<APIResponse<CollectFormPrefill>> {
+  return customFetch<CollectFormPrefill>(
+    `/public/collectForms/${collectFormId}/prefill`,
+    { method: "GET" },
+    { qct }
+  );
 }
 
 export type PublicCollectFormPolicyUrlResponse = PolicyTemplateFileUrlResponse & {

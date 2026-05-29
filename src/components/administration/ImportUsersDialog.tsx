@@ -83,23 +83,29 @@ const ImportUsersDialog = ({ refresh }: Props) => {
     try {
       const res = await importCompanyUsers(companyId, file);
 
+      const payload = res.data as ImportUsersResult | undefined;
+
+      // Si tenemos el detalle (resumen + errores por fila), lo mostramos en la
+      // tarjeta SIEMPRE, aunque venga acompañado de un error de backend.
+      if (payload?.summary) {
+        setResult(payload);
+
+        if (payload.summary.createdCount > 0) {
+          toast.success(
+            `${payload.summary.createdCount} usuario(s) importado(s) correctamente.`
+          );
+          refresh();
+        }
+        return;
+      }
+
+      // Sin detalle: error genérico del backend.
       if (res.error) {
         toast.error(parseApiError(res.error));
         return;
       }
 
-      const payload = res.data as ImportUsersResult;
-      setResult(payload);
-
-      if (payload.summary.createdCount > 0) {
-        toast.success(
-          `${payload.summary.createdCount} usuario(s) importado(s) correctamente.`
-        );
-        refresh();
-      }
-      if (payload.summary.errorCount > 0 && payload.summary.createdCount === 0) {
-        toast.error("No se pudo importar ningún usuario. Revisa los errores.");
-      }
+      toast.error("No se recibió respuesta de la importación. Intenta de nuevo.");
     } catch {
       toast.error("Ocurrió un error al procesar el archivo. Intenta nuevamente.");
     } finally {
@@ -108,6 +114,40 @@ const ImportUsersDialog = ({ refresh }: Props) => {
   }
 
   const hasErrors = (result?.summary.errorCount ?? 0) > 0;
+  const createdCount = result?.summary.createdCount ?? 0;
+
+  const resultHeader = (() => {
+    if (!result) {
+      return {
+        icon: "basil:cloud-upload-outline",
+        iconClass: "",
+        title: "Importar usuarios desde Excel",
+        subtitle: "Sube la plantilla con los datos de los usuarios a crear.",
+      };
+    }
+    if (hasErrors && createdCount === 0) {
+      return {
+        icon: "tabler:alert-triangle",
+        iconClass: "text-red-600",
+        title: "No se importaron usuarios",
+        subtitle: "Ninguna fila se pudo crear. Revisa los errores.",
+      };
+    }
+    if (hasErrors && createdCount > 0) {
+      return {
+        icon: "tabler:alert-circle",
+        iconClass: "text-amber-500",
+        title: "Importación parcial",
+        subtitle: "Algunas filas se crearon y otras tienen errores.",
+      };
+    }
+    return {
+      icon: "tabler:circle-check",
+      iconClass: "text-green-600",
+      title: "Importación completada",
+      subtitle: "Todos los usuarios se importaron correctamente.",
+    };
+  })();
 
   return (
     <div
@@ -120,19 +160,13 @@ const ImportUsersDialog = ({ refresh }: Props) => {
         <header className="border-b border-b-disabled flex items-center justify-between p-4 gap-6">
           <div className="rounded-full ml-4 border border-disabled p-2 shrink-0">
             <Icon
-              icon={result ? "tabler:circle-check" : "basil:cloud-upload-outline"}
-              className={clsx("text-5xl", result && "text-green-600")}
+              icon={resultHeader.icon}
+              className={clsx("text-5xl", resultHeader.iconClass)}
             />
           </div>
           <div className="flex flex-col items-start text-left flex-1 min-w-0">
-            <h3 className="font-bold text-xl">
-              {result ? "Importación completada" : "Importar usuarios desde Excel"}
-            </h3>
-            <p className="text-sm text-stone-500">
-              {result
-                ? "Revisa el resumen de la importación."
-                : "Sube la plantilla con los datos de los usuarios a crear."}
-            </p>
+            <h3 className="font-bold text-xl">{resultHeader.title}</h3>
+            <p className="text-sm text-stone-500">{resultHeader.subtitle}</p>
           </div>
           <button
             type="button"

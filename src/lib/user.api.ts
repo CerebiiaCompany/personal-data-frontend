@@ -245,9 +245,58 @@ export async function downloadUsersImportTemplate(
 }
 
 /**
+ * El detalle de la importación (resumen + errores por fila) puede venir en
+ * distintos lugares según el backend: en `data`, dentro del envelope de error
+ * (`error.details` / `error.data`) o en la raíz. Lo rescatamos desde cualquiera
+ * de esas ubicaciones para poder mostrarlo SIEMPRE en la tabla, no como un toast
+ * genérico.
+ */
+function extractImportResult(body: unknown): ImportUsersResult | null {
+  if (!body || typeof body !== "object") return null;
+
+  const candidates: unknown[] = [
+    (body as Record<string, unknown>).data,
+    (body as Record<string, unknown>).result,
+    ((body as Record<string, unknown>).error as Record<string, unknown>)?.details,
+    ((body as Record<string, unknown>).error as Record<string, unknown>)?.data,
+    body,
+  ];
+
+  for (const candidate of candidates) {
+    if (!candidate || typeof candidate !== "object") continue;
+    const c = candidate as Record<string, unknown>;
+    const hasErrors = Array.isArray(c.errors);
+    const hasSummary =
+      !!c.summary &&
+      typeof c.summary === "object" &&
+      "errorCount" in (c.summary as Record<string, unknown>);
+    if (hasErrors || hasSummary) {
+      const errors = Array.isArray(c.errors)
+        ? (c.errors as ImportUsersResult["errors"])
+        : [];
+      const created = Array.isArray(c.created)
+        ? (c.created as ImportUsersResult["created"])
+        : [];
+      const summary = (c.summary as ImportUsersResult["summary"]) ?? {
+        total: created.length + errors.length,
+        createdCount: created.length,
+        errorCount: errors.length,
+      };
+      return { summary, created, errors };
+    }
+  }
+
+  return null;
+}
+
+/**
  * Importa usuarios masivamente desde un archivo Excel (.xlsx/.xls) usando
  * multipart/form-data. No se fija Content-Type manualmente: el navegador agrega
  * el boundary automáticamente.
+ *
+ * Devuelve `data` con el detalle (resumen + errores por fila) siempre que el
+ * backend lo incluya, incluso cuando la respuesta es de error, para mostrar al
+ * usuario qué filas fallaron y por qué.
  */
 export async function importCompanyUsers(
   companyId: string,
@@ -266,22 +315,28 @@ export async function importCompanyUsers(
       }
     );
 
-    if (!response.ok) {
-      let errorBody: APIResponse<ImportUsersResult> | null = null;
-      try {
-        errorBody = (await response.json()) as APIResponse<ImportUsersResult>;
-      } catch {
-        // respuesta no-JSON
-      }
-      return {
-        error: errorBody?.error || {
-          code: "http/unknown-error",
-          message: `No se pudo importar el archivo (${response.status})`,
-        },
-      };
+    let body: unknown = null;
+    try {
+      body = await response.json();
+    } catch {
+      // respuesta no-JSON
     }
 
-    return (await response.json()) as APIResponse<ImportUsersResult>;
+    const result = extractImportResult(body);
+
+    if (!response.ok) {
+      const error = (body as APIResponse<ImportUsersResult>)?.error ?? {
+        code: "http/unknown-error",
+        message: `No se pudo importar el archivo (${response.status})`,
+      };
+      // Si el error trae el detalle de filas, lo devolvemos como data para
+      // renderizar la tabla en lugar de un toast genérico.
+      return result ? { data: result, error } : { error };
+    }
+
+    if (result) return { data: result };
+
+    return (body as APIResponse<ImportUsersResult>) ?? {};
   } catch (error) {
     return {
       error: {
