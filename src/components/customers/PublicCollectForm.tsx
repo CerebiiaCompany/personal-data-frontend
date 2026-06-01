@@ -257,12 +257,15 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isValid },
     reset,
     setValue,
     watch,
   } = useForm({
     resolver,
+    // Validación en vivo para poder habilitar/deshabilitar el botón de envío
+    // según si TODOS los campos requeridos están completos y válidos.
+    mode: "onChange",
     defaultValues: {
       data:
         (initialValues?.data as typeof dynamicDefaultValues) ||
@@ -955,20 +958,20 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
           className="w-full max-w-lg" 
           type="submit"
           loading={isSubmitting}
-          disabled={isSubmitting || !pendingOtpId || !watch("otpCode") || watch("otpCode")?.trim() === ""}
+          disabled={isSubmitting || !pendingOtpId || !isValid}
         >
           {isSubmitting ? "Enviando..." : "Enviar"}
         </Button>
       </div>
       
-      {/* Mensaje informativo si falta el código OTP */}
-      {(!pendingOtpId || !watch("otpCode") || watch("otpCode")?.trim() === "") && (
+      {/* Mensaje informativo si faltan campos por completar o el OTP */}
+      {(!pendingOtpId || !isValid) && (
         <div className="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-md p-3 mt-4">
           <Icon icon={"material-symbols:warning-outline"} className="text-lg" />
           <span className="font-medium">
-            {!pendingOtpId 
-              ? "Debes enviar el código OTP primero para poder enviar el formulario."
-              : "Debes ingresar el código OTP recibido para poder enviar el formulario."}
+            {!isValid
+              ? "Debes completar correctamente todos los campos del formulario para poder enviarlo."
+              : "Debes enviar e ingresar el código OTP para poder enviar el formulario."}
           </span>
         </div>
       )}
