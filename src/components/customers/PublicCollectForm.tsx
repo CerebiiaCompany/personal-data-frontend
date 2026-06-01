@@ -1,6 +1,6 @@
 import { AnswerType, CollectForm } from "@/types/collectForm.types";
 import { zodResolver } from "@hookform/resolvers/zod";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { FieldError, useForm } from "react-hook-form";
 import * as z from "zod";
 import Button from "../base/Button";
@@ -41,6 +41,18 @@ interface Props {
   initialValues?: { [key: string]: any };
 }
 
+// Genera una clave de idempotencia única para cada intento de registro.
+// Se usa para que, ante reintentos por red lenta/inestable, el backend pueda
+// deduplicar y no crear respuestas duplicadas.
+function generateIdempotencyKey(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random()
+    .toString(36)
+    .slice(2)}`;
+}
+
 // Opciones de códigos telefónicos de países
 type PhoneCountryCode = "57" | "58" | "1" | "52" | "51" | "56" | "54" | "55" | "593" | "507";
 
@@ -69,6 +81,10 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
   const [otpLastSentChannel, setOtpLastSentChannel] =
     useState<CampaignDeliveryChannel | null>(null);
   const [showReauthModal, setShowReauthModal] = useState(false);
+  // Clave de idempotencia estable durante todo el ciclo de vida del registro
+  // actual. Se mantiene igual entre reintentos (automáticos o manuales) para que
+  // el backend deduplique, y se renueva solo al iniciar un nuevo registro.
+  const idempotencyKeyRef = useRef<string>(generateIdempotencyKey());
   const otpPricing = useCompanyCreditsPricing();
   const fields: {
     [key: string]: {
@@ -289,6 +305,8 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
   const resetForm = () => {
     setPersonKind("NATURAL");
     setFormKey((prev) => prev + 1);
+    // Nuevo registro => nueva clave de idempotencia.
+    idempotencyKeyRef.current = generateIdempotencyKey();
     reset({
       data: dynamicDefaultValues,
       dataProcessing: false,
@@ -326,23 +344,29 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
   async function onSubmit(formData: any) {
     // Prevenir múltiples envíos
     if (isSubmitting) return;
-    const hasSession = await ensureActiveSession();
-    if (!hasSession) return;
-    
-    // Validar que se haya enviado el OTP
+
+    // Validaciones síncronas (baratas) ANTES de marcar loading, para no mostrar
+    // "Enviando..." si falta el OTP.
     if (!pendingOtpId) {
       toast.error("Por favor, envía el código OTP primero");
       return;
     }
-
-    // Validar que se haya ingresado el código OTP
     if (!formData.otpCode || formData.otpCode.trim() === "") {
       toast.error("Por favor, ingresa el código OTP recibido");
       return;
     }
-    
+
+    // Activar loading de inmediato: la verificación de sesión es una llamada de
+    // red (hasta 20s en conexiones lentas) y antes se ejecutaba ANTES de poner
+    // el botón en "Enviando...", lo que hacía parecer que el clic no respondía.
     setIsSubmitting(true);
-    
+
+    const hasSession = await ensureActiveSession();
+    if (!hasSession) {
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       // Concatenar código de país con el número de teléfono
       const phoneCountryCode = watch("user.phoneCountryCode") || "57";
@@ -368,17 +392,21 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
 
       const userPayload = buildCollectFormUserPayload(formData.user, personKind);
 
-      const res = await registerCollectFormResponse(data._id, {
-        data: formData.data,
-        dataProcessing: formData.dataProcessing,
-        user: userPayload,
-        otpCode: formData.otpCode,
-        otpCodeId: otpValidation.data.id,
-        recipientData: {
-          channel: otpRecipientChannel,
-          address: otpRecipientAddress,
+      const res = await registerCollectFormResponse(
+        data._id,
+        {
+          data: formData.data,
+          dataProcessing: formData.dataProcessing,
+          user: userPayload,
+          otpCode: formData.otpCode,
+          otpCodeId: otpValidation.data.id,
+          recipientData: {
+            channel: otpRecipientChannel,
+            address: otpRecipientAddress,
+          },
         },
-      });
+        idempotencyKeyRef.current
+      );
 
       if (res.error) {
         toast.error(parseApiError(res.error));
@@ -413,24 +441,37 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
   };
 
   async function createOtpCode(channel: CampaignDeliveryChannel) {
-    const hasSession = await ensureActiveSession();
-    if (!hasSession) return;
+    // Evitar doble envío si ya hay uno en curso.
+    if (isSendingOtp) return;
 
     const phone = watch("user.phone");
     const phoneCountryCode = watch("user.phoneCountryCode") || "57";
     const email = watch("user.email");
-    
+
+    // Validaciones síncronas (baratas) ANTES de marcar loading, para no mostrar
+    // el botón "Enviando..." si falta el dato requerido.
+    if (channel === "SMS" && (!phone || phone.trim() === "")) {
+      toast.error("Por favor ingresa tu número de teléfono primero");
+      return;
+    }
+    if (channel === "EMAIL" && (!email || email.trim() === "")) {
+      toast.error("Por favor ingresa tu correo electrónico primero");
+      return;
+    }
+
+    // Activar loading de inmediato: la verificación de sesión es una llamada de
+    // red (hasta 20s en conexiones lentas) y antes se ejecutaba ANTES de poner
+    // el botón en estado de carga, lo que hacía parecer que el clic no respondía.
     setIsSendingOtp(true);
+
+    const hasSession = await ensureActiveSession();
+    if (!hasSession) {
+      setIsSendingOtp(false);
+      return;
+    }
 
     try {
       if (channel === "SMS") {
-        // Validar que el teléfono esté ingresado
-        if (!phone || phone.trim() === "") {
-          toast.error("Por favor ingresa tu número de teléfono primero");
-          setIsSendingOtp(false);
-          return;
-        }
-
         // Concatenar código de país con el número
         const fullPhoneNumber = `${phoneCountryCode}${phone}`;
 
@@ -465,12 +506,6 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
         toast.success("Código enviado por SMS");
       } else {
         // Enviar por EMAIL (generando OTP o reenviando si ya existe uno pendiente)
-        if (!email || email.trim() === "") {
-          toast.error("Por favor ingresa tu correo electrónico primero");
-          setIsSendingOtp(false);
-          return;
-        }
-
         // Si ya hay OTP pendiente, reenviar por email
         if (pendingOtpId) {
           const resend = await resendOtpCodeByEmail(pendingOtpId, email);

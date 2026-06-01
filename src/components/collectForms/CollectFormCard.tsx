@@ -41,6 +41,9 @@ const CollectFormCard = ({ data, deleteHandler }: Props) => {
 
   const handleCopyLink = useCallback(() => {
     copyToClipboard(formUrl, "Enlace copiado");
+    // Además de copiar, abrir el formulario en una nueva pestaña.
+    // `noopener,noreferrer` evita que la pestaña abierta acceda a `window.opener`.
+    window.open(formUrl, "_blank", "noopener,noreferrer");
   }, [formUrl]);
 
   const handleDelete = useCallback(() => {

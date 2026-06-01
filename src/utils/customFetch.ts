@@ -37,11 +37,42 @@ function buildQueryString(params?: QueryParams): string {
   return parts.join("&");
 }
 
+/**
+ * Configuración de resiliencia de red por petición.
+ *
+ * Estos parámetros son clave para equipos con internet lento o inestable
+ * (p. ej. cajas/puntos de venta): permiten dar más tiempo a la petición y
+ * reintentar automáticamente ante caídas momentáneas de red, en lugar de
+ * fallar de inmediato.
+ */
+export interface FetchConfig {
+  /** Tiempo máximo de espera (ms) antes de abortar. Default 30000. */
+  timeoutMs?: number;
+  /** Número de reintentos ante errores de red/timeout. Default 0. */
+  retries?: number;
+  /** Delay base entre reintentos (ms). Se aplica backoff lineal. Default 1000. */
+  retryDelayMs?: number;
+  /**
+   * Si es true, también reintenta cuando la causa fue un TIMEOUT.
+   *
+   * IMPORTANTE: úsalo SOLO en operaciones idempotentes (GET) o en POST/PATCH
+   * protegidos con `Idempotency-Key`, porque un timeout puede significar que el
+   * servidor SÍ procesó la petición y reintentar podría duplicar datos.
+   */
+  retryOnTimeout?: boolean;
+}
+
+const DEFAULT_TIMEOUT_MS = 30000;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 // Función auxiliar para hacer fetch con timeout
 async function fetchWithTimeout(
   url: string,
   options: RequestInit = {},
-  timeoutMs: number = 30000
+  timeoutMs: number = DEFAULT_TIMEOUT_MS
 ): Promise<Response> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -62,50 +93,37 @@ async function fetchWithTimeout(
   }
 }
 
-// Función auxiliar para reintentar peticiones
+// Reintenta una petición que devuelve APIResponse (nunca lanza) ante errores
+// de red y, opcionalmente, timeouts. Aplica backoff lineal.
 async function fetchWithRetry<T>(
   fetchFn: () => Promise<APIResponse<T>>,
-  maxRetries: number = 2,
-  delayMs: number = 1000
+  retries: number,
+  delayMs: number,
+  retryOnTimeout: boolean
 ): Promise<APIResponse<T>> {
-  let lastError: any;
-  
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      const result = await fetchFn();
-      
-      // Si es un error de red o timeout, reintentar
-      if (result.error?.code === 'http/network-error' || 
-          result.error?.code === 'http/timeout') {
-        if (attempt < maxRetries) {
-          console.log(`[customFetch] Reintento ${attempt + 1}/${maxRetries}...`);
-          await new Promise(resolve => setTimeout(resolve, delayMs * (attempt + 1)));
-          continue;
-        }
-      }
-      
-      return result;
-    } catch (error) {
-      lastError = error;
-      if (attempt < maxRetries) {
-        console.log(`[customFetch] Reintento ${attempt + 1}/${maxRetries} después de error...`);
-        await new Promise(resolve => setTimeout(resolve, delayMs * (attempt + 1)));
-      }
-    }
+  let result: APIResponse<T> = await fetchFn();
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    const code = result.error?.code;
+    const isNetworkError = code === "http/network-error";
+    const isTimeout = code === "http/timeout";
+    const isRetryable = isNetworkError || (isTimeout && retryOnTimeout);
+
+    if (!isRetryable) return result;
+
+    console.log(`[customFetch] Reintento ${attempt}/${retries} (causa: ${code})...`);
+    await delay(delayMs * attempt);
+    result = await fetchFn();
   }
-  
-  return {
-    error: { 
-      message: lastError?.message || "Error desconocido después de reintentos", 
-      code: "http/unknown-error" 
-    },
-  };
+
+  return result;
 }
 
 export async function customFetch<T>(
   endpoint: string,
   options: RequestInit = {},
-  query?: QueryParams
+  query?: QueryParams,
+  config?: FetchConfig
 ): Promise<APIResponse<T>> {
   const headers: HeadersInit = {};
 
@@ -120,7 +138,21 @@ export async function customFetch<T>(
     localEndpoint += `?${queries}`;
   }
 
+  const timeoutMs = config?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+
   const fetchFn = async (): Promise<APIResponse<T>> => {
+    // Detección temprana de "sin conexión": evita esperar todo el timeout
+    // cuando el navegador ya sabe que no hay red. `onLine === false` es fiable;
+    // se trata como error de red (reintetable) para dar margen a reconectar.
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      return {
+        error: {
+          message: "Sin conexión a internet. Verifica tu red e intenta de nuevo.",
+          code: "http/network-error",
+        },
+      };
+    }
+
     try {
       const req = await fetchWithTimeout(`${API_BASE_URL}${localEndpoint}`, {
         credentials: "include",
@@ -128,12 +160,14 @@ export async function customFetch<T>(
         // mutación (crear/editar/eliminar) el refetch siempre debe traer datos
         // frescos del backend.
         cache: "no-store",
+        ...options,
+        // headers se fusiona al final para no perder Content-Type ni headers
+        // propios (p. ej. Idempotency-Key) que vengan en `options.headers`.
         headers: {
           ...headers,
           ...options.headers,
         },
-        ...options,
-      }, 30000); // Timeout de 30 segundos
+      }, timeoutMs);
 
       // Check for HTTP 401 status before parsing JSON
       if (req.status === 401) {
@@ -248,12 +282,20 @@ export async function customFetch<T>(
     }
   };
 
-  // Solo aplicar reintentos para endpoints críticos (auth, session)
-  const shouldRetry = endpoint.includes('/auth/') || endpoint.includes('/session');
-  
-  if (shouldRetry) {
-    return fetchWithRetry(fetchFn, 2, 1000);
+  // Reintentos automáticos para endpoints críticos de sesión (comportamiento
+  // histórico) cuando el caller no especifica una config explícita.
+  const autoRetry =
+    endpoint.includes("/auth/") || endpoint.includes("/session");
+
+  const retries = config?.retries ?? (autoRetry ? 2 : 0);
+  const retryDelayMs = config?.retryDelayMs ?? 1000;
+  // Por defecto, los reintentos automáticos de sesión sí reintentan en timeout
+  // (son GET idempotentes); para el resto, solo si el caller lo habilita.
+  const retryOnTimeout = config?.retryOnTimeout ?? autoRetry;
+
+  if (retries > 0) {
+    return fetchWithRetry(fetchFn, retries, retryDelayMs, retryOnTimeout);
   }
-  
+
   return fetchFn();
 }

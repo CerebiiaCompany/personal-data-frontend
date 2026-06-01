@@ -81,10 +81,17 @@ export async function getSession(): Promise<APIResponse<SessionUser>> {
 export async function checkActiveSession(): Promise<
   APIResponse<{ authenticated: boolean }>
 > {
+  // Timeout explícito: sin esto, en equipos con mala red el fetch podría quedar
+  // colgado indefinidamente y bloquear el envío del formulario (se llama antes
+  // de generar OTP y antes de enviar la respuesta).
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 20000);
+
   try {
     const req = await fetch(`${API_BASE_URL}/auth`, {
       method: "GET",
       credentials: "include",
+      signal: controller.signal,
     });
 
     if (req.status === 401) {
@@ -106,12 +113,23 @@ export async function checkActiveSession(): Promise<
     }
 
     return { data: { authenticated: true } };
-  } catch {
+  } catch (error) {
+    if ((error as Error)?.name === "AbortError") {
+      return {
+        error: {
+          code: "http/timeout",
+          message:
+            "No se pudo validar la sesión: la conexión está muy lenta. Intenta de nuevo.",
+        },
+      };
+    }
     return {
       error: {
         code: "http/network-error",
         message: "No se pudo validar la sesión por un error de red",
       },
     };
+  } finally {
+    clearTimeout(timeoutId);
   }
 }

@@ -12,7 +12,15 @@ import { CollectFormPrefill } from "@/types/collectFormResponse.types";
 export async function fetchPublicCollectForm(
   params: QueryParams
 ): Promise<APIResponse> {
-  let res = await customFetch(`/public/collectForms/${params.id}`, {}, params);
+  // GET idempotente y público: damos más tiempo y reintentamos (incluido
+  // timeout) para que equipos lentos / con mala red puedan cargar el formulario
+  // sin que falle a los 30s.
+  let res = await customFetch(
+    `/public/collectForms/${params.id}`,
+    {},
+    params,
+    { timeoutMs: 45000, retries: 3, retryDelayMs: 1500, retryOnTimeout: true }
+  );
   return res;
 }
 
@@ -50,7 +58,8 @@ export async function getPublicCollectFormPolicyUrl(
   return customFetch<PublicCollectFormPolicyUrlResponse>(
     `/public/collectForms/${collectFormId}/policy/url`,
     { method: "GET" },
-    query
+    query,
+    { timeoutMs: 45000, retries: 3, retryDelayMs: 1500, retryOnTimeout: true }
   );
 }
 

@@ -5,14 +5,50 @@ import {
 } from "@/types/collectFormResponse.types";
 import { customFetch } from "@/utils/customFetch";
 
+/**
+ * Activa el envío del header `Idempotency-Key` en el registro de respuestas.
+ *
+ * IMPORTANTE: déjalo en `false` hasta que el BACKEND:
+ *   1) incluya `Idempotency-Key` en `Access-Control-Allow-Headers` (CORS), y
+ *   2) implemente la deduplicación por esa clave.
+ * Si se activa antes del paso (1), el navegador bloquea la petición en el
+ * preflight CORS (error "Request header field idempotency-key is not allowed").
+ * Una vez listo el backend, pon esto en `true` y también `retryOnTimeout: true`.
+ */
+const SEND_IDEMPOTENCY_HEADER = false;
+
 export async function registerCollectFormResponse(
   formId: string,
-  data: CreateCollectFormResponse
+  data: CreateCollectFormResponse,
+  idempotencyKey?: string
 ): Promise<APIResponse> {
-  let res = await customFetch(`/public/collectForms/${formId}/responses`, {
-    method: "POST",
-    body: JSON.stringify(data),
-  });
+  // Envío crítico (puede perderse la respuesta del titular en mala red):
+  // - timeout amplio (90s) para tolerar subidas lentas + procesamiento.
+  // - reintento ante errores de RED (conexión no establecida → seguro reintentar).
+  // - `Idempotency-Key` (cuando el backend lo soporte): permite deduplicar
+  //   reintentos sin crear respuestas duplicadas.
+  const headers =
+    SEND_IDEMPOTENCY_HEADER && idempotencyKey
+      ? { "Idempotency-Key": idempotencyKey }
+      : undefined;
+
+  const res = await customFetch(
+    `/public/collectForms/${formId}/responses`,
+    {
+      method: "POST",
+      body: JSON.stringify(data),
+      headers,
+    },
+    undefined,
+    {
+      timeoutMs: 90000,
+      retries: 2,
+      retryDelayMs: 2000,
+      // Mientras no haya idempotencia en backend, NO reintentar en timeout
+      // (un timeout puede significar que el servidor sí guardó la respuesta).
+      retryOnTimeout: false,
+    }
+  );
 
   return res;
 }
