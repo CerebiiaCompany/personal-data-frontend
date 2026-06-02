@@ -97,10 +97,18 @@ export interface ArcoUpdateStatusPayload {
   status: Extract<ArcoRequestStatus, "IN_PROGRESS" | "REJECTED">;
 }
 
+/** Campo aprobado al resolver una solicitud de rectificación */
+export interface ArcoApprovedField {
+  field: string;
+  requestedValue: string;
+}
+
 export interface ArcoRespondPayload {
   finalStatus: Extract<ArcoRequestStatus, "RESOLVED" | "REJECTED">;
   message: string;
   attachmentUrls?: string[];
+  /** Solo RECTIFICATION + finalStatus RESOLVED */
+  approvedFields?: ArcoApprovedField[];
   accessReportData?: ArcoAccessReportOfficerData;
 }
 

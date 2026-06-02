@@ -14,6 +14,10 @@ import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useCompanyArcoRequestDetail } from "@/hooks/useCompanyArcoRequestDetail";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useSessionStore } from "@/store/useSessionStore";
+import {
+  parseUserGenderToString,
+  UserGender,
+} from "@/types/collectFormResponse.types";
 import { ARCO_RECTIFICATION_FIELDS } from "@/types/arco.types";
 import {
   ARCO_DOC_TYPE_LABELS,
@@ -35,6 +39,13 @@ function fieldLabel(field: string) {
   return (
     ARCO_RECTIFICATION_FIELDS.find((f) => f.value === field)?.label ?? field
   );
+}
+
+function formatRectificationValue(field: string, value: string) {
+  if (field === "gender" && ["MALE", "FEMALE", "OTHER"].includes(value)) {
+    return parseUserGenderToString(value as UserGender);
+  }
+  return value;
 }
 
 export default function ArcoRequestDetailPage() {
@@ -87,8 +98,13 @@ export default function ArcoRequestDetailPage() {
   const resolutionDays = data
     ? getArcoResolutionDays(data.createdAt, data.resolvedAt)
     : null;
-  const canTakeAction =
-    canRespond && data && (data.status === "PENDING" || data.status === "IN_PROGRESS");
+  const isPending = data?.status === "PENDING";
+  const isInProgress = data?.status === "IN_PROGRESS";
+  // La acción de resolver/responder solo está disponible (y se muestra) cuando
+  // la solicitud ya fue marcada "En proceso". En PENDING se muestra deshabilitada
+  // para dejar claro que ese es el paso previo obligatorio.
+  const canTakeAction = canRespond && (isPending || isInProgress);
+  const canResolve = canRespond && isInProgress;
   const isAccessRequest = data?.requestType === "ACCESS";
   const isResolved = data?.status === "RESOLVED" || data?.status === "REJECTED";
 
@@ -128,49 +144,60 @@ export default function ArcoRequestDetailPage() {
               </div>
 
               <CheckPermission group="arcoRequests" permission="respond">
-                <div className="flex flex-wrap gap-2">
-                  {data.status === "PENDING" && (
-                    <Button
-                      hierarchy="secondary"
-                      loading={statusLoading}
-                      disabled={statusLoading}
-                      onClick={handleMarkInProgress}
-                      startContent={<Icon icon="tabler:progress" />}
-                    >
-                      Marcar en proceso
-                    </Button>
-                  )}
-                  {canTakeAction && (
-                    <Button
-                      hierarchy="primary"
-                      onClick={() =>
-                        isAccessRequest
-                          ? setAccessRespondOpen(true)
-                          : setRespondOpen(true)
-                      }
-                      startContent={
-                        <Icon
-                          icon={
-                            isAccessRequest
-                              ? "tabler:file-description"
-                              : "tabler:message-reply"
-                          }
-                        />
-                      }
-                    >
-                      {isAccessRequest
-                        ? "Resolver con informe de acceso"
-                        : "Responder solicitud"}
-                    </Button>
-                  )}
-                  {isAccessRequest && isResolved && (
-                    <Button
-                      hierarchy="secondary"
-                      onClick={() => setAccessRespondOpen(true)}
-                      startContent={<Icon icon="tabler:eye" />}
-                    >
-                      Ver informe de acceso
-                    </Button>
+                <div className="flex flex-col items-stretch gap-2 lg:items-end">
+                  <div className="flex flex-wrap gap-2 lg:justify-end">
+                    {isPending && (
+                      <Button
+                        hierarchy="primary"
+                        loading={statusLoading}
+                        disabled={statusLoading}
+                        onClick={handleMarkInProgress}
+                        startContent={<Icon icon="tabler:progress" />}
+                      >
+                        1. Marcar en proceso
+                      </Button>
+                    )}
+                    {canTakeAction && (
+                      <Button
+                        hierarchy={canResolve ? "primary" : "secondary"}
+                        disabled={!canResolve}
+                        onClick={() =>
+                          isAccessRequest
+                            ? setAccessRespondOpen(true)
+                            : setRespondOpen(true)
+                        }
+                        startContent={
+                          <Icon
+                            icon={
+                              isAccessRequest
+                                ? "tabler:file-description"
+                                : "tabler:message-reply"
+                            }
+                          />
+                        }
+                      >
+                        {isAccessRequest
+                          ? "2. Resolver con informe de acceso"
+                          : "2. Responder solicitud"}
+                      </Button>
+                    )}
+                    {isAccessRequest && isResolved && (
+                      <Button
+                        hierarchy="secondary"
+                        onClick={() => setAccessRespondOpen(true)}
+                        startContent={<Icon icon="tabler:eye" />}
+                      >
+                        Ver informe de acceso
+                      </Button>
+                    )}
+                  </div>
+
+                  {isPending && (
+                    <p className="flex items-center gap-1.5 text-xs font-medium text-amber-600 lg:justify-end">
+                      <Icon icon="tabler:info-circle" className="text-sm" />
+                      Primero marca la solicitud “En proceso” para habilitar la
+                      resolución.
+                    </p>
                   )}
                 </div>
               </CheckPermission>
@@ -266,13 +293,19 @@ export default function ArcoRequestDetailPage() {
                         <p className="font-medium text-[#1A2B5B]">
                           {fieldLabel(field.field)}
                         </p>
-                        <p className="mt-1 text-[#64748B]">
-                          Actual: <span className="text-[#334155]">{field.currentValue}</span>
-                        </p>
+                        {field.currentValue?.trim() ? (
+                          <p className="mt-1 text-[#64748B]">
+                            Actual:{" "}
+                            <span className="text-[#334155]">{field.currentValue}</span>
+                          </p>
+                        ) : null}
                         <p className="text-[#64748B]">
                           Solicitado:{" "}
                           <span className="font-medium text-primary-900">
-                            {field.requestedValue}
+                            {formatRectificationValue(
+                              field.field,
+                              field.requestedValue
+                            )}
                           </span>
                         </p>
                       </li>
@@ -402,6 +435,8 @@ export default function ArcoRequestDetailPage() {
             open={respondOpen}
             companyId={companyId}
             requestId={requestId}
+            requestType={data?.requestType}
+            rectificationFields={data?.rectificationFields}
             onClose={() => setRespondOpen(false)}
             onSuccess={refresh}
           />

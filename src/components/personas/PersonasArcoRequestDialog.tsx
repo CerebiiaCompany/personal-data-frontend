@@ -11,6 +11,10 @@ import {
   ArcoRectificationField,
   ArcoRequestType,
 } from "@/types/arco.types";
+import {
+  UserGender,
+  userGendersOptions,
+} from "@/types/collectFormResponse.types";
 import { CustomSelectOption } from "@/types/forms.types";
 import { showApiErrorToast, showPersonasMessageToast } from "@/components/feedback/ApiErrorToast";
 import { Icon } from "@iconify/react/dist/iconify.js";
@@ -41,27 +45,35 @@ const PersonasArcoRequestDialog = ({
 }: Props) => {
   const [description, setDescription] = useState("");
   const [oppositionReason, setOppositionReason] = useState("");
+  // Solo se pide el valor solicitado; el valor actual lo determina la empresa al atender.
   const [rectificationFields, setRectificationFields] = useState<
-    ArcoRectificationField[]
-  >([{ field: "name", currentValue: "", requestedValue: "" }]);
+    Pick<ArcoRectificationField, "field" | "requestedValue">[]
+  >([{ field: "name", requestedValue: "" }]);
   const [loading, setLoading] = useState(false);
 
   if (!open) return null;
 
   function updateRectField(
     index: number,
-    key: keyof ArcoRectificationField,
+    key: "field" | "requestedValue",
     value: string
   ) {
     setRectificationFields((prev) =>
-      prev.map((row, i) => (i === index ? { ...row, [key]: value } : row))
+      prev.map((row, i) => {
+        if (i !== index) return row;
+        // Al cambiar el tipo de campo, limpiar el valor solicitado (p. ej. texto → género).
+        if (key === "field" && value !== row.field) {
+          return { field: value, requestedValue: "" };
+        }
+        return { ...row, [key]: value };
+      })
     );
   }
 
   function addRectField() {
     setRectificationFields((prev) => [
       ...prev,
-      { field: "email", currentValue: "", requestedValue: "" },
+      { field: "email", requestedValue: "" },
     ]);
   }
 
@@ -82,11 +94,11 @@ const PersonasArcoRequestDialog = ({
     }
 
     if (requestType === "RECTIFICATION") {
-      const valid = rectificationFields.some(
-        (f) => f.currentValue.trim() && f.requestedValue.trim()
-      );
+      const valid = rectificationFields.some((f) => f.requestedValue.trim());
       if (!valid) {
-        showPersonasMessageToast("Completa al menos un campo a rectificar.");
+        showPersonasMessageToast(
+          "Indica el valor solicitado en al menos un campo a rectificar."
+        );
         return;
       }
     }
@@ -102,9 +114,13 @@ const PersonasArcoRequestDialog = ({
         : {}),
       ...(requestType === "RECTIFICATION"
         ? {
-            rectificationFields: rectificationFields.filter(
-              (f) => f.currentValue.trim() && f.requestedValue.trim()
-            ),
+            rectificationFields: rectificationFields
+              .filter((f) => f.requestedValue.trim())
+              .map((f) => ({
+                field: f.field,
+                currentValue: "",
+                requestedValue: f.requestedValue.trim(),
+              })),
           }
         : {}),
     };
@@ -123,9 +139,7 @@ const PersonasArcoRequestDialog = ({
     );
     setDescription("");
     setOppositionReason("");
-    setRectificationFields([
-      { field: "name", currentValue: "", requestedValue: "" },
-    ]);
+    setRectificationFields([{ field: "name", requestedValue: "" }]);
     onSuccess();
     onClose();
   }
@@ -220,22 +234,42 @@ const PersonasArcoRequestDialog = ({
                       </button>
                     )}
                   </div>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <CustomInput
-                      label="Valor actual"
-                      value={row.currentValue}
-                      onChange={(e) =>
-                        updateRectField(index, "currentValue", e.target.value)
-                      }
-                    />
+                  {row.field === "gender" ? (
+                    <div className="flex flex-col items-start gap-1 text-left w-full">
+                      <label className="font-medium w-full text-ellipsis pl-2 text-stone-500 text-sm">
+                        Valor solicitado
+                      </label>
+                      <select
+                        value={row.requestedValue}
+                        onChange={(e) =>
+                          updateRectField(
+                            index,
+                            "requestedValue",
+                            e.target.value as UserGender
+                          )
+                        }
+                        className="rounded-lg gap-2 w-full text-primary-900 border border-primary-900 flex-1 relative px-3 py-2 bg-primary-50"
+                      >
+                        <option value="" disabled>
+                          Seleccionar opción
+                        </option>
+                        {userGendersOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.title}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
                     <CustomInput
                       label="Valor solicitado"
                       value={row.requestedValue}
                       onChange={(e) =>
                         updateRectField(index, "requestedValue", e.target.value)
                       }
+                      placeholder="Escribe el dato correcto que deseas registrar"
                     />
-                  </div>
+                  )}
                 </div>
               ))}
               <button
