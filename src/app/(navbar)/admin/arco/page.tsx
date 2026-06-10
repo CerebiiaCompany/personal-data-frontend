@@ -1,20 +1,22 @@
 "use client";
 
+import ArcoOfficersManager from "@/components/arco/ArcoOfficersManager";
+import ArcoRequestsFilters, {
+  emptyArcoRequestsFilters,
+} from "@/components/arco/ArcoRequestsFilters";
 import ArcoRequestsTable from "@/components/arco/ArcoRequestsTable";
 import ArcoSummaryCards from "@/components/arco/ArcoSummaryCards";
 import Button from "@/components/base/Button";
 import Pagination from "@/components/base/Pagination";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
+import { useArcoMyAccess } from "@/hooks/useArcoMyAccess";
 import { useCompanyArcoRequests } from "@/hooks/useCompanyArcoRequests";
 import { useCompanyArcoSummary } from "@/hooks/useCompanyArcoSummary";
-import { usePermissions } from "@/hooks/usePermissions";
+import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
+import { fetchArcoOfficers } from "@/lib/arcoAdmin.api";
 import { useSessionStore } from "@/store/useSessionStore";
-import {
-  ARCO_REQUEST_STATUS_LABELS,
-  ARCO_REQUEST_TYPE_LABELS,
-  ArcoRequestStatus,
-  ArcoRequestType,
-} from "@/types/arco.types";
+import { ArcoOfficerUser } from "@/types/arco.admin.types";
+import { ArcoRequestStatus } from "@/types/arco.types";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -23,32 +25,49 @@ import { useEffect, useMemo, useState } from "react";
 export default function ArcoAdminPage() {
   const user = useSessionStore((store) => store.user);
   const router = useRouter();
-  const { hasPermission } = usePermissions();
   const companyId = useActiveCompanyId();
+  const { canView, loading: accessLoading } = useArcoMyAccess({ companyId });
 
-  const canView = hasPermission("arcoRequests", "view");
+  const canManageOfficers =
+    user?.role === "COMPANY_ADMIN" || user?.role === "SUPERADMIN";
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
-  const [statusFilter, setStatusFilter] = useState<ArcoRequestStatus | "">("");
-  const [typeFilter, setTypeFilter] = useState<ArcoRequestType | "">("");
+  const [filters, setFilters] = useState(emptyArcoRequestsFilters);
   const [cardFilter, setCardFilter] = useState<string>("");
+  const [officers, setOfficers] = useState<ArcoOfficerUser[]>([]);
+
+  const { debouncedValue: docNumberDebounced, search: docNumberSearch, setSearch: setDocNumberSearch } =
+    useDebouncedSearch();
 
   useEffect(() => {
-    if (user && !canView) {
+    setFilters((prev) => ({ ...prev, docNumber: docNumberSearch }));
+  }, [docNumberSearch]);
+
+  useEffect(() => {
+    if (!accessLoading && user && !canView) {
       router.push("/sin-acceso");
     }
-  }, [user, canView, router]);
+  }, [user, canView, accessLoading, router]);
+
+  useEffect(() => {
+    if (!companyId || !canView) return;
+    fetchArcoOfficers(companyId).then((res) => {
+      setOfficers(res.data?.officers ?? []);
+    });
+  }, [companyId, canView]);
 
   const summaryQuery = useCompanyArcoSummary(companyId, canView);
 
   const listStatus = useMemo(() => {
-    if (cardFilter === "overdue") return statusFilter || undefined;
+    if (cardFilter === "overdue") return filters.status || undefined;
     if (cardFilter && cardFilter !== "overdue") {
       return cardFilter as ArcoRequestStatus;
     }
-    return statusFilter || undefined;
-  }, [cardFilter, statusFilter]);
+    return filters.status || undefined;
+  }, [cardFilter, filters.status]);
+
+  const overdueFilter = cardFilter === "overdue";
 
   const {
     data: requests,
@@ -61,51 +80,61 @@ export default function ArcoAdminPage() {
     page,
     pageSize,
     status: listStatus,
-    requestType: typeFilter || undefined,
+    requestType: filters.requestType || undefined,
+    docNumber: docNumberDebounced || undefined,
+    assignedToId: filters.assignedToId || undefined,
+    overdue: overdueFilter || undefined,
+    dateFrom: filters.dateFrom || undefined,
+    dateTo: filters.dateTo || undefined,
     enabled: canView,
   });
 
-  const displayedRequests = useMemo(() => {
-    if (!requests) return null;
-    if (cardFilter !== "overdue") return requests;
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    return requests.filter((r) => {
-      if (r.status === "RESOLVED" || r.status === "REJECTED") return false;
-      const due = new Date(r.dueDate);
-      due.setHours(0, 0, 0, 0);
-      return due < now;
-    });
-  }, [requests, cardFilter]);
-
   useEffect(() => {
     setPage(1);
-  }, [statusFilter, typeFilter, cardFilter]);
+  }, [
+    filters.status,
+    filters.requestType,
+    filters.assignedToId,
+    filters.dateFrom,
+    filters.dateTo,
+    docNumberDebounced,
+    cardFilter,
+  ]);
 
   const handleCardFilter = (filter: string) => {
     setCardFilter((prev) => (prev === filter ? "" : filter));
     if (filter !== "overdue") {
-      setStatusFilter(filter === cardFilter ? "" : (filter as ArcoRequestStatus));
+      setFilters((prev) => ({
+        ...prev,
+        status: filter === cardFilter ? "" : (filter as ArcoRequestStatus),
+      }));
     }
   };
 
   const clearFilters = () => {
-    setStatusFilter("");
-    setTypeFilter("");
+    setFilters(emptyArcoRequestsFilters);
+    setDocNumberSearch("");
     setCardFilter("");
     setPage(1);
   };
 
-  const hasActiveFilters = statusFilter || typeFilter || cardFilter;
+  const hasActiveFilters =
+    filters.status ||
+    filters.requestType ||
+    filters.docNumber ||
+    filters.assignedToId ||
+    filters.dateFrom ||
+    filters.dateTo ||
+    cardFilter;
 
-  if (!user || !canView) return null;
+  if (!user || accessLoading || !canView) return null;
 
   const inputClass =
     "h-[42px] w-full px-3 border border-[#E4EAF6] rounded-xl text-sm bg-white text-[#0B1737] focus:outline-none focus:ring-2 focus:ring-primary-500";
 
   return (
     <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col bg-[#F8FAFC]">
-      <div className="w-full px-5 pt-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
+      <div className="w-full px-5 pt-4 pb-2 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
         <header className="rounded-2xl border border-[#E8EDF7] bg-white px-5 py-5 shadow-[0_2px_12px_rgba(15,35,70,0.04)] sm:px-6 sm:py-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-2">
@@ -123,29 +152,68 @@ export default function ArcoAdminPage() {
               </h1>
               <p className="max-w-2xl text-sm text-[#64748B]">
                 Atiende solicitudes de acceso, rectificación, cancelación y
-                oposición de titulares de datos. Los encargados se configuran en{" "}
-                <Link
-                  href="/admin/administracion/perfil-empresa"
-                  className="font-medium text-primary-900 underline"
-                >
-                  perfil de empresa
-                </Link>
-                .
+                oposición de titulares de datos.
               </p>
             </div>
-            <Button
-              hierarchy="tertiary"
-              onClick={() => {
-                summaryQuery.refresh();
-                refresh();
-              }}
-              startContent={<Icon icon="tabler:refresh" />}
-              className="shrink-0"
-            >
-              Actualizar
-            </Button>
+            <div className="flex shrink-0 flex-wrap gap-2">
+              <Link href="/admin/arco/audit">
+                <Button
+                  hierarchy="secondary"
+                  startContent={<Icon icon="tabler:timeline" />}
+                >
+                  Trazabilidad
+                </Button>
+              </Link>
+              <Button
+                hierarchy="tertiary"
+                onClick={() => {
+                  summaryQuery.refresh();
+                  refresh();
+                }}
+                startContent={<Icon icon="tabler:refresh" />}
+              >
+                Actualizar
+              </Button>
+            </div>
           </div>
         </header>
+
+        <details
+          open
+          className="group mt-4 rounded-2xl border border-[#D4DEEE] bg-white shadow-[0_2px_12px_rgba(15,35,70,0.04)]"
+        >
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 sm:px-6 [&::-webkit-details-marker]:hidden">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EEF3FF] text-[#3357A5]">
+                <Icon icon="tabler:user-shield" className="text-xl" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-[#1A2B5B]">
+                  Responsables ARCO
+                </p>
+                <p className="mt-0.5 text-xs text-[#64748B]">
+                  Encargados de recibir notificaciones y atender solicitudes
+                </p>
+              </div>
+            </div>
+            <Icon
+              icon="tabler:chevron-down"
+              className="shrink-0 text-lg text-[#64748B] transition-transform group-open:rotate-180"
+            />
+          </summary>
+          <div className="border-t border-[#EEF2F8] px-5 pb-5 pt-4 sm:px-6">
+            {companyId ? (
+              <ArcoOfficersManager
+                companyId={companyId}
+                canEdit={canManageOfficers}
+              />
+            ) : (
+              <p className="text-sm text-[#64748B]">
+                No se encontró la empresa activa.
+              </p>
+            )}
+          </div>
+        </details>
       </div>
 
       <div className="flex min-h-0 w-full flex-1 flex-col gap-4 px-5 py-6 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
@@ -154,7 +222,7 @@ export default function ArcoAdminPage() {
           <ArcoSummaryCards
             summary={summaryQuery.data}
             loading={summaryQuery.loading}
-            activeFilter={cardFilter || statusFilter}
+            activeFilter={cardFilter || filters.status}
             onFilterClick={handleCardFilter}
           />
         </section>
@@ -174,47 +242,18 @@ export default function ArcoAdminPage() {
               </Button>
             )}
           </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-[#64748B]">Estado</label>
-              <select
-                value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value as ArcoRequestStatus | "");
-                  setCardFilter("");
-                }}
-                className={inputClass}
-              >
-                <option value="">Todos</option>
-                {(Object.keys(ARCO_REQUEST_STATUS_LABELS) as ArcoRequestStatus[]).map(
-                  (s) => (
-                    <option key={s} value={s}>
-                      {ARCO_REQUEST_STATUS_LABELS[s]}
-                    </option>
-                  )
-                )}
-              </select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-[#64748B]">Tipo</label>
-              <select
-                value={typeFilter}
-                onChange={(e) =>
-                  setTypeFilter(e.target.value as ArcoRequestType | "")
-                }
-                className={inputClass}
-              >
-                <option value="">Todos</option>
-                {(Object.keys(ARCO_REQUEST_TYPE_LABELS) as ArcoRequestType[]).map(
-                  (t) => (
-                    <option key={t} value={t}>
-                      {ARCO_REQUEST_TYPE_LABELS[t]}
-                    </option>
-                  )
-                )}
-              </select>
-            </div>
-          </div>
+          <ArcoRequestsFilters
+            values={{ ...filters, docNumber: docNumberSearch }}
+            officers={officers}
+            inputClass={inputClass}
+            onChange={(patch) => {
+              if ("docNumber" in patch) {
+                setDocNumberSearch(patch.docNumber ?? "");
+              }
+              setFilters((prev) => ({ ...prev, ...patch }));
+              if ("status" in patch) setCardFilter("");
+            }}
+          />
         </section>
 
         <section
@@ -222,13 +261,9 @@ export default function ArcoAdminPage() {
           className="overflow-visible rounded-2xl border border-[#E8EDF7] bg-white shadow-[0_2px_12px_rgba(15,35,70,0.04)]"
         >
           <div className="p-4 sm:p-5">
-            <ArcoRequestsTable
-              items={displayedRequests}
-              loading={loading}
-              error={error}
-            />
+            <ArcoRequestsTable items={requests} loading={loading} error={error} />
           </div>
-          {meta && cardFilter !== "overdue" ? (
+          {meta ? (
             <div className="border-t border-[#EEF2F8] px-4 py-3 sm:px-5">
               <Pagination
                 meta={meta}

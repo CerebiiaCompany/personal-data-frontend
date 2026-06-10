@@ -107,7 +107,7 @@ export default function CompanyProfilePage() {
             companyId={companyId}
             profile={profile}
           />
-          <RightsAttentionSection companyId={companyId} profile={profile} />
+          <RightsAttentionSection companyId={companyId} />
           <InternalRegulationsSection companyId={companyId} profile={profile} />
           <SpecialObservationsSection companyId={companyId} profile={profile} />
         </div>

@@ -5,12 +5,15 @@ import CustomInput from "@/components/forms/CustomInput";
 import CustomSelect from "@/components/forms/CustomSelect";
 import { personasTheme } from "@/constants/personasTheme";
 import { arcoCreateRequest } from "@/lib/arco.api";
+import PersonasOppositionScopesPicker from "@/components/personas/PersonasOppositionScopesPicker";
 import {
   ARCO_RECTIFICATION_FIELDS,
   ARCO_REQUEST_TYPE_LABELS,
+  ArcoOppositionScope,
   ArcoRectificationField,
   ArcoRequestType,
 } from "@/types/arco.types";
+import { validateOppositionScopes } from "@/utils/arcoOppositionScopes.utils";
 import {
   UserGender,
   userGendersOptions,
@@ -19,7 +22,8 @@ import { CustomSelectOption } from "@/types/forms.types";
 import { showApiErrorToast, showPersonasMessageToast } from "@/components/feedback/ApiErrorToast";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import clsx from "clsx";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { toast } from "sonner";
 
 interface Props {
@@ -45,13 +49,37 @@ const PersonasArcoRequestDialog = ({
 }: Props) => {
   const [description, setDescription] = useState("");
   const [oppositionReason, setOppositionReason] = useState("");
-  // Solo se pide el valor solicitado; el valor actual lo determina la empresa al atender.
+  const [oppositionScopes, setOppositionScopes] = useState<ArcoOppositionScope[]>(
+    []
+  );
   const [rectificationFields, setRectificationFields] = useState<
     Pick<ArcoRectificationField, "field" | "requestedValue">[]
   >([{ field: "name", requestedValue: "" }]);
   const [loading, setLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  if (!open) return null;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    setDescription("");
+    setOppositionReason("");
+    setOppositionScopes([]);
+    setRectificationFields([{ field: "name", requestedValue: "" }]);
+  }, [open, requestType]);
+
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
+
+  if (!open || !mounted) return null;
 
   function updateRectField(
     index: number,
@@ -88,9 +116,16 @@ const PersonasArcoRequestDialog = ({
       return;
     }
 
-    if (requestType === "OPPOSITION" && !oppositionReason.trim()) {
-      showPersonasMessageToast("Indica el motivo de oposición.");
-      return;
+    if (requestType === "OPPOSITION") {
+      if (!oppositionReason.trim()) {
+        showPersonasMessageToast("Indica el motivo de oposición.");
+        return;
+      }
+      const scopesError = validateOppositionScopes(oppositionScopes);
+      if (scopesError) {
+        showPersonasMessageToast(scopesError);
+        return;
+      }
     }
 
     if (requestType === "RECTIFICATION") {
@@ -110,7 +145,10 @@ const PersonasArcoRequestDialog = ({
       requestType,
       description: description.trim(),
       ...(requestType === "OPPOSITION"
-        ? { oppositionReason: oppositionReason.trim() }
+        ? {
+            oppositionReason: oppositionReason.trim(),
+            oppositionScopes,
+          }
         : {}),
       ...(requestType === "RECTIFICATION"
         ? {
@@ -118,7 +156,6 @@ const PersonasArcoRequestDialog = ({
               .filter((f) => f.requestedValue.trim())
               .map((f) => ({
                 field: f.field,
-                currentValue: "",
                 requestedValue: f.requestedValue.trim(),
               })),
           }
@@ -139,46 +176,62 @@ const PersonasArcoRequestDialog = ({
     );
     setDescription("");
     setOppositionReason("");
+    setOppositionScopes([]);
     setRectificationFields([{ field: "name", requestedValue: "" }]);
     onSuccess();
     onClose();
   }
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-4 sm:items-center"
+      className="fixed inset-0 z-[200] flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="arco-request-title"
     >
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/40"
+        aria-label="Cerrar"
+        onClick={loading ? undefined : onClose}
+        tabIndex={-1}
+      />
       <div
         className={clsx(
           personasTheme.card,
-          "max-h-[90vh] w-full max-w-lg overflow-y-auto p-6 sm:p-8"
+          "animate-appear relative z-10 flex max-h-[min(90vh,100%)] w-full max-w-lg flex-col overflow-hidden shadow-xl"
         )}
       >
-        <div className="mb-6 flex items-start justify-between gap-4">
-          <div>
-            <p className={personasTheme.sectionTitle}>Nueva solicitud</p>
-            <h2
-              id="arco-request-title"
-              className={clsx("text-xl font-semibold", personasTheme.heading)}
+        <div className="shrink-0 border-b border-zinc-200/70 px-6 py-5 sm:px-8">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className={personasTheme.sectionTitle}>Nueva solicitud</p>
+              <h2
+                id="arco-request-title"
+                className={clsx("text-xl font-semibold", personasTheme.heading)}
+              >
+                {ARCO_REQUEST_TYPE_LABELS[requestType]}
+              </h2>
+              <p className={clsx("mt-1 text-sm", personasTheme.body)}>
+                {companyName}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-100"
+              aria-label="Cerrar"
             >
-              {ARCO_REQUEST_TYPE_LABELS[requestType]}
-            </h2>
-            <p className={clsx("mt-1 text-sm", personasTheme.body)}>{companyName}</p>
+              <Icon icon="tabler:x" className="text-xl" />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-100"
-            aria-label="Cerrar"
-          >
-            <Icon icon="tabler:x" className="text-xl" />
-          </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form
+          onSubmit={handleSubmit}
+          className="flex min-h-0 flex-1 flex-col"
+        >
+          <div className="sidebar-scroll flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-6 py-5 sm:px-8">
           <div className="flex flex-col gap-1">
             <label className="pl-2 text-sm font-medium text-stone-500">
               Descripción de la solicitud
@@ -193,18 +246,24 @@ const PersonasArcoRequestDialog = ({
           </div>
 
           {requestType === "OPPOSITION" && (
-            <div className="flex flex-col gap-1">
-              <label className="pl-2 text-sm font-medium text-stone-500">
-                Motivo de oposición
-              </label>
-              <textarea
-                value={oppositionReason}
-                onChange={(e) => setOppositionReason(e.target.value)}
-                rows={3}
-                placeholder="Ej. No autorizo el uso de mis datos para marketing"
-                className="w-full resize-y rounded-lg border border-disabled px-3 py-2 text-primary-900 outline-none focus:border-primary-900"
+            <>
+              <PersonasOppositionScopesPicker
+                value={oppositionScopes}
+                onChange={setOppositionScopes}
               />
-            </div>
+              <div className="flex flex-col gap-1">
+                <label className="pl-2 text-sm font-medium text-stone-500">
+                  Motivo de oposición <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={oppositionReason}
+                  onChange={(e) => setOppositionReason(e.target.value)}
+                  rows={3}
+                  placeholder="Ej. No deseo recibir publicidad ni que compartan mis datos."
+                  className="w-full resize-y rounded-lg border border-disabled px-3 py-2 text-primary-900 outline-none focus:border-primary-900"
+                />
+              </div>
+            </>
           )}
 
           {requestType === "RECTIFICATION" && (
@@ -287,34 +346,55 @@ const PersonasArcoRequestDialog = ({
           )}
 
           {requestType === "CANCELLATION" && (
-            <p className={clsx("text-xs", personasTheme.muted)}>
-              La cancelación aprobada elimina tus datos solo en esta empresa y
-              revoca el consentimiento asociado.
-            </p>
+            <div
+              className={clsx(
+                personasTheme.infoBox,
+                "flex gap-2 text-xs leading-relaxed"
+              )}
+            >
+              <Icon
+                icon="tabler:info-circle"
+                className="shrink-0 text-lg text-primary-600"
+              />
+              <p className={personasTheme.body}>
+                Al enviar esta solicitud, tu registro quedará como{" "}
+                <strong className="text-primary-900">
+                  solicitud de cancelación en trámite
+                </strong>{" "}
+                y no recibirás campañas mientras la empresa revisa tu caso. Si se
+                aprueba, tus datos se eliminan en esta empresa; si se rechaza,
+                tu consentimiento vuelve a activo.
+              </p>
+            </div>
           )}
 
-          <div className="flex flex-col gap-2 pt-2 sm:flex-row-reverse">
-            <Button
-              type="submit"
-              hierarchy="primary"
-              loading={loading}
-              disabled={loading}
-              className="w-full rounded-xl! sm:flex-1"
-            >
-              Enviar solicitud
-            </Button>
-            <Button
-              type="button"
-              hierarchy="secondary"
-              onClick={onClose}
-              className="w-full rounded-xl! text-primary-900! sm:flex-1"
-            >
-              Cancelar
-            </Button>
+          </div>
+
+          <div className="shrink-0 border-t border-zinc-200/70 px-6 py-4 sm:px-8">
+            <div className="flex flex-col gap-2 sm:flex-row-reverse">
+              <Button
+                type="submit"
+                hierarchy="primary"
+                loading={loading}
+                disabled={loading}
+                className="w-full rounded-xl! sm:flex-1"
+              >
+                Enviar solicitud
+              </Button>
+              <Button
+                type="button"
+                hierarchy="secondary"
+                onClick={onClose}
+                className="w-full rounded-xl! text-primary-900! sm:flex-1"
+              >
+                Cancelar
+              </Button>
+            </div>
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

@@ -6,21 +6,27 @@ import ArcoAccessReportSection from "@/components/arco/ArcoAccessReportSection";
 import ArcoRequestStatusBadge from "@/components/arco/ArcoRequestStatusBadge";
 import ArcoRespondDialog from "@/components/arco/ArcoRespondDialog";
 import Button from "@/components/base/Button";
-import CheckPermission from "@/components/checkers/CheckPermission";
 import LoadingCover from "@/components/layout/LoadingCover";
 import { showApiErrorToast } from "@/components/feedback/ApiErrorToast";
 import { patchArcoRequestStatus } from "@/lib/arcoAdmin.api";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
+import { useArcoMyAccess } from "@/hooks/useArcoMyAccess";
+import { useCompanyArcoRequestAudit } from "@/hooks/useCompanyArcoRequestAudit";
 import { useCompanyArcoRequestDetail } from "@/hooks/useCompanyArcoRequestDetail";
-import { usePermissions } from "@/hooks/usePermissions";
 import { useSessionStore } from "@/store/useSessionStore";
 import {
+  getConsentStatusChipClass,
+  getConsentStatusLabel,
   parseUserGenderToString,
   UserGender,
 } from "@/types/collectFormResponse.types";
-import { ARCO_RECTIFICATION_FIELDS } from "@/types/arco.types";
+import {
+  ARCO_OPPOSITION_SCOPE_OPTIONS,
+  ARCO_RECTIFICATION_FIELDS,
+} from "@/types/arco.types";
 import {
   ARCO_DOC_TYPE_LABELS,
+  formatArcoAssignedTo,
   formatArcoDate,
   formatArcoDateTime,
   formatArcoRequestLabel,
@@ -54,9 +60,9 @@ export default function ArcoRequestDetailPage() {
   const router = useRouter();
   const user = useSessionStore((store) => store.user);
   const companyId = useActiveCompanyId();
-  const { hasPermission } = usePermissions();
-  const canView = hasPermission("arcoRequests", "view");
-  const canRespond = hasPermission("arcoRequests", "respond");
+  const { canView, canRespond, loading: accessLoading } = useArcoMyAccess({
+    companyId,
+  });
 
   const [respondOpen, setRespondOpen] = useState(false);
   const [accessRespondOpen, setAccessRespondOpen] = useState(false);
@@ -68,11 +74,17 @@ export default function ArcoRequestDetailPage() {
     canView
   );
 
+  const { events: auditEvents, loading: auditLoading } =
+    useCompanyArcoRequestAudit(companyId, requestId, canView);
+
+  const timelineEvents =
+    auditEvents && auditEvents.length > 0 ? auditEvents : (data?.audit ?? []);
+
   useEffect(() => {
-    if (user && !canView) {
+    if (!accessLoading && user && !canView) {
       router.push("/sin-acceso");
     }
-  }, [user, canView, router]);
+  }, [user, canView, accessLoading, router]);
 
   async function handleMarkInProgress() {
     if (!companyId || !requestId) return;
@@ -89,7 +101,7 @@ export default function ArcoRequestDetailPage() {
     refresh();
   }
 
-  if (!user || !canView) return null;
+  if (!user || accessLoading || !canView) return null;
 
   const overdue = data
     ? isArcoRequestOverdue(data.dueDate, data.status)
@@ -143,7 +155,7 @@ export default function ArcoRequestDetailPage() {
                 </p>
               </div>
 
-              <CheckPermission group="arcoRequests" permission="respond">
+              {canRespond && (
                 <div className="flex flex-col items-stretch gap-2 lg:items-end">
                   <div className="flex flex-wrap gap-2 lg:justify-end">
                     {isPending && (
@@ -200,7 +212,7 @@ export default function ArcoRequestDetailPage() {
                     </p>
                   )}
                 </div>
-              </CheckPermission>
+              )}
             </div>
           )}
         </header>
@@ -241,6 +253,22 @@ export default function ArcoRequestDetailPage() {
                       <dt className="text-xs text-[#64748B]">Resuelta</dt>
                       <dd className="font-medium text-[#1A2B5B]">
                         {formatArcoDateTime(data.resolvedAt)}
+                      </dd>
+                    </div>
+                  )}
+                  {data.response?.respondedByName && (
+                    <div>
+                      <dt className="text-xs text-[#64748B]">Resolvió</dt>
+                      <dd className="font-medium text-[#1A2B5B]">
+                        {data.response.respondedByName}
+                      </dd>
+                    </div>
+                  )}
+                  {data.notifiedAt && (
+                    <div>
+                      <dt className="text-xs text-[#64748B]">Notificación encargados</dt>
+                      <dd className="font-medium text-[#1A2B5B]">
+                        {formatArcoDateTime(data.notifiedAt)}
                       </dd>
                     </div>
                   )}
@@ -314,12 +342,32 @@ export default function ArcoRequestDetailPage() {
                 </section>
               )}
 
-              {data.oppositionReason && (
+              {(data.oppositionScopes?.length || data.oppositionReason) && (
                 <section className="rounded-2xl border border-[#E8EDF7] bg-white p-5">
-                  <h2 className="mb-2 text-sm font-semibold text-[#1A2B5B]">
-                    Motivo de oposición
+                  <h2 className="mb-3 text-sm font-semibold text-[#1A2B5B]">
+                    Oposición al tratamiento
                   </h2>
-                  <p className="text-sm text-[#334155]">{data.oppositionReason}</p>
+                  {data.oppositionScopes && data.oppositionScopes.length > 0 && (
+                    <ul className="mb-3 flex flex-wrap gap-2">
+                      {data.oppositionScopes.map((scope) => {
+                        const label =
+                          ARCO_OPPOSITION_SCOPE_OPTIONS.find(
+                            (o) => o.value === scope
+                          )?.label ?? scope;
+                        return (
+                          <li
+                            key={scope}
+                            className="rounded-md bg-[#EDF2FA] px-2.5 py-1 text-xs font-medium text-[#2563EB]"
+                          >
+                            {label}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                  {data.oppositionReason && (
+                    <p className="text-sm text-[#334155]">{data.oppositionReason}</p>
+                  )}
                 </section>
               )}
 
@@ -367,9 +415,13 @@ export default function ArcoRequestDetailPage() {
 
               <section className="rounded-2xl border border-[#E8EDF7] bg-white p-5">
                 <h2 className="mb-4 text-sm font-semibold text-[#1A2B5B]">
-                  Historial forense
+                  Trazabilidad
                 </h2>
-                <ArcoAuditTimeline events={data.audit ?? []} />
+                {auditLoading && !timelineEvents.length ? (
+                  <p className="text-sm text-[#64748B]">Cargando eventos...</p>
+                ) : (
+                  <ArcoAuditTimeline events={timelineEvents} />
+                )}
               </section>
             </div>
 
@@ -407,12 +459,17 @@ export default function ArcoRequestDetailPage() {
                   <p className="text-sm text-[#64748B]">Sin datos adicionales.</p>
                 )}
                 {data.consentStatus && (
-                  <p className="mt-4 rounded-lg bg-[#F8FAFC] px-3 py-2 text-xs text-[#64748B]">
-                    Consentimiento:{" "}
-                    <span className="font-medium text-[#1A2B5B]">
-                      {data.consentStatus}
+                  <div className="mt-4 rounded-lg bg-[#F8FAFC] px-3 py-2.5">
+                    <p className="text-xs text-[#64748B]">Estado del consentimiento</p>
+                    <span
+                      className={clsx(
+                        "mt-1.5 inline-flex rounded-md px-2 py-0.5 text-xs font-semibold",
+                        getConsentStatusChipClass(data.consentStatus)
+                      )}
+                    >
+                      {getConsentStatusLabel(data.consentStatus)}
                     </span>
-                  </p>
+                  </div>
                 )}
               </section>
 
@@ -424,6 +481,13 @@ export default function ArcoRequestDetailPage() {
                   </p>
                 </section>
               )}
+
+              <section className="rounded-2xl border border-[#E8EDF7] bg-white p-5 text-sm">
+                <p className="text-xs text-[#64748B]">Asignado a</p>
+                <p className="font-medium text-[#1A2B5B]">
+                  {formatArcoAssignedTo(data.assignedTo)}
+                </p>
+              </section>
             </aside>
           </>
         )}

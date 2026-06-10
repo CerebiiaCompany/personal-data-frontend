@@ -10,6 +10,7 @@ interface Props {
   description: string;
   onSubmit: (e: React.FormEvent) => void;
   loading: boolean;
+  hideSubmit?: boolean;
   children: React.ReactNode;
 }
 
@@ -19,6 +20,7 @@ const ProfileSectionCard = ({
   description,
   onSubmit,
   loading,
+  hideSubmit = false,
   children,
 }: Props) => {
   return (
@@ -35,11 +37,13 @@ const ProfileSectionCard = ({
 
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
         {children}
-        <div className="flex justify-end pt-4 border-t border-[#E8EDF7]">
-          <Button hierarchy="primary" type="submit" loading={loading}>
-            Guardar cambios
-          </Button>
-        </div>
+        {!hideSubmit && (
+          <div className="flex justify-end pt-4 border-t border-[#E8EDF7]">
+            <Button hierarchy="primary" type="submit" loading={loading}>
+              Guardar cambios
+            </Button>
+          </div>
+        )}
       </form>
     </section>
   );

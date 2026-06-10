@@ -1,10 +1,11 @@
+import { getConsentStatusLabel } from "@/types/collectFormResponse.types";
 import {
   ARCO_REQUEST_STATUS_LABELS,
   ARCO_REQUEST_TYPE_LABELS,
   ArcoDocType,
   ArcoRequestStatus,
 } from "@/types/arco.types";
-import { ArcoAccessConsentInfo } from "@/types/arco.admin.types";
+import { ArcoAccessConsentInfo, ArcoAssignedTo, ArcoAuditEvent, ArcoCompanyAuditEntry } from "@/types/arco.admin.types";
 import { formatDateToString } from "@/utils/date.utils";
 
 export const ARCO_DOC_TYPE_LABELS: Record<ArcoDocType, string> = {
@@ -71,6 +72,11 @@ export function formatArcoStatusLabel(status: ArcoRequestStatus) {
   return ARCO_REQUEST_STATUS_LABELS[status];
 }
 
+export function formatArcoAssignedTo(assignedTo?: ArcoAssignedTo | null): string {
+  if (!assignedTo) return "Sin asignar";
+  return [assignedTo.name, assignedTo.lastName].filter(Boolean).join(" ");
+}
+
 export function getArcoConsentStatusCode(
   consent: ArcoAccessConsentInfo
 ): string | null {
@@ -84,10 +90,8 @@ export function getArcoConsentStatusCode(
 
 export function getArcoConsentStatusLabel(consent: ArcoAccessConsentInfo): string {
   if (consent.statusLabel?.trim()) return consent.statusLabel.trim();
-  if (consent.status === "ACTIVE") return "Consentimiento activo y vigente";
-  if (consent.status === "REVOKED") return "Consentimiento revocado";
-  if (consent.status === "PENDING") return "Consentimiento pendiente";
-  return consent.status ?? "Sin información de consentimiento";
+  const code = getArcoConsentStatusCode(consent) ?? consent.status;
+  return getConsentStatusLabel(code);
 }
 
 export function isArcoConsentLegacyRecord(consent: ArcoAccessConsentInfo): boolean {
@@ -107,6 +111,10 @@ export function getArcoConsentBadgeClass(
       return "bg-red-50 text-red-800 border-red-200/90";
     case "PENDING":
       return "bg-amber-50 text-amber-800 border-amber-200/90";
+    case "CLAIM_IN_PROGRESS":
+      return "bg-blue-50 text-blue-800 border-blue-200/90";
+    case "LEGAL_DISPUTE":
+      return "bg-violet-50 text-violet-800 border-violet-200/90";
     default:
       return "bg-slate-100 text-slate-700 border-slate-200/90";
   }
@@ -119,13 +127,119 @@ export function isArcoDataOriginFromSystem(
   return dataOriginRaw != null && dataOriginRaw !== "";
 }
 
-export function parseArcoAuditTypeLabel(type: string): string {
+export function parseArcoAuditTypeLabel(type?: string | null): string {
+  if (!type) return "Evento";
   const labels: Record<string, string> = {
+    REQUEST_CREATED: "Solicitud creada",
     CREATED: "Solicitud creada",
+    OFFICER_NOTIFIED: "Encargados notificados",
+    STATUS_CHANGED: "Cambio de estado",
     STATUS_CHANGED_TO_IN_PROGRESS: "Marcada en proceso",
+    STATUS_CHANGED_TO_REJECTED: "Rechazada",
+    ASSIGNED: "Asignada a responsable",
+    RESPONDED: "Solicitud respondida",
     RESPONDED_RESOLVED: "Respondida — resuelta",
     RESPONDED_REJECTED: "Respondida — rechazada",
-    STATUS_CHANGED_TO_REJECTED: "Rechazada",
   };
   return labels[type] ?? type.replaceAll("_", " ").toLowerCase();
 }
+
+/** Normaliza eventos del backend (eventType/at vs type). */
+export function normalizeArcoAuditEvent<T extends Record<string, unknown>>(
+  raw: T
+): ArcoAuditEvent {
+  const type =
+    (raw.type as string | undefined) ??
+    (raw.eventType as string | undefined) ??
+    "";
+  const at =
+    (raw.at as string | undefined) ??
+    (raw.createdAt as string | undefined) ??
+    (raw.timestamp as string | undefined) ??
+    "";
+  const actorRaw = raw.actor as ArcoAuditEvent["actor"] | undefined;
+  const actorName =
+    actorRaw?.name ??
+    (raw.actorName as string | undefined) ??
+    (raw.userName as string | undefined);
+
+  return {
+    type,
+    at,
+    actor: {
+      userId: actorRaw?.userId ?? (raw.userId as string | undefined),
+      name: actorName ?? "Sistema",
+      role: actorRaw?.role ?? (raw.actorRole as string | undefined),
+    },
+    meta: (raw.meta as Record<string, unknown> | undefined) ?? undefined,
+  };
+}
+
+export function normalizeArcoCompanyAuditEntry(
+  raw: Record<string, unknown>
+): ArcoCompanyAuditEntry {
+  const base = normalizeArcoAuditEvent(raw);
+  return {
+    ...base,
+    requestId:
+      (raw.requestId as string | undefined) ??
+      (raw.request_id as string | undefined),
+    docNumber: raw.docNumber as string | undefined,
+    requestType: raw.requestType as ArcoCompanyAuditEntry["requestType"],
+    requestStatus: raw.requestStatus as ArcoCompanyAuditEntry["requestStatus"],
+  };
+}
+
+export function getArcoRequestId(item: { id?: string; _id?: string }): string {
+  return item.id ?? item._id ?? "";
+}
+
+export function formatArcoAuditMetaLines(
+  meta?: Record<string, unknown>
+): string[] {
+  if (!meta) return [];
+  const lines: string[] = [];
+
+  if (typeof meta.message === "string" && meta.message.trim()) {
+    lines.push(meta.message.trim());
+  }
+  if (typeof meta.status === "string") {
+    lines.push(`Estado: ${formatArcoStatusLabel(meta.status as ArcoRequestStatus)}`);
+  }
+  if (typeof meta.finalStatus === "string") {
+    lines.push(
+      `Resultado: ${formatArcoStatusLabel(meta.finalStatus as ArcoRequestStatus)}`
+    );
+  }
+  if (typeof meta.assignedToName === "string") {
+    lines.push(`Asignado a: ${meta.assignedToName}`);
+  }
+  if (typeof meta.respondedByName === "string") {
+    lines.push(`Respondió: ${meta.respondedByName}`);
+  }
+  if (meta.daysUntilDue !== undefined && meta.daysUntilDue !== null) {
+    const days = Number(meta.daysUntilDue);
+    if (Number.isFinite(days)) {
+      lines.push(
+        days < 0
+          ? `${Math.abs(days)} día(s) después del vencimiento`
+          : days === 0
+            ? "Resuelta el día del vencimiento"
+            : `${days} día(s) antes del vencimiento`
+      );
+    }
+  }
+  if (typeof meta.docNumber === "string") {
+    lines.push(`Documento: ${meta.docNumber}`);
+  }
+
+  return lines;
+}
+
+export const ARCO_AUDIT_EVENT_TYPE_OPTIONS = [
+  { value: "REQUEST_CREATED", label: "Solicitud creada" },
+  { value: "OFFICER_NOTIFIED", label: "Encargados notificados" },
+  { value: "STATUS_CHANGED", label: "Cambio de estado" },
+  { value: "ASSIGNED", label: "Asignación" },
+  { value: "RESPONDED", label: "Respuesta enviada" },
+] as const;

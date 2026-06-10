@@ -121,16 +121,74 @@ input:focus {
   animation: personasFadeUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
+.personas-guide-step {
+  border: 1px solid rgba(228, 228, 231, 0.9);
+  background-color: rgba(255, 255, 255, 0.85);
+  transition:
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.28s ease,
+    background-color 0.28s ease;
+}
+
+.personas-guide-step:hover {
+  transform: translateY(-5px);
+  border-color: rgba(0, 11, 80, 0.22);
+  background-color: #fff;
+  box-shadow:
+    0 14px 32px -12px rgba(0, 11, 80, 0.14),
+    0 0 0 1px rgba(0, 11, 80, 0.06);
+}
+
+.personas-guide-step:hover .personas-guide-step-badge {
+  transform: scale(1.1);
+  background-color: #000b50;
+  color: #fff;
+  box-shadow: 0 6px 16px -4px rgba(0, 11, 80, 0.35);
+}
+
+.personas-guide-step-badge {
+  transition:
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 0.28s ease,
+    color 0.28s ease,
+    box-shadow 0.28s ease;
+}
+
+.personas-guide-step:hover .personas-guide-step-icon {
+  transform: scale(1.12);
+  color: #000b50;
+}
+
+.personas-guide-step-icon {
+  transition:
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.28s ease;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .personas-fade-up,
   .personas-fade-in,
   .personas-page-enter,
+  .personas-guide-step,
+  .personas-guide-step-badge,
+  .personas-guide-step-icon,
   .collect-enter,
   .collect-enter-delayed {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
     filter: none !important;
+  }
+
+  .personas-guide-step:hover {
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  .personas-guide-step:hover .personas-guide-step-badge,
+  .personas-guide-step:hover .personas-guide-step-icon {
+    transform: none !important;
   }
 }
 

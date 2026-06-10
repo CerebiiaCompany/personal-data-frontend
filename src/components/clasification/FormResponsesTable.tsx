@@ -14,13 +14,17 @@ import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { usePermissionCheck } from "@/hooks/usePermissionCheck";
 import { useConfirm } from "@/components/dialogs/ConfirmProvider";
 import { APIResponse } from "@/types/api.types";
+import ResponsePermissionsCell from "@/components/clasification/ResponsePermissionsCell";
 import {
   CollectFormResponse,
+  getConsentStatusChipClass,
+  getConsentStatusLabel,
   isJuridicaDocType,
   OneTimeCodePopulated,
   parseCollectFormDocTypeToString,
   parseUserGenderToString,
 } from "@/types/collectFormResponse.types";
+import { hasAnyPermissionBlock } from "@/utils/collectFormPermissions.utils";
 
 interface Props {
   items: CollectFormResponse[] | null;
@@ -74,25 +78,10 @@ function otpStatusChipClass(status?: string) {
   return "bg-[#F1F5F9] text-[#64748B]";
 }
 
-function consentChipClass(status?: string) {
-  const s = (status || "").toUpperCase();
-  if (s === "ACTIVE") return "bg-[#E8F8EE] text-[#1E8A52]";
-  if (s === "REVOKED") return "bg-[#FDECEC] text-[#D84C4C]";
-  return "bg-[#FDF4E6] text-[#A97711]";
-}
-
 function personKindChipClass(docType?: string) {
   return isJuridicaDocType(docType)
     ? "bg-[#EDE9FE] text-[#6D28D9] border border-[#DDD6FE]"
     : "bg-[#E0F2FE] text-[#0369A1] border border-[#BAE6FD]";
-}
-
-function prettyConsentStatus(status?: string) {
-  const s = (status || "").toUpperCase();
-  if (s === "ACTIVE") return "Activo";
-  if (s === "REVOKED") return "Revocado";
-  if (s === "PENDING") return "Pendiente";
-  return s || "Pendiente";
 }
 
 function prettyObtainedVia(value?: string) {
@@ -264,7 +253,7 @@ const FormResponsesTable = ({
       {!loading && items?.length ? (
         <>
           <div className="w-full overflow-x-auto overflow-y-auto flex-1 min-h-0 rounded-t-2xl border-b border-[#E5EAF2]">
-            <table className="w-full min-w-[1680px] border-separate border-spacing-0">
+            <table className="w-full min-w-[1960px] border-separate border-spacing-0">
               <thead className="sticky top-0 bg-[#F4F6FA] z-10">
                 <tr>
                   {[
@@ -289,6 +278,9 @@ const FormResponsesTable = ({
                     "Fallos",
                     "Obtenido vía",
                     "Consentimiento",
+                    "Camp. marketing",
+                    "Camp. consentimiento",
+                    "Compartir terceros",
                     "Política",
                     "Fecha",
                     "Usó OTP",
@@ -297,6 +289,15 @@ const FormResponsesTable = ({
                   ].map((title) => (
                     <th
                       key={title}
+                      title={
+                        title === "Camp. marketing"
+                          ? "canReceiveMarketingCampaigns"
+                          : title === "Camp. consentimiento"
+                            ? "canReceiveConsentCampaigns"
+                            : title === "Compartir terceros"
+                              ? "canShareWithThirdParties"
+                              : undefined
+                      }
                       className="text-left font-semibold text-[#7A869D] text-[10px] uppercase tracking-wide py-3 px-3 whitespace-nowrap border-b border-[#E3E8F2]"
                     >
                       {title}
@@ -435,11 +436,29 @@ const FormResponsesTable = ({
                         <span
                           className={clsx(
                             "inline-flex items-center px-2 py-[2px] rounded-full text-[10px] font-semibold whitespace-nowrap",
-                            consentChipClass(String(consentStatus))
+                            getConsentStatusChipClass(String(consentStatus))
                           )}
                         >
-                          {prettyConsentStatus(String(consentStatus))}
+                          {getConsentStatusLabel(String(consentStatus))}
                         </span>
+                      </td>
+                      <td className="py-3 px-3 text-[11px] align-top">
+                        <ResponsePermissionsCell
+                          permissions={item.permissions}
+                          column="marketing"
+                        />
+                      </td>
+                      <td className="py-3 px-3 text-[11px] align-top">
+                        <ResponsePermissionsCell
+                          permissions={item.permissions}
+                          column="consentCampaigns"
+                        />
+                      </td>
+                      <td className="py-3 px-3 text-[11px] align-top">
+                        <ResponsePermissionsCell
+                          permissions={item.permissions}
+                          column="thirdParty"
+                        />
                       </td>
                       <td className="py-3 px-3 text-[11px] text-[#3A4B70] whitespace-nowrap">
                         <div className="flex items-center gap-2">
@@ -555,8 +574,44 @@ const FormResponsesTable = ({
                     </tr>
                     {expandedId === item._id && (
                       <tr>
-                        <td colSpan={25} className="px-3 pb-3">
+                        <td colSpan={29} className="px-3 pb-3">
                           <div className="rounded-xl border border-[#E7ECF4] bg-[#FAFCFF] p-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 text-[11px]">
+                            {item.permissions && (
+                              <div className="md:col-span-2 xl:col-span-4 rounded-lg border border-[#E3E9F5] bg-white p-3 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div>
+                                  <p className="text-[#7A869D] font-semibold mb-2">
+                                    Campañas de marketing
+                                  </p>
+                                  <ResponsePermissionsCell
+                                    permissions={item.permissions}
+                                    column="marketing"
+                                  />
+                                </div>
+                                <div>
+                                  <p className="text-[#7A869D] font-semibold mb-2">
+                                    Campañas de consentimiento
+                                  </p>
+                                  <ResponsePermissionsCell
+                                    permissions={item.permissions}
+                                    column="consentCampaigns"
+                                  />
+                                </div>
+                                <div>
+                                  <p className="text-[#7A869D] font-semibold mb-2">
+                                    Compartir con terceros
+                                  </p>
+                                  <ResponsePermissionsCell
+                                    permissions={item.permissions}
+                                    column="thirdParty"
+                                  />
+                                </div>
+                                {!hasAnyPermissionBlock(item.permissions) && (
+                                  <p className="sm:col-span-3 text-[#16A34A]">
+                                    Sin bloqueos activos en ningún canal.
+                                  </p>
+                                )}
+                              </div>
+                            )}
                             <div>
                               <p className="text-[#7A869D] font-semibold">Tipo de persona</p>
                               <p className="text-[#1E2D4E]">

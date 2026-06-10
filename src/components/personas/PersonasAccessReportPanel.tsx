@@ -26,7 +26,7 @@ const PersonasAccessReportPanel = ({ accessReport }: Props) => {
       >
         <span className="flex items-center gap-2">
           <Icon icon="tabler:file-description" className="text-lg" />
-          Ver informe de acceso entregado
+          Ver los datos que la empresa te entregó
         </span>
         <Icon
           icon={expanded ? "tabler:chevron-up" : "tabler:chevron-down"}

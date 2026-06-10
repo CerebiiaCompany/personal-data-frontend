@@ -1,40 +1,37 @@
-import { fetchArcoRequests } from "@/lib/arcoAdmin.api";
-import { APIResponse } from "@/types/api.types";
-import { ArcoAdminRequestListItem } from "@/types/arco.admin.types";
-import { ArcoRequestStatus, ArcoRequestType } from "@/types/arco.types";
+import { fetchArcoAudit } from "@/lib/arcoAdmin.api";
 import { showApiErrorToast } from "@/components/feedback/ApiErrorToast";
+import { APIResponse } from "@/types/api.types";
+import { ArcoCompanyAuditEntry } from "@/types/arco.admin.types";
+import { ArcoRequestType } from "@/types/arco.types";
+import {
+  normalizeArcoCompanyAuditEntry,
+} from "@/utils/arcoAdmin.utils";
 import { useCallback, useEffect, useState } from "react";
 
 interface Params {
   companyId: string | undefined;
   page?: number;
   pageSize?: number;
-  status?: ArcoRequestStatus;
+  eventType?: string;
   requestType?: ArcoRequestType;
-  docNumber?: string;
-  assignedToId?: string;
-  overdue?: boolean;
   dateFrom?: string;
   dateTo?: string;
   enabled?: boolean;
 }
 
-export function useCompanyArcoRequests(params: Params) {
+export function useCompanyArcoAudit(params: Params) {
   const {
     companyId,
     page = 1,
     pageSize = 20,
-    status,
+    eventType,
     requestType,
-    docNumber,
-    assignedToId,
-    overdue,
     dateFrom,
     dateTo,
     enabled = true,
   } = params;
 
-  const [data, setData] = useState<ArcoAdminRequestListItem[] | null>(null);
+  const [data, setData] = useState<ArcoCompanyAuditEntry[] | null>(null);
   const [meta, setMeta] = useState<APIResponse["meta"] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,15 +40,12 @@ export function useCompanyArcoRequests(params: Params) {
     if (!companyId) return;
     setLoading(true);
     setError(null);
-    const res = await fetchArcoRequests({
+    const res = await fetchArcoAudit({
       companyId,
       page,
       pageSize,
-      status,
+      eventType,
       requestType,
-      docNumber,
-      assignedToId,
-      overdue,
       dateFrom,
       dateTo,
     });
@@ -60,23 +54,16 @@ export function useCompanyArcoRequests(params: Params) {
       if (res.error.code !== "auth/unauthorized") {
         showApiErrorToast(res.error, res.error.status);
       }
-      setError(res.error.message ?? "Error al cargar solicitudes");
+      setError(res.error.message ?? "Error al cargar auditoría ARCO");
       return;
     }
-    setData(res.data ?? []);
+    setData(
+      (res.data ?? []).map((item) =>
+        normalizeArcoCompanyAuditEntry(item as unknown as Record<string, unknown>)
+      )
+    );
     setMeta(res.meta ?? null);
-  }, [
-    companyId,
-    page,
-    pageSize,
-    status,
-    requestType,
-    docNumber,
-    assignedToId,
-    overdue,
-    dateFrom,
-    dateTo,
-  ]);
+  }, [companyId, page, pageSize, eventType, requestType, dateFrom, dateTo]);
 
   useEffect(() => {
     if (!enabled || !companyId) return;

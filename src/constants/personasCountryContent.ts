@@ -146,7 +146,7 @@ export const personasArcoActions = [
 export const personasFlowSteps = [
   { id: "documento", label: "Documento", path: "/personas/ingresar" },
   { id: "codigo", label: "Código", path: "/personas/verificar" },
-  { id: "portal", label: "Mis datos", path: "/personas/portal" },
+  { id: "portal", label: "Tu panel", path: "/personas/portal" },
 ] as const;
 
 export const PERSONAS_COUNTRIES: PersonasCountryCode[] = ["CO", "CL"];

@@ -61,6 +61,8 @@ export interface ArcoVerifyResult {
 }
 
 export interface ArcoDataOfficer {
+  /** API puede enviar `name` o `fullName` */
+  name?: string;
   fullName?: string;
   position?: string;
   email?: string;
@@ -101,11 +103,60 @@ export interface ArcoPolicyResult {
   consent: ArcoConsentInfo;
 }
 
+export interface ArcoRightsAttentionOfficer {
+  name: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  position?: string;
+}
+
+export interface ArcoRightsAttentionPublic {
+  phoneLine?: string;
+  officers?: ArcoRightsAttentionOfficer[];
+}
+
 export interface ArcoRectificationField {
   field: string;
-  currentValue: string;
   requestedValue: string;
+  /** Solo legacy; el portal envía field + requestedValue */
+  currentValue?: string;
 }
+
+export type ArcoOppositionScope =
+  | "ALL_CAMPAIGNS"
+  | "MARKETING_CAMPAIGNS"
+  | "CONSENT_CAMPAIGNS"
+  | "THIRD_PARTY_SHARING";
+
+export const ARCO_OPPOSITION_SCOPE_OPTIONS: {
+  value: ArcoOppositionScope;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: "ALL_CAMPAIGNS",
+    label: "Todas las campañas",
+    description:
+      "Bloquea campañas de marketing y de consentimiento mientras se resuelve.",
+  },
+  {
+    value: "MARKETING_CAMPAIGNS",
+    label: "Solo campañas de marketing",
+    description: "Publicidad, promociones y comunicaciones comerciales.",
+  },
+  {
+    value: "CONSENT_CAMPAIGNS",
+    label: "Solo campañas de consentimiento",
+    description: "Invitaciones para renovar o confirmar tu autorización.",
+  },
+  {
+    value: "THIRD_PARTY_SHARING",
+    label: "Compartir con terceros",
+    description:
+      "Te opones a que compartan tus datos con otras organizaciones.",
+  },
+];
 
 export interface ArcoCreateRequestPayload {
   companyId: string;
@@ -113,6 +164,8 @@ export interface ArcoCreateRequestPayload {
   description: string;
   rectificationFields?: ArcoRectificationField[];
   oppositionReason?: string;
+  /** Requerido cuando requestType es OPPOSITION */
+  oppositionScopes?: ArcoOppositionScope[];
 }
 
 export interface ArcoRegulationInfo {

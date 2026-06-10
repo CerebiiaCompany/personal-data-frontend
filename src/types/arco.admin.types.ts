@@ -20,16 +20,36 @@ export interface ArcoRegulationSnapshot {
   legalReference?: string;
 }
 
+export interface ArcoAssignedTo {
+  id: string;
+  name: string;
+  lastName?: string;
+}
+
 export interface ArcoAdminRequestListItem {
-  _id: string;
+  /** Identificador actual del backend */
+  id?: string;
+  /** @deprecated Usar id */
+  _id?: string;
   docType: ArcoDocType;
   docNumber: string;
   requestType: ArcoRequestType;
   status: ArcoRequestStatus;
   description: string;
   dueDate: string;
+  resolvedAt?: string | null;
   notifiedAt?: string;
+  response?: ArcoRequestResponse | null;
+  assignedToId?: string;
+  assignedTo?: ArcoAssignedTo;
   createdAt: string;
+}
+
+export interface ArcoMyAccess {
+  canView: boolean;
+  canRespond: boolean;
+  isOfficer: boolean;
+  isAdmin: boolean;
 }
 
 export interface ArcoRequestResponse {
@@ -41,11 +61,14 @@ export interface ArcoRequestResponse {
 }
 
 export interface ArcoAuditEvent {
-  type: string;
-  at: string;
-  actor: {
+  type?: string;
+  /** @deprecated Algunos endpoints usan eventType */
+  eventType?: string;
+  at?: string;
+  createdAt?: string;
+  actor?: {
     userId?: string;
-    name: string;
+    name?: string;
     role?: string;
   };
   meta?: Record<string, unknown>;
@@ -63,6 +86,7 @@ export interface ArcoAdminRequestDetail extends ArcoAdminRequestListItem {
   companyId: string;
   rectificationFields?: ArcoRectificationField[];
   oppositionReason?: string;
+  oppositionScopes?: string[];
   regulationSnapshot?: ArcoRegulationSnapshot;
   resolvedAt?: string;
   response?: ArcoRequestResponse;
@@ -125,6 +149,8 @@ export type ArcoConsentStatusCode =
   | "ACTIVE"
   | "REVOKED"
   | "PENDING"
+  | "CLAIM_IN_PROGRESS"
+  | "LEGAL_DISPUTE"
   | (string & {});
 
 export interface ArcoAccessConsentInfo {
@@ -215,6 +241,34 @@ export interface ArcoRequestsQuery {
   companyId: string;
   status?: ArcoRequestStatus;
   requestType?: ArcoRequestType;
+  docNumber?: string;
+  assignedToId?: string;
+  overdue?: boolean;
+  dateFrom?: string;
+  dateTo?: string;
   page?: number;
   pageSize?: number;
+}
+
+export interface ArcoAuditQuery {
+  companyId: string;
+  eventType?: string;
+  requestType?: ArcoRequestType;
+  dateFrom?: string;
+  dateTo?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+/** Evento de la auditoría general GET /arco/audit */
+export interface ArcoCompanyAuditEntry extends ArcoAuditEvent {
+  requestId?: string;
+  docNumber?: string;
+  requestType?: ArcoRequestType;
+  requestStatus?: ArcoRequestStatus;
+}
+
+export interface ArcoRequestAuditResponse {
+  requestId: string;
+  events: ArcoAuditEvent[];
 }

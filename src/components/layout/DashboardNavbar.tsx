@@ -12,6 +12,10 @@ import clsx from "clsx";
 import { toast } from "sonner";
 import { useSessionStore } from "@/store/useSessionStore";
 import { logoutUser } from "@/lib/auth.api";
+import NotificationsBell from "@/components/notifications/NotificationsBell";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
+import { useArcoMyAccess } from "@/hooks/useArcoMyAccess";
+import { usePermissions } from "@/hooks/usePermissions";
 import { SUPERADMIN_NAVBAR_DATA } from "@/constants/superadminNavbarData";
 import { hasPermissionByPath } from "@/utils/permissions.utils";
 
@@ -20,6 +24,12 @@ const COMING_SOON_PATHS = new Set(["/admin/asistente-ia"]);
 const DashboardNavbar = () => {
   const session = useSessionStore();
   const pathname = usePathname();
+  const companyId = useActiveCompanyId();
+  const { hasPermission } = usePermissions();
+  const { canView: canViewArco, loading: arcoAccessLoading } = useArcoMyAccess({
+    companyId,
+  });
+  const showNotifications = Boolean(companyId && canViewArco);
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
   const navScrollRef = useRef<HTMLDivElement | null>(null);
   const navListRef = useRef<HTMLUListElement | null>(null);
@@ -64,12 +74,20 @@ const DashboardNavbar = () => {
 
         if (!route.requiredPermission) return true;
 
+        if (
+          route.path === "/admin/arco" &&
+          !arcoAccessLoading &&
+          !canViewArco
+        ) {
+          return false;
+        }
+
         return hasPermissionByPath(
           session.permissions,
           route.requiredPermission
         );
       });
-  }, [session.user?.role, session.permissions]);
+  }, [session.user?.role, session.permissions, arcoAccessLoading, canViewArco]);
 
   const activeRoutePath = useMemo(() => {
     const match = mainNavbarRoutes.find((r) => r.path === pathname);
@@ -345,7 +363,17 @@ const DashboardNavbar = () => {
         </ul>
       </div>
 
-      <div className="bg-[linear-gradient(180deg,rgba(10,34,84,0.78)_0%,rgba(7,24,61,0.82)_100%)] border border-[#2B4F8F]/45 h-fit flex flex-col rounded-xl w-full overflow-hidden shadow-[0_6px_16px_rgba(3,10,30,0.28)] backdrop-blur-sm">
+      <div className="bg-[linear-gradient(180deg,rgba(10,34,84,0.78)_0%,rgba(7,24,61,0.82)_100%)] border border-[#2B4F8F]/45 h-fit flex flex-col rounded-xl w-full shadow-[0_6px_16px_rgba(3,10,30,0.28)] backdrop-blur-sm">
+        {showNotifications && (
+          <div className="overflow-visible">
+            <NotificationsBell
+              companyId={companyId}
+              enabled={showNotifications}
+              isCollapsed={isCollapsed}
+            />
+            <span className="inline-block w-full h-[1px] bg-gradient-to-r from-transparent via-[#2A4A86] to-transparent" />
+          </div>
+        )}
         <Link
           href={"/perfil"}
           className={clsx([

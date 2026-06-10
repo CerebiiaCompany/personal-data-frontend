@@ -6,6 +6,7 @@ import {
   ArcoLookupPayload,
   ArcoLookupResult,
   ArcoPolicyResult,
+  ArcoRightsAttentionPublic,
   ArcoRequestListItem,
   ArcoVerifyPayload,
   ArcoVerifyResult,
@@ -145,6 +146,14 @@ export function arcoListCompanies() {
 export function arcoGetCompanyPolicy(companyId: string) {
   return arcoFetch<ArcoPolicyResult>(
     `/arco/companies/${companyId}/policy`,
+    { method: "GET" },
+    true
+  );
+}
+
+export function arcoGetCompanyRightsAttention(companyId: string) {
+  return arcoFetch<ArcoRightsAttentionPublic>(
+    `/arco/companies/${companyId}/rights-attention`,
     { method: "GET" },
     true
   );
