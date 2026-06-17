@@ -8,7 +8,6 @@ import {
 } from "@/types/campaign.types";
 import { formatDateToString } from "@/utils/date.utils";
 import Button from "../base/Button";
-import CustomToggle from "../forms/CustomToggle";
 import { updateCampaign } from "@/lib/campaign.api";
 import { toast } from "sonner";
 import { parseApiError } from "@/utils/parseApiError";
@@ -29,6 +28,8 @@ interface Props {
   loading: boolean;
   error: string | null;
   refresh?: () => void;
+  /** Sin borde/sombra propios cuando va dentro del panel unificado con filtros */
+  embedded?: boolean;
 }
 
 function goalPill(goal: CampaignGoal): { label: string; className: string; icon: string } {
@@ -67,10 +68,16 @@ function goalPill(goal: CampaignGoal): { label: string; className: string; icon:
 
 function statusPill(item: Campaign): { label: string; className: string } {
   const st = item.status ?? "DRAFT";
-  if (st === "COMPLETED" || st === "EXPIRED") {
+  if (st === "COMPLETED") {
     return {
-      label: st === "EXPIRED" ? "Expirada" : "Completada",
+      label: "Completada",
       className: "bg-emerald-50 text-emerald-800 border-emerald-200",
+    };
+  }
+  if (st === "EXPIRED") {
+    return {
+      label: "Expirada",
+      className: "bg-red-50 text-red-700 border-red-200",
     };
   }
   if (st === "SCHEDULED") {
@@ -117,7 +124,7 @@ function channelIcon(ch: string): string {
   return "tabler:send";
 }
 
-const CampaignsTable = ({ items, loading, error, refresh }: Props) => {
+const CampaignsTable = ({ items, loading, error, refresh, embedded }: Props) => {
   const confirm = useConfirm();
   const { can } = usePermissionCheck();
   const [localItems, setLocalItems] = useState<Campaign[] | null>(null);
@@ -176,14 +183,21 @@ const CampaignsTable = ({ items, loading, error, refresh }: Props) => {
     "text-left text-[10px] font-semibold uppercase tracking-[0.06em] text-[#94A3B8] py-3.5 px-4 border-b border-[#EEF2F8] bg-[#F8FAFC]";
 
   return (
-    <div className="relative w-full overflow-hidden rounded-2xl border border-[#E8EDF7] bg-white shadow-[0_2px_12px_rgba(15,35,70,0.04)]">
+    <div
+      className={clsx(
+        "relative w-full overflow-hidden bg-white",
+        embedded
+          ? ""
+          : "rounded-2xl border border-[#E8EDF7] shadow-[0_2px_12px_rgba(15,35,70,0.04)]"
+      )}
+    >
       {loading && !localItems && (
         <div className="relative min-h-[280px] w-full">
           <LoadingCover />
         </div>
       )}
       {loading && localItems && (
-        <div className="absolute inset-0 z-10 rounded-2xl bg-white/70">
+        <div className={clsx("absolute inset-0 z-10 bg-white/70", !embedded && "rounded-2xl")}>
           <LoadingCover />
         </div>
       )}
@@ -196,14 +210,14 @@ const CampaignsTable = ({ items, loading, error, refresh }: Props) => {
 
       {localItems && localItems.length > 0 ? (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[960px] border-collapse text-left">
+          <table className="w-full min-w-[920px] border-collapse text-left">
             <thead>
               <tr>
-                <th scope="col" className={clsx(thClass, "w-[72px]")}>
-                  Estado
-                </th>
                 <th scope="col" className={thClass}>
                   Campaña
+                </th>
+                <th scope="col" className={clsx(thClass, "w-[120px]")}>
+                  Estado
                 </th>
                 <th scope="col" className={clsx(thClass, "w-[140px]")}>
                   Objetivo
@@ -220,7 +234,7 @@ const CampaignsTable = ({ items, loading, error, refresh }: Props) => {
                 <th scope="col" className={clsx(thClass, "w-[140px]")}>
                   Créditos
                 </th>
-                <th scope="col" className={clsx(thClass, "w-[200px] text-right")}>
+                <th scope="col" className={clsx(thClass, "w-[180px] text-right")}>
                   Acciones
                 </th>
               </tr>
@@ -257,57 +271,37 @@ const CampaignsTable = ({ items, loading, error, refresh }: Props) => {
                     className="border-b border-[#F1F5F9] last:border-0 transition-colors hover:bg-[#F8FAFC]"
                   >
                     <td className="py-4 px-4 align-middle">
-                      <div className="flex justify-center">
-                        <CustomToggle
-                          readOnly
-                          onClick={() =>
-                            can("campaigns.send") &&
-                            setCampaignActive(item._id, !item.active)
-                          }
-                          checked={item.active}
-                          className={
-                            !can("campaigns.send")
-                              ? "opacity-40 cursor-not-allowed"
-                              : ""
-                          }
-                          title={
-                            can("campaigns.send")
-                              ? "Activar campaña"
-                              : "Sin permiso para enviar campañas"
-                          }
-                        />
-                      </div>
-                    </td>
-                    <td className="py-4 px-4 align-middle">
-                      <div className="flex flex-col gap-1.5 min-w-0">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="font-semibold text-[#0B1737] text-[15px] leading-snug line-clamp-2">
+                      <div className="flex min-w-0 flex-col gap-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="line-clamp-2 text-[15px] font-semibold leading-snug text-[#0B1737]">
                             {item.name}
                           </span>
                           {item.type === "CONSENT_REQUEST" && (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 shrink-0">
+                            <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
                               <Icon icon="tabler:bell-ringing" className="text-xs" />
                               Consentimiento
                             </span>
                           )}
                         </div>
                         {desc ? (
-                          <span className="text-[13px] text-[#64748B] line-clamp-2">
+                          <span className="line-clamp-1 text-[13px] text-[#64748B]">
                             {desc}
                             {item.content?.bodyText && item.content.bodyText.length > 80
                               ? "…"
                               : ""}
                           </span>
                         ) : null}
-                        <span
-                          className={clsx(
-                            "inline-flex w-fit items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold",
-                            stPill.className
-                          )}
-                        >
-                          {stPill.label}
-                        </span>
                       </div>
+                    </td>
+                    <td className="py-4 px-4 align-middle">
+                      <span
+                        className={clsx(
+                          "inline-flex items-center rounded-full border px-2.5 py-1 text-[12px] font-semibold whitespace-nowrap",
+                          stPill.className
+                        )}
+                      >
+                        {stPill.label}
+                      </span>
                     </td>
                     <td className="py-4 px-4 align-middle">
                       {item.type === "CONSENT_REQUEST" ? (
@@ -388,30 +382,23 @@ const CampaignsTable = ({ items, loading, error, refresh }: Props) => {
                         >
                           Ver detalle
                         </Button>
-                        {can("campaigns.send") && (
+                        {can("campaigns.send") && !item.active && (
                           <button
                             type="button"
-                            title={
-                              item.active
-                                ? "Pausar (no disponible hasta finalizar envío)"
-                                : "Activar campaña"
-                            }
-                            onClick={() => {
-                              if (item.active) {
-                                toast.warning(
-                                  "No puedes desactivar una campaña en proceso"
-                                );
-                              } else {
-                                void setCampaignActive(item._id, true);
-                              }
-                            }}
-                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[#E4EAF6] bg-white text-[#334155] hover:bg-[#F1F5F9] transition-colors"
+                            title="Activar campaña"
+                            onClick={() => void setCampaignActive(item._id, true)}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[#1A2B5B] bg-[#1A2B5B] text-white transition-colors hover:bg-[#152248]"
                           >
-                            <Icon
-                              icon={item.active ? "tabler:player-pause" : "tabler:player-play"}
-                              className="text-lg"
-                            />
+                            <Icon icon="tabler:player-play" className="text-lg" />
                           </button>
+                        )}
+                        {can("campaigns.send") && item.active && (
+                          <span
+                            title="Campaña en proceso — no se puede pausar"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[#E4EAF6] bg-[#F8FAFC] text-[#94A3B8]"
+                          >
+                            <Icon icon="tabler:player-pause" className="text-lg" />
+                          </span>
                         )}
                       </div>
                     </td>
@@ -422,16 +409,15 @@ const CampaignsTable = ({ items, loading, error, refresh }: Props) => {
           </table>
         </div>
       ) : !loading && localItems && localItems.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-          <Icon
-            icon="tabler:megaphone-off"
-            className="text-4xl text-[#CBD5E1] mb-3"
-          />
-          <p className="text-[#64748B] text-sm font-medium max-w-sm">
-            No hay campañas que coincidan con los filtros o aún no has creado ninguna.
+        <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F1F5F9]">
+            <Icon icon="tabler:megaphone-off" className="text-3xl text-[#94A3B8]" />
+          </div>
+          <p className="max-w-sm text-sm font-semibold text-[#334155]">
+            No hay campañas con estos filtros
           </p>
-          <p className="text-[#94A3B8] text-xs mt-2">
-            Usa &quot;Crear campaña&quot; para comenzar un envío segmentado.
+          <p className="mt-1.5 max-w-sm text-xs text-[#64748B]">
+            Prueba cambiando el estado o el tipo, o crea una nueva campaña para comenzar.
           </p>
         </div>
       ) : !loading && !localItems ? (

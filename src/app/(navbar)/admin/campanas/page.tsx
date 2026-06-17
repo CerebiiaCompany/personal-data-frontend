@@ -2,6 +2,10 @@
 
 import Button from "@/components/base/Button";
 import SectionSearchBar from "@/components/base/SectionSearchBar";
+import CampaignsFilters, {
+  StatusFilterTab,
+  TypeFilterTab,
+} from "@/components/campaigns/CampaignsFilters";
 import CampaignsSummaryCards from "@/components/campaigns/CampaignsSummaryCards";
 import CampaignsTable from "@/components/campaigns/CampaignsTable";
 import CheckPermission from "@/components/checkers/CheckPermission";
@@ -24,23 +28,6 @@ const topCardClass =
   "bg-white border border-[#E8EDF7] rounded-2xl shadow-[0_2px_12px_rgba(15,35,70,0.04)]";
 
 const NAVY = "#1A2B5B";
-
-type StatusFilterTab = "ALL" | "ACTIVE" | "SCHEDULED" | "PAUSED" | "COMPLETED";
-type TypeFilterTab = "ALL" | "MARKETING" | "CONSENT_REQUEST";
-
-const FILTER_TABS: { id: StatusFilterTab; label: string }[] = [
-  { id: "ALL", label: "Todas" },
-  { id: "ACTIVE", label: "Activa" },
-  { id: "SCHEDULED", label: "Programada" },
-  { id: "PAUSED", label: "Pausada" },
-  { id: "COMPLETED", label: "Completada" },
-];
-
-const TYPE_FILTER_TABS: { id: TypeFilterTab; label: string; icon: string }[] = [
-  { id: "ALL", label: "Todos los tipos", icon: "tabler:layout-grid" },
-  { id: "MARKETING", label: "Marketing", icon: "tabler:speakerphone" },
-  { id: "CONSENT_REQUEST", label: "Consentimiento", icon: "tabler:bell-ringing" },
-];
 
 function matchesStatusFilter(item: Campaign, tab: StatusFilterTab): boolean {
   if (tab === "ALL") return true;
@@ -206,61 +193,24 @@ export default function CampaignsPage() {
             />
           )}
 
-          <div className="flex shrink-0 flex-col gap-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="mr-1 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#64748B]">
-                <Icon icon="tabler:filter" className="text-base" />
-                Estado
-              </span>
-              {FILTER_TABS.map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setStatusTab(tab.id)}
-                  className={clsx(
-                    "rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition-colors",
-                    statusTab === tab.id
-                      ? "border-[#1A2B5B] bg-[#1A2B5B] text-white shadow-sm"
-                      : "border-[#E2E8F0] bg-white text-[#334155] hover:bg-[#F1F5F9]"
-                  )}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="mr-1 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#64748B]">
-                <Icon icon="tabler:tag" className="text-base" />
-                Tipo
-              </span>
-              {TYPE_FILTER_TABS.map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setTypeTab(tab.id)}
-                  className={clsx(
-                    "inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition-colors",
-                    typeTab === tab.id
-                      ? tab.id === "CONSENT_REQUEST"
-                        ? "border-emerald-600 bg-emerald-600 text-white shadow-sm"
-                        : "border-[#1A2B5B] bg-[#1A2B5B] text-white shadow-sm"
-                      : "border-[#E2E8F0] bg-white text-[#334155] hover:bg-[#F1F5F9]"
-                  )}
-                >
-                  <Icon icon={tab.icon} className="text-base" />
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+          <div className="overflow-hidden rounded-2xl border border-[#E8EDF7] bg-white shadow-[0_2px_12px_rgba(15,35,70,0.04)]">
+            <CampaignsFilters
+              statusTab={statusTab}
+              typeTab={typeTab}
+              onStatusChange={setStatusTab}
+              onTypeChange={setTypeTab}
+              resultCount={filteredItems?.length ?? 0}
+              totalCount={data?.length ?? 0}
+              loading={loading && !data}
+            />
+            <CampaignsTable
+              items={filteredItems}
+              loading={loading}
+              error={error}
+              refresh={refresh}
+              embedded
+            />
           </div>
-
-          <CampaignsTable
-            items={filteredItems}
-            loading={loading}
-            error={error}
-            refresh={refresh}
-          />
         </div>
       </div>
     </div>
