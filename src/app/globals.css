@@ -58,6 +58,60 @@ input:focus {
   animation: pageTransitionEnter 260ms ease-out;
 }
 
+/* Entrada global de páginas — escalonado automático de secciones */
+.page-stagger-auto > * {
+  opacity: 0;
+  animation: dashboardFadeUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.page-stagger-auto > *:only-child {
+  opacity: 1;
+  animation: none;
+}
+
+.page-stagger-auto > *:only-child > * {
+  opacity: 0;
+  animation: dashboardFadeUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.page-stagger-auto > *:nth-child(1) {
+  animation-delay: 0ms;
+}
+.page-stagger-auto > *:nth-child(2) {
+  animation-delay: 65ms;
+}
+.page-stagger-auto > *:nth-child(3) {
+  animation-delay: 130ms;
+}
+.page-stagger-auto > *:nth-child(4) {
+  animation-delay: 195ms;
+}
+.page-stagger-auto > *:nth-child(5) {
+  animation-delay: 260ms;
+}
+.page-stagger-auto > *:nth-child(n + 6) {
+  animation-delay: 325ms;
+}
+
+.page-stagger-auto > *:only-child > *:nth-child(1) {
+  animation-delay: 0ms;
+}
+.page-stagger-auto > *:only-child > *:nth-child(2) {
+  animation-delay: 65ms;
+}
+.page-stagger-auto > *:only-child > *:nth-child(3) {
+  animation-delay: 130ms;
+}
+.page-stagger-auto > *:only-child > *:nth-child(4) {
+  animation-delay: 195ms;
+}
+.page-stagger-auto > *:only-child > *:nth-child(5) {
+  animation-delay: 260ms;
+}
+.page-stagger-auto > *:only-child > *:nth-child(n + 6) {
+  animation-delay: 325ms;
+}
+
 @keyframes collectPageEnter {
   0% {
     opacity: 0;
@@ -164,6 +218,121 @@ input:focus {
   transition:
     transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
     color 0.28s ease;
+}
+
+@keyframes dashboardFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dashboardContentIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes skeletonShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.dashboard-enter {
+  opacity: 0;
+  animation: dashboardFadeUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.dashboard-enter-delay-1 {
+  animation-delay: 70ms;
+}
+
+.dashboard-enter-delay-2 {
+  animation-delay: 130ms;
+}
+
+.dashboard-enter-delay-3 {
+  animation-delay: 190ms;
+}
+
+.dashboard-enter-delay-4 {
+  animation-delay: 250ms;
+}
+
+.dashboard-enter-delay-5 {
+  animation-delay: 310ms;
+}
+
+.dashboard-content-in {
+  opacity: 0;
+  animation: dashboardContentIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    #e8edf7 0%,
+    #f4f7fb 45%,
+    #e8edf7 90%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.6s ease-in-out infinite;
+}
+
+.skeleton-shimmer-light {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(255, 255, 255, 0.28) 45%,
+    rgba(255, 255, 255, 0.12) 90%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-stagger-auto > *,
+  .page-stagger-auto > *:only-child > * {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .dashboard-enter,
+  .dashboard-enter-delay-1,
+  .dashboard-enter-delay-2,
+  .dashboard-enter-delay-3,
+  .dashboard-enter-delay-4,
+  .dashboard-enter-delay-5 {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .dashboard-content-in {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .skeleton-shimmer,
+  .skeleton-shimmer-light {
+    animation: none !important;
+    background: #e8edf7 !important;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

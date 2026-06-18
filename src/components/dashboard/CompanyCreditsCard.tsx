@@ -1,7 +1,7 @@
 import { Icon } from "@iconify/react";
 import React from "react";
-import LoadingCover from "../layout/LoadingCover";
 import { CompanyCreditsCurrentMonth } from "@/types/company.types";
+import { DashboardCreditsCardSkeleton } from "./DashboardSkeletons";
 
 interface Props {
   data: CompanyCreditsCurrentMonth | null;
@@ -28,53 +28,59 @@ const CompanyCreditsCard = ({ data, loading, error }: Props) => {
     return months[month - 1] || "";
   };
 
-  return (
-    <div className="bg-[linear-gradient(103deg,_#1C4DC8_0%,_#2F63EE_52%,_#3E71F5_100%)] rounded-[20px] px-6 py-5 text-white relative overflow-hidden h-full min-h-[160px]">
-      <div className="absolute -right-6 -top-8 w-28 h-28 rounded-full bg-[#4C79F0]/45" />
-      <div className="absolute -left-8 -bottom-10 w-24 h-24 rounded-full bg-[#4C79F0]/45" />
+  if (loading) {
+    return <DashboardCreditsCardSkeleton />;
+  }
 
-      <div className="relative z-10 flex flex-col h-full">
+  return (
+    <div className="relative h-full min-h-[160px] overflow-hidden rounded-[20px] bg-[linear-gradient(103deg,_#1C4DC8_0%,_#2F63EE_52%,_#3E71F5_100%)] px-6 py-5 text-white">
+      <div className="absolute -right-6 -top-8 h-28 w-28 rounded-full bg-[#4C79F0]/45" />
+      <div className="absolute -bottom-10 -left-8 h-24 w-24 rounded-full bg-[#4C79F0]/45" />
+
+      <div className="relative z-10 flex h-full flex-col">
         <div className="flex items-center gap-2.5">
-          <span className="w-[18px] h-[18px] rounded-[5px] border border-white/55 bg-white/10 grid place-content-center">
+          <span className="grid h-[18px] w-[18px] place-content-center rounded-[5px] border border-white/55 bg-white/10">
             <Icon icon="tabler:credit-card" className="text-[11px] text-white" />
           </span>
-          <h4 className="font-semibold text-[14px] leading-none whitespace-nowrap">
+          <h4 className="whitespace-nowrap text-[14px] font-semibold leading-none">
             Créditos consumidos
           </h4>
         </div>
 
-        <div className="flex flex-col gap-1.5 mt-4">
-          {loading && (
-            <div className="relative w-20 h-6">
-              <LoadingCover size="sm" />
-            </div>
-          )}
-
+        <div className="dashboard-content-in mt-4 flex flex-col gap-1.5">
           {error && (
             <div className="flex items-center gap-2 text-white/90">
-              <Icon icon="material-symbols:report-outline-rounded" className="text-base sm:text-lg flex-shrink-0" />
-              <p className="font-medium text-xs sm:text-sm">Error: {error}</p>
+              <Icon
+                icon="material-symbols:report-outline-rounded"
+                className="flex-shrink-0 text-base sm:text-lg"
+              />
+              <p className="text-xs font-medium sm:text-sm">Error: {error}</p>
             </div>
           )}
 
-          {!loading && !error && data && (
+          {!error && data && (
             <>
               <div className="flex items-baseline gap-1.5">
                 <span className="text-[46px] font-bold leading-none tracking-[-0.03em]">
                   {data.creditsUsed}
                 </span>
-                <span className="text-[20px] text-white/95 leading-none">pesos</span>
+                <span className="text-[20px] leading-none text-white/95">pesos</span>
               </div>
-              <p className="text-white/90 text-[14px] leading-none">
+              <p className="text-[14px] leading-none text-white/90">
                 {getMonthName(data.month)} {data.year}
               </p>
             </>
           )}
 
-          {!loading && !error && !data && (
+          {!error && !data && (
             <div className="flex items-center gap-2 text-white/90">
-              <Icon icon="tabler:report" className="text-base sm:text-lg flex-shrink-0" />
-              <p className="font-medium text-xs sm:text-sm">No hay datos disponibles</p>
+              <Icon
+                icon="tabler:report"
+                className="flex-shrink-0 text-base sm:text-lg"
+              />
+              <p className="text-xs font-medium sm:text-sm">
+                No hay datos disponibles
+              </p>
             </div>
           )}
         </div>
@@ -84,4 +90,3 @@ const CompanyCreditsCard = ({ data, loading, error }: Props) => {
 };
 
 export default CompanyCreditsCard;
-

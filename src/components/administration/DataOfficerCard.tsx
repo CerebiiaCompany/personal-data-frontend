@@ -8,6 +8,7 @@ import { useSessionStore } from "@/store/useSessionStore";
 import { Icon } from "@iconify/react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { DashboardDataOfficerSkeleton } from "@/components/dashboard/DashboardSkeletons";
 
 interface Props {
   compact?: boolean;
@@ -53,6 +54,10 @@ export default function DataOfficerCard({
   }, [companyUsers.data]);
 
   const hasOfficer = Boolean(dataOfficer.data?._id);
+
+  if (compact && dataOfficer.loading) {
+    return <DashboardDataOfficerSkeleton />;
+  }
 
   if (compact && dataOfficer.error) return null;
   if (compact && hasOfficer && hideWhenAssigned) return null;

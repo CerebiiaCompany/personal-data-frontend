@@ -3,6 +3,7 @@
 import PersonasAnimateIn from "@/components/personas/PersonasAnimateIn";
 import PersonasFooter from "@/components/personas/PersonasFooter";
 import PersonasHeader from "@/components/personas/PersonasHeader";
+import AnimatedRoute from "@/components/layout/AnimatedRoute";
 import { personasTheme } from "@/constants/personasTheme";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
@@ -38,9 +39,7 @@ const PersonasLayoutShell = ({ children }: { children: React.ReactNode }) => {
         />
       </PersonasAnimateIn>
 
-      <main key={pathname} className="personas-page-enter flex-1">
-        {children}
-      </main>
+      <AnimatedRoute className="flex-1">{children}</AnimatedRoute>
 
       <PersonasRevealFooter />
     </div>

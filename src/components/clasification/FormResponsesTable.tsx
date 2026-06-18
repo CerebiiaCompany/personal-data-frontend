@@ -36,6 +36,7 @@ interface Props {
   pageSize: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
+  embedded?: boolean;
 }
 
 function formatDateTime(value?: string) {
@@ -179,6 +180,7 @@ const FormResponsesTable = ({
   pageSize,
   onPageChange,
   onPageSizeChange,
+  embedded,
 }: Props) => {
   const companyId = useActiveCompanyId();
   const { can } = usePermissionCheck();
@@ -240,7 +242,12 @@ const FormResponsesTable = ({
   const showPagination = totalCount > pageSize || hasMoreData || currentPage > 1;
 
   return (
-    <div className="w-full h-full relative min-h-0 flex flex-col">
+    <div
+      className={clsx(
+        "relative flex h-full min-h-0 w-full flex-col",
+        embedded && "min-h-[320px]"
+      )}
+    >
       {loading && <LoadingCover />}
 
       <SendConsentInvitationDialog
@@ -252,7 +259,12 @@ const FormResponsesTable = ({
 
       {!loading && items?.length ? (
         <>
-          <div className="w-full overflow-x-auto overflow-y-auto flex-1 min-h-0 rounded-t-2xl border-b border-[#E5EAF2]">
+          <div
+            className={clsx(
+              "min-h-0 w-full flex-1 overflow-x-auto overflow-y-auto border-b border-[#E5EAF2]",
+              !embedded && "rounded-t-2xl"
+            )}
+          >
             <table className="w-full min-w-[1960px] border-separate border-spacing-0">
               <thead className="sticky top-0 bg-[#F4F6FA] z-10">
                 <tr>
@@ -815,9 +827,15 @@ const FormResponsesTable = ({
           )}
         </>
       ) : !loading && items && items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-10 px-4">
-          <p className="text-center text-[#6F7F9F] text-sm sm:text-base">
-            Este formulario aún no tiene registros
+        <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F1F5F9]">
+            <Icon icon="tabler:clipboard-off" className="text-3xl text-[#94A3B8]" />
+          </div>
+          <p className="text-sm font-semibold text-[#334155]">
+            No hay registros que coincidan
+          </p>
+          <p className="mt-1.5 max-w-sm text-xs text-[#64748B]">
+            Prueba otro filtro de consentimiento o espera nuevas respuestas del formulario.
           </p>
         </div>
       ) : null}

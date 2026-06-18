@@ -3,28 +3,75 @@
 import Button from "@/components/base/Button";
 import SectionSearchBar from "@/components/base/SectionSearchBar";
 import FormResponsesTable from "@/components/clasification/FormResponsesTable";
+import FormResponsesFilters, {
+  ConsentStatusFilter,
+} from "@/components/clasification/FormResponsesFilters";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useCollectFormResponses } from "@/hooks/useCollectFormResponses";
 import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import { useConsentResponsesExport } from "@/hooks/useConsentResponsesExport";
 import { usePermissionCheck } from "@/hooks/usePermissionCheck";
-import {
-  ConsentStatus,
-  consentStatusOptions,
-} from "@/types/collectFormResponse.types";
+import { ConsentStatus } from "@/types/collectFormResponse.types";
 import { Icon } from "@iconify/react";
 import clsx from "clsx";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
-type ConsentStatusFilter = "ALL" | ConsentStatus;
-
 type FormResponseSummary = {
   verifiedResponses?: number;
   consentActiveCount?: number;
   consentRevokedCount?: number;
 };
+
+function formatInt(n: number) {
+  return n.toLocaleString("es-CO", { maximumFractionDigits: 0 });
+}
+
+interface KpiCardProps {
+  icon: string;
+  label: string;
+  value: string | number;
+  subtitle: string;
+  subtitleClassName?: string;
+  detail?: string;
+}
+
+function KpiCard({
+  icon,
+  label,
+  value,
+  subtitle,
+  subtitleClassName,
+  detail,
+}: KpiCardProps) {
+  return (
+    <article className="flex items-start gap-3.5 rounded-2xl border border-[#E8EDF7] bg-white px-4 py-4 shadow-[0_2px_12px_rgba(15,35,70,0.04)] sm:px-5">
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#EEF2FF] text-[#1A2B5B]">
+        <Icon icon={icon} className="text-xl" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[#94A3B8]">
+          {label}
+        </p>
+        <p className="text-[22px] font-bold leading-tight text-[#0B1737] tabular-nums sm:text-[24px]">
+          {value}
+        </p>
+        <p
+          className={clsx(
+            "mt-0.5 text-[12px] font-semibold",
+            subtitleClassName ?? "text-[#64748B]"
+          )}
+        >
+          {subtitle}
+        </p>
+        {detail ? (
+          <p className="mt-1 text-[11px] leading-snug text-[#94A3B8]">{detail}</p>
+        ) : null}
+      </div>
+    </article>
+  );
+}
 
 export default function FormClassificationPage() {
   const { isCompanyAdmin } = usePermissionCheck();
@@ -35,15 +82,16 @@ export default function FormClassificationPage() {
   const [pageSize, setPageSize] = useState(20);
   const [consentFilter, setConsentFilter] = useState<ConsentStatusFilter>("ALL");
   const companyId = useActiveCompanyId();
-  const { startExport, exporting: exportingExcel, progress: exportProgress } =
-    useConsentResponsesExport(companyId);
+  const {
+    startExport,
+    exporting: exportingExcel,
+    progress: exportProgress,
+  } = useConsentResponsesExport(companyId);
 
   const apiSearch = useMemo(() => {
     const value = debouncedValue.trim();
     if (!value) return "";
 
-    // Para búsquedas por CC/teléfono: enviar solo dígitos al backend
-    // y evitar que símbolos (+, -, espacios) rompan el match.
     const digits = value.replace(/\D/g, "");
     if (digits.length >= 4) return digits;
 
@@ -60,6 +108,7 @@ export default function FormClassificationPage() {
   });
 
   const typedSummary = (summary || {}) as FormResponseSummary;
+
   useEffect(() => {
     setCurrentPage(1);
   }, [apiSearch, consentFilter]);
@@ -108,15 +157,11 @@ export default function FormClassificationPage() {
     );
 
     const total = meta?.totalCount || responses.length || 0;
-    const consentActive =
-      typedSummary.consentActiveCount ?? activeConsentsFallback;
-    const consentRevoked =
-      typedSummary.consentRevokedCount ?? revokedConsentsFallback;
+    const consentActive = typedSummary.consentActiveCount ?? activeConsentsFallback;
+    const consentRevoked = typedSummary.consentRevokedCount ?? revokedConsentsFallback;
     const verified = typedSummary.verifiedResponses ?? fallbackVerified;
-    const evidenceCoveragePct =
-      total > 0 ? (legalEvidenceCount / total) * 100 : 0;
-    const consentCoveragePct =
-      total > 0 ? (consentActive / total) * 100 : 0;
+    const evidenceCoveragePct = total > 0 ? (legalEvidenceCount / total) * 100 : 0;
+    const consentCoveragePct = total > 0 ? (consentActive / total) * 100 : 0;
 
     const channelEntries = [
       { key: "SMS", value: channels.SMS },
@@ -154,7 +199,7 @@ export default function FormClassificationPage() {
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handlePageSizeChange = (newSize: number) => {
@@ -162,135 +207,142 @@ export default function FormClassificationPage() {
     setCurrentPage(1);
   };
 
+  const topCardClass =
+    "bg-white border border-[#E8EDF7] rounded-2xl shadow-[0_2px_12px_rgba(15,35,70,0.04)]";
+
   return (
-    <div className="flex flex-col h-full min-h-0 bg-[#F9FBFF]">
-      <div className="px-5 md:px-6 pt-4 pb-3">
-        <div className="max-w-[1240px] mx-auto space-y-4">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <SectionSearchBar
-              search={search}
-              onSearchChange={setSearch}
-              placeholder="Buscar por nombre, NIT, razón social, documento, correo..."
-            />
-            <div className="flex flex-wrap items-center gap-1.5">
-              {(
-                [
-                  { value: "ALL", title: "Todos" },
-                  ...consentStatusOptions,
-                ] as { value: ConsentStatusFilter; title: string }[]
-              ).map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setConsentFilter(option.value)}
-                  className={clsx(
-                    "px-3.5 py-2 rounded-xl text-[12px] font-semibold border transition-colors whitespace-nowrap",
-                    consentFilter === option.value
-                      ? "bg-[#133C95] text-white border-[#133C95]"
-                      : "bg-white text-[#5C6D91] border-[#E3E9F5] hover:bg-[#F4F7FE]"
+    <div className="flex h-full min-h-0 flex-col bg-[#F8FAFC]">
+      <div className="w-full shrink-0 px-5 pt-5 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
+        <div className="mx-auto flex max-w-[1240px] flex-col gap-5 sm:gap-6">
+          <section className={clsx(topCardClass, "px-5 py-5 sm:px-6 sm:py-6")}>
+            <div className="flex flex-col gap-6">
+              <SectionSearchBar
+                variant="pill"
+                search={search}
+                onSearchChange={setSearch}
+                placeholder="Buscar por nombre, documento, correo, NIT..."
+              />
+
+              <header className="flex flex-col gap-4 border-t border-[#EEF2F8] pt-5 lg:flex-row lg:items-start lg:justify-between lg:gap-8">
+                <div className="min-w-0 flex-1 space-y-2">
+                  <nav className="flex flex-wrap items-center gap-2 text-sm text-[#64748B]">
+                    <Link href="/admin" className="hover:underline">
+                      Inicio
+                    </Link>
+                    <Icon
+                      icon="tabler:chevron-right"
+                      className="shrink-0 text-base text-[#94A3B8]"
+                    />
+                    <Link href="/admin/clasificacion" className="hover:underline">
+                      Clasificación
+                    </Link>
+                    <Icon
+                      icon="tabler:chevron-right"
+                      className="shrink-0 text-base text-[#94A3B8]"
+                    />
+                    <span className="truncate font-semibold text-[#1A2B5B]">
+                      {data?.name || "…"}
+                    </span>
+                  </nav>
+                  <h1 className="text-[26px] font-bold leading-tight tracking-tight text-[#0B1737] sm:text-[28px]">
+                    {data?.name || "Cargando formulario…"}
+                  </h1>
+                  <p className="max-w-2xl text-[13px] leading-relaxed text-[#64748B] sm:text-sm">
+                    Reporte de registros, validación OTP y trazabilidad de consentimiento.
+                  </p>
+                </div>
+
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  <Button
+                    href="/admin/clasificacion"
+                    hierarchy="secondary"
+                    className="rounded-xl! border-[#E2E8F0]! bg-white! px-4! py-2.5! text-[13px]! font-semibold! text-[#334155]! hover:bg-[#F8FAFC]!"
+                    startContent={
+                      <Icon icon="tabler:arrow-left" className="text-base" />
+                    }
+                  >
+                    Volver
+                  </Button>
+                  {canExportExcel && (
+                    <Button
+                      hierarchy="primary"
+                      className="rounded-xl! border-[#1A2B5B]! bg-[#1A2B5B]! px-4! py-2.5! text-[13px]! font-semibold! text-white!"
+                      onClick={exportAllToExcel}
+                      disabled={exportingExcel}
+                      loading={exportingExcel}
+                      startContent={
+                        !exportingExcel ? (
+                          <Icon icon="tabler:file-export" className="text-base" />
+                        ) : undefined
+                      }
+                    >
+                      {exportingExcel
+                        ? exportProgress != null
+                          ? `Exportando… ${exportProgress}%`
+                          : "Exportando…"
+                        : "Exportar Excel"}
+                    </Button>
                   )}
-                >
-                  {option.title}
-                </button>
-              ))}
+                </div>
+              </header>
             </div>
-            {canExportExcel && (
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  hierarchy="secondary"
-                  className="rounded-xl! border-[#E3E9F4]! text-[13px]! px-4! py-2.5!"
-                  onClick={exportAllToExcel}
-                  disabled={exportingExcel}
-                  loading={exportingExcel}
-                >
-                  <span className="flex items-center gap-2">
-                    {!exportingExcel && (
-                      <Icon icon="tabler:file-export" className="text-base" />
-                    )}
-                    {exportingExcel
-                      ? exportProgress != null
-                        ? `Exportando... ${exportProgress}%`
-                        : "Exportando..."
-                      : "Exportar Excel"}
-                  </span>
-                </Button>
-              </div>
-            )}
-          </div>
+          </section>
 
-          <header className="rounded-2xl border border-[#E8EDF7] bg-white px-5 py-4">
-            <div className="flex items-center justify-between gap-4">
-              <div className="min-w-0">
-                <nav className="flex items-center gap-1.5 text-xs text-[#7384A6] mb-2">
-                  <Link href="/admin" className="hover:underline">Inicio</Link>
-                  <Icon icon="tabler:chevron-right" className="text-sm" />
-                  <Link href="/admin/clasificacion" className="hover:underline">Clasificación</Link>
-                  <Icon icon="tabler:chevron-right" className="text-sm" />
-                  <span className="font-semibold text-[#1D2E56] truncate">{data?.name || "..."}</span>
-                </nav>
-                <h1 className="text-[30px] leading-tight font-bold text-[#0B1737] truncate">
-                  {data?.name || "Cargando formulario..."}
-                </h1>
-                <p className="text-[#6F7F9F] text-[13px] mt-1">
-                  Reporte completo de usuarios registrados, validación OTP y trazabilidad.
-                </p>
-              </div>
-              <Button href="/admin/clasificacion" hierarchy="secondary" className="rounded-xl! border-[#E3E9F4]! text-[13px]! px-4! py-2.5! shrink-0">
-                <span className="flex items-center gap-2">
-                  <Icon icon="tabler:arrow-left" className="text-base" />
-                  Volver
-                </span>
-              </Button>
-            </div>
-          </header>
-
-          <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-            <article className="rounded-2xl border border-[#E8EDF7] bg-white px-4 py-3">
-              <p className="text-[11px] text-[#7E8BA5] font-semibold uppercase">Total registros</p>
-              <p className="text-[28px] font-bold text-[#0B1737] leading-tight">{kpis.total}</p>
-              <p className="text-[12px] text-emerald-600 font-semibold">
-                {kpis.verifiedPct.toFixed(1)}% con OTP verificado
-              </p>
-            </article>
-            <article className="rounded-2xl border border-[#E8EDF7] bg-white px-4 py-3">
-              <p className="text-[11px] text-[#7E8BA5] font-semibold uppercase">Consentimiento activo</p>
-              <p className="text-[28px] font-bold text-[#0B1737] leading-tight">{kpis.consentActive}</p>
-              <p className="text-[12px] text-amber-600 font-semibold">
-                {kpis.consentCoveragePct.toFixed(1)}% del total · {kpis.consentRevoked} revocados
-              </p>
-            </article>
-            <article className="rounded-2xl border border-[#E8EDF7] bg-white px-4 py-3">
-              <p className="text-[11px] text-[#7E8BA5] font-semibold uppercase">Evidencia legal completa</p>
-              <p className="text-[28px] font-bold text-[#0B1737] leading-tight">{kpis.legalEvidenceCount}</p>
-              <p className="text-[12px] text-[#6F7F9F]">
-                {kpis.evidenceCoveragePct.toFixed(1)}% con política + aceptación + traza
-              </p>
-            </article>
-            <article className="rounded-2xl border border-[#E8EDF7] bg-white px-4 py-3">
-              <p className="text-[11px] text-[#7E8BA5] font-semibold uppercase">Canal principal OTP</p>
-              <p className="text-[28px] font-bold text-[#0B1737] leading-tight">{kpis.topChannel}</p>
-              <p className="text-[12px] text-[#6F7F9F]">distribución visible</p>
-              <p className="text-[12px] text-[#6F7F9F] mt-0.5">
-                {kpis.topChannelCount} casos · SMS {kpis.channels.SMS} · Email {kpis.channels.EMAIL} · WhatsApp {kpis.channels.WHATSAPP}
-              </p>
-            </article>
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <KpiCard
+              icon="tabler:users"
+              label="Total registros"
+              value={formatInt(kpis.total)}
+              subtitle={`${kpis.verifiedPct.toFixed(1)}% con OTP verificado`}
+              subtitleClassName="text-emerald-600"
+            />
+            <KpiCard
+              icon="tabler:shield-check"
+              label="Consentimiento activo"
+              value={formatInt(kpis.consentActive)}
+              subtitle={`${kpis.consentCoveragePct.toFixed(1)}% del total`}
+              subtitleClassName="text-emerald-600"
+              detail={`${formatInt(kpis.consentRevoked)} revocados`}
+            />
+            <KpiCard
+              icon="tabler:file-certificate"
+              label="Evidencia legal"
+              value={formatInt(kpis.legalEvidenceCount)}
+              subtitle={`${kpis.evidenceCoveragePct.toFixed(1)}% cobertura completa`}
+              detail="Política + aceptación + traza"
+            />
+            <KpiCard
+              icon="tabler:device-mobile-message"
+              label="Canal OTP principal"
+              value={kpis.topChannel}
+              subtitle={`${formatInt(kpis.topChannelCount)} registros`}
+              detail={`SMS ${kpis.channels.SMS} · Email ${kpis.channels.EMAIL} · WhatsApp ${kpis.channels.WHATSAPP}`}
+            />
           </section>
         </div>
       </div>
 
-      <div className="px-5 md:px-6 pb-4 flex-1 min-h-0">
-        <div className="max-w-[1240px] mx-auto h-full rounded-2xl border border-[#E8EDF7] bg-white">
-        <FormResponsesTable
-          refresh={refresh}
-          items={data ? data.responses : null}
-          loading={loading}
-          error={error}
-          meta={meta}
-          currentPage={currentPage}
-          pageSize={pageSize}
-          onPageChange={handlePageChange}
-          onPageSizeChange={handlePageSizeChange}
-        />
+      <div className="min-h-0 flex-1 px-5 pb-6 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
+        <div className="mx-auto h-full max-w-[1240px] overflow-hidden rounded-2xl border border-[#E8EDF7] bg-white shadow-[0_2px_12px_rgba(15,35,70,0.04)]">
+          <FormResponsesFilters
+            activeFilter={consentFilter}
+            onChange={setConsentFilter}
+            resultCount={meta?.totalCount ?? data?.responses?.length ?? 0}
+            totalCount={kpis.total}
+            loading={loading && !data}
+          />
+          <FormResponsesTable
+            refresh={refresh}
+            items={data ? data.responses : null}
+            loading={loading}
+            error={error}
+            meta={meta}
+            currentPage={currentPage}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+            embedded
+          />
         </div>
       </div>
     </div>
