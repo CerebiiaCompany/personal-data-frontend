@@ -65,11 +65,6 @@ input:focus {
 }
 
 .page-stagger-auto > *:only-child {
-  opacity: 1;
-  animation: none;
-}
-
-.page-stagger-auto > *:only-child > * {
   opacity: 0;
   animation: dashboardFadeUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
@@ -90,25 +85,6 @@ input:focus {
   animation-delay: 260ms;
 }
 .page-stagger-auto > *:nth-child(n + 6) {
-  animation-delay: 325ms;
-}
-
-.page-stagger-auto > *:only-child > *:nth-child(1) {
-  animation-delay: 0ms;
-}
-.page-stagger-auto > *:only-child > *:nth-child(2) {
-  animation-delay: 65ms;
-}
-.page-stagger-auto > *:only-child > *:nth-child(3) {
-  animation-delay: 130ms;
-}
-.page-stagger-auto > *:only-child > *:nth-child(4) {
-  animation-delay: 195ms;
-}
-.page-stagger-auto > *:only-child > *:nth-child(5) {
-  animation-delay: 260ms;
-}
-.page-stagger-auto > *:only-child > *:nth-child(n + 6) {
   animation-delay: 325ms;
 }
 
@@ -223,22 +199,18 @@ input:focus {
 @keyframes dashboardFadeUp {
   from {
     opacity: 0;
-    transform: translateY(14px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
 @keyframes dashboardContentIn {
   from {
     opacity: 0;
-    transform: translateY(6px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -305,7 +277,7 @@ input:focus {
 
 @media (prefers-reduced-motion: reduce) {
   .page-stagger-auto > *,
-  .page-stagger-auto > *:only-child > * {
+  .page-stagger-auto > *:only-child {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;

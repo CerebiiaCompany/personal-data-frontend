@@ -628,8 +628,8 @@ const CreateCollectFormForm = ({ initialValues }: Props) => {
             </section>
           </div>
 
-          {/* Resumen lateral */}
-          <aside className="lg:sticky lg:top-8 space-y-5">
+          {/* Resumen lateral — sticky dentro del área de scroll del dashboard */}
+          <aside className="space-y-5 lg:sticky lg:top-6 lg:z-[1] lg:self-start">
             <div className="rounded-2xl border border-[#E6EBF2] bg-white p-7 shadow-[0_4px_20px_rgba(15,23,42,0.06)]">
               <h2 className="text-[16px] font-bold text-[#0F172A] mb-5">
                 Resumen

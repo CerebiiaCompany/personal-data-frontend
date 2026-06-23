@@ -11,6 +11,7 @@ import { useSessionStore } from "@/store/useSessionStore";
 import { usePolicyTemplates } from "@/hooks/usePolicyTemplates";
 import clsx from "clsx";
 import { PolicyTemplate } from "@/types/policyTemplate.types";
+import DialogPortal from "./DialogPortal";
 
 interface Props {
   items: PolicyTemplate[];
@@ -35,12 +36,12 @@ const SelectTemplateDialog = ({ value, onSelect, items }: Props) => {
   }
 
   return (
-    /* Wrapper */
-    <div
-      onClick={handleClick}
-      id={id}
-      className="dialog-wrapper fixed hidden w-full top-0 left-0 h-full z-20 justify-center items-center bg-stone-900/50"
-    >
+    <DialogPortal>
+      <div
+        onClick={handleClick}
+        id={id}
+        className="dialog-wrapper fixed inset-0 z-[100] hidden h-full w-full items-center justify-center bg-stone-900/50"
+      >
       {/* Modal */}
       <div className="w-full animate-appear max-w-xl rounded-xl overflow-hidden bg-white flex flex-col max-h-3/4 gap-4">
         <header className="border-b justify-between border-b-disabled flex items-center p-4">
@@ -114,7 +115,8 @@ const SelectTemplateDialog = ({ value, onSelect, items }: Props) => {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </DialogPortal>
   );
 };
 

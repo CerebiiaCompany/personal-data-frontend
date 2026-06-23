@@ -15,6 +15,7 @@ import { hideDialog } from "@/utils/dialogs.utils";
 import { parseApiError } from "@/utils/parseApiError";
 import { CampaignDeliveryChannel } from "@/types/campaign.types";
 import { toDateTimeLocalString } from "@/utils/date.utils";
+import DialogPortal from "./DialogPortal";
 
 interface Props {
   companyId: string;
@@ -184,11 +185,12 @@ export default function ConsentCampaignDialog({ companyId, formId, formName, onS
     new Date(scheduledDateTime).getTime() <= Date.now();
 
   return (
-    <div
-      onClick={handleBackdrop}
-      id={id}
-      className="dialog-wrapper fixed inset-0 z-50 flex items-center justify-center p-4"
-    >
+    <DialogPortal>
+      <div
+        onClick={handleBackdrop}
+        id={id}
+        className="dialog-wrapper fixed inset-0 z-[100] flex items-center justify-center p-4"
+      >
       <div
         className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
@@ -442,6 +444,7 @@ export default function ConsentCampaignDialog({ companyId, formId, formName, onS
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </DialogPortal>
   );
 }
