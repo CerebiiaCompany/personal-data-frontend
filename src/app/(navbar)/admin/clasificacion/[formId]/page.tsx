@@ -199,7 +199,10 @@ export default function FormClassificationPage() {
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    document.getElementById("scrollContainer")?.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
   };
 
   const handlePageSizeChange = (newSize: number) => {
@@ -211,7 +214,7 @@ export default function FormClassificationPage() {
     "bg-white border border-[#E8EDF7] rounded-2xl shadow-[0_2px_12px_rgba(15,35,70,0.04)]";
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[#F8FAFC]">
+    <div className="flex flex-col bg-[#F8FAFC]">
       <div className="w-full shrink-0 px-5 pt-5 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
         <div className="mx-auto flex max-w-[1240px] flex-col gap-5 sm:gap-6">
           <section className={clsx(topCardClass, "px-5 py-5 sm:px-6 sm:py-6")}>
@@ -322,8 +325,8 @@ export default function FormClassificationPage() {
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 px-5 pb-6 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
-        <div className="mx-auto h-full max-w-[1240px] overflow-hidden rounded-2xl border border-[#E8EDF7] bg-white shadow-[0_2px_12px_rgba(15,35,70,0.04)]">
+      <div className="px-5 pb-6 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
+        <div className="mx-auto max-w-[1240px] overflow-hidden rounded-2xl border border-[#E8EDF7] bg-white shadow-[0_2px_12px_rgba(15,35,70,0.04)]">
           <FormResponsesFilters
             activeFilter={consentFilter}
             onChange={setConsentFilter}

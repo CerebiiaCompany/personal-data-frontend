@@ -244,8 +244,8 @@ const FormResponsesTable = ({
   return (
     <div
       className={clsx(
-        "relative flex h-full min-h-0 w-full flex-col",
-        embedded && "min-h-[320px]"
+        "relative flex w-full flex-col",
+        !embedded && "h-full min-h-0"
       )}
     >
       {loading && <LoadingCover />}
@@ -261,8 +261,8 @@ const FormResponsesTable = ({
         <>
           <div
             className={clsx(
-              "min-h-0 w-full flex-1 overflow-x-auto overflow-y-auto border-b border-[#E5EAF2]",
-              !embedded && "rounded-t-2xl"
+              "w-full overflow-x-auto border-b border-[#E5EAF2]",
+              !embedded && "min-h-0 flex-1 overflow-y-auto rounded-t-2xl"
             )}
           >
             <table className="w-full min-w-[1960px] border-separate border-spacing-0">

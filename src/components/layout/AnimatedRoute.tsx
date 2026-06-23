@@ -25,7 +25,7 @@ export default function AnimatedRoute({
     <div
       key={pathname}
       className={clsx(
-        "flex min-h-0 min-w-0 flex-1 flex-col",
+        "flex w-full flex-col",
         stagger && "page-stagger-auto",
         className
       )}
