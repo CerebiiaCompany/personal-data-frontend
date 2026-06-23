@@ -398,7 +398,7 @@ const DashboardNavbar = () => {
               {session.user?.username}
             </h6>
             <p className="w-full text-ellipsis text-[#9EB2DB] text-[11px]">
-              {session.user?.companyUserData?.personalEmail.toLowerCase()}
+              {session.user?.companyUserData?.personalEmail?.toLowerCase() ?? ""}
             </p>
           </div>
         </Link>

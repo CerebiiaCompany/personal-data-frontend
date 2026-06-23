@@ -319,6 +319,9 @@ const FormResponsesTable = ({
               </thead>
               <tbody className="bg-white">
                 {items.map((item) => {
+                  const user = item.user;
+                  if (!user) return null;
+
                   const otp = getOtp(item);
                   const otpChannel =
                     otp?.recipientData?.channel ?? item.consent?.otp?.channel ?? "—";
@@ -326,7 +329,7 @@ const FormResponsesTable = ({
                     otp?.status ?? (item.consent?.otp?.verified ? "VERIFIED" : "—");
                   const obtainedVia = prettyObtainedVia(item.consent?.obtainedVia);
                   const consentStatus = item.consent?.status ?? "PENDIENTE";
-                  const isJuridica = isJuridicaDocType(item.user.docType);
+                  const isJuridica = isJuridicaDocType(user.docType);
                   const createdAt = splitDateTime(item.createdAt);
                   const createdByName = item.createdBy?.name || item.createdBy?.lastName
                     ? `${item.createdBy?.name || ""}${
@@ -357,19 +360,19 @@ const FormResponsesTable = ({
                         <span
                           className={clsx(
                             "inline-flex items-center px-2 py-[2px] rounded-full text-[10px] font-semibold whitespace-nowrap",
-                            personKindChipClass(item.user.docType)
+                            personKindChipClass(user.docType)
                           )}
                         >
                           {isJuridica ? "Jurídica" : "Natural"}
                         </span>
                       </td>
                       <td className="py-3 px-3 text-[11px] text-[#3A4B70] whitespace-nowrap">
-                        {parseCollectFormDocTypeToString(item.user.docType)}{" "}
-                        {item.user.docNumber}
+                        {parseCollectFormDocTypeToString(user.docType)}{" "}
+                        {user.docNumber}
                       </td>
                       <td className="py-3 px-3 text-[12px] font-semibold text-[#0B1737] max-w-[200px]">
-                        <div className="truncate" title={item.user.razonSocial || undefined}>
-                          {isJuridica ? item.user.razonSocial || "—" : "—"}
+                        <div className="truncate" title={user.razonSocial || undefined}>
+                          {isJuridica ? user.razonSocial || "—" : "—"}
                         </div>
                       </td>
                       <td className="py-3 px-3 text-[11px] text-[#3A4B70] max-w-[140px]">
@@ -377,30 +380,30 @@ const FormResponsesTable = ({
                           className="truncate"
                           title={isJuridica ? "Representante legal" : undefined}
                         >
-                          {item.user.name || "—"}
+                          {user.name || "—"}
                         </div>
                       </td>
                       <td className="py-3 px-3 text-[11px] text-[#3A4B70] max-w-[140px]">
-                        <div className="truncate">{item.user.lastName || "—"}</div>
+                        <div className="truncate">{user.lastName || "—"}</div>
                       </td>
                       <td className="py-3 px-3 text-[11px] text-[#3A4B70] whitespace-nowrap">
-                        {!isJuridica && item.user.age != null ? item.user.age : "—"}
+                        {!isJuridica && user.age != null ? user.age : "—"}
                       </td>
                       <td className="py-3 px-3 text-[11px] text-[#3A4B70] whitespace-nowrap">
-                        {!isJuridica && item.user.gender
-                          ? parseUserGenderToString(item.user.gender)
+                        {!isJuridica && user.gender
+                          ? parseUserGenderToString(user.gender)
                           : "—"}
                       </td>
                       <td className="py-3 px-3 text-[11px] text-[#3A4B70] max-w-[240px]">
                         <div className="flex items-center gap-1.5 truncate">
                           <Icon icon="tabler:mail" className="text-[13px] text-[#8DA0C3] shrink-0" />
-                          <span className="truncate">{item.user.email || "—"}</span>
+                          <span className="truncate">{user.email || "—"}</span>
                         </div>
                       </td>
                       <td className="py-3 px-3 text-[11px] text-[#3A4B70] whitespace-nowrap">
                         <span className="inline-flex items-center gap-1.5">
                           <Icon icon="tabler:phone" className="text-[13px] text-[#8DA0C3]" />
-                          {item.user.phone || "—"}
+                          {user.phone || "—"}
                         </span>
                       </td>
                       <td className="py-3 px-3 text-[11px] text-[#3A4B70] max-w-[170px] truncate">
@@ -633,7 +636,7 @@ const FormResponsesTable = ({
                             {isJuridica && (
                               <div>
                                 <p className="text-[#7A869D] font-semibold">Razón social</p>
-                                <p className="text-[#1E2D4E]">{item.user.razonSocial || "—"}</p>
+                                <p className="text-[#1E2D4E]">{user.razonSocial || "—"}</p>
                               </div>
                             )}
                             <div>
@@ -641,7 +644,7 @@ const FormResponsesTable = ({
                                 {isJuridica ? "Representante legal" : "Titular"}
                               </p>
                               <p className="text-[#1E2D4E]">
-                                {[item.user.name, item.user.lastName].filter(Boolean).join(" ") || "—"}
+                                {[user.name, user.lastName].filter(Boolean).join(" ") || "—"}
                               </p>
                             </div>
                             <div>
