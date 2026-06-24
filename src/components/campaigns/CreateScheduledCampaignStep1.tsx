@@ -31,7 +31,7 @@ const GOAL_CARDS: {
     value: "PROMOTION",
     title: "Marketing",
     description: "Campañas de marca y fidelización",
-    icon: "tabler:megaphone",
+    icon: "tabler:speakerphone",
   },
   {
     value: "INTERACTION",
@@ -61,6 +61,7 @@ interface Step1Props {
   errors: FieldErrors<any>;
   collectForms: CollectForm[] | null;
   channelOptions: ChannelOption[];
+  highlightErrors?: boolean;
 }
 
 export default function CreateScheduledCampaignStep1({
@@ -70,6 +71,7 @@ export default function CreateScheduledCampaignStep1({
   errors,
   collectForms,
   channelOptions,
+  highlightErrors = false,
 }: Step1Props) {
   const sourceFormIds = watch("sourceFormIds") as string[];
   const selectedGoal = watch("goal") as CampaignGoal | undefined;
@@ -85,9 +87,20 @@ export default function CreateScheduledCampaignStep1({
   const cardShell =
     "rounded-xl border border-[#E8EDF7] bg-white p-4 sm:p-6 shadow-sm";
 
+  const goalHasError = Boolean(errors.goal);
+  const channelHasError = Boolean(errors.deliveryChannel);
+  const formsHasError = Boolean(errors.sourceFormIds);
+
   return (
     <div className="flex flex-col gap-5 sm:gap-6">
-      <section className={cardShell}>
+      <section
+        className={clsx(
+          cardShell,
+          highlightErrors &&
+            goalHasError &&
+            "border-red-300 ring-1 ring-red-200"
+        )}
+      >
         <h2 className="text-[15px] font-bold text-[#0B1737] mb-4 tracking-tight">
           Tipo de objetivo
         </h2>
@@ -132,7 +145,14 @@ export default function CreateScheduledCampaignStep1({
         )}
       </section>
 
-      <section className={cardShell}>
+      <section
+        className={clsx(
+          cardShell,
+          highlightErrors &&
+            channelHasError &&
+            "border-red-300 ring-1 ring-red-200"
+        )}
+      >
         <h2 className="text-base font-bold text-[#0B1737] mb-4">
           Canal de envío
         </h2>
@@ -196,7 +216,14 @@ export default function CreateScheduledCampaignStep1({
         )}
       </section>
 
-      <section className={cardShell}>
+      <section
+        className={clsx(
+          cardShell,
+          highlightErrors &&
+            formsHasError &&
+            "border-red-300 ring-1 ring-red-200"
+        )}
+      >
         <h2 className="text-[15px] font-bold text-[#0B1737] mb-4 tracking-tight">
           Seleccionar formulario
         </h2>

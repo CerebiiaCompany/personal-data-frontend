@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { usePublicCollectForm } from "@/hooks/usePublicCollectForm";
 import LoadingCover from "@/components/layout/LoadingCover";
+import ClientOnly from "@/components/layout/ClientOnly";
 import PublicConsentCampaignForm from "@/components/customers/PublicConsentCampaignForm";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import LogoCerebiia from "@public/logo.svg";
@@ -19,13 +20,13 @@ function ConsentFormContent() {
 
   if (!cct) {
     return (
-      <div className="flex flex-col items-center gap-5 max-w-md w-full text-center py-10 px-4">
-        <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
+      <div className="flex w-full max-w-md flex-col items-center gap-5 px-4 py-10 text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
           <Icon icon="tabler:link-off" className="text-3xl text-red-600" />
         </div>
         <div className="flex flex-col gap-2">
           <h2 className="text-xl font-bold text-[#0B1737]">Enlace inválido</h2>
-          <p className="text-[#64748B] text-sm leading-relaxed">
+          <p className="text-sm leading-relaxed text-[#64748B]">
             Este enlace no contiene el token de autenticación necesario. Por
             favor, usa el enlace original que recibiste por SMS o correo
             electrónico.
@@ -45,15 +46,15 @@ function ConsentFormContent() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center gap-5 max-w-md w-full text-center py-10 px-4">
-        <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
+      <div className="flex w-full max-w-md flex-col items-center gap-5 px-4 py-10 text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
           <Icon icon="tabler:alert-circle" className="text-3xl text-red-600" />
         </div>
         <div className="flex flex-col gap-2">
           <h2 className="text-xl font-bold text-[#0B1737]">
             Error al cargar el formulario
           </h2>
-          <p className="text-[#64748B] text-sm leading-relaxed">{error}</p>
+          <p className="text-sm leading-relaxed text-[#64748B]">{error}</p>
         </div>
       </div>
     );
@@ -66,8 +67,8 @@ function ConsentFormContent() {
 
 export default function FormularioConsentPage() {
   return (
-    <div className="flex-1 flex flex-col gap-8">
-      <header className="w-full h-16 bg-primary-50 rounded-b-xl shadow-md border border-stone-100 flex items-center justify-between p-3">
+    <div className="flex flex-1 flex-col gap-8">
+      <header className="flex h-16 w-full items-center justify-between rounded-b-xl border border-stone-100 bg-primary-50 p-3 shadow-md">
         <Image
           src={LogoCerebiia}
           width={200}
@@ -77,16 +78,24 @@ export default function FormularioConsentPage() {
         />
       </header>
 
-      <div className="flex justify-center pb-10 px-4">
-        <Suspense
+      <div className="flex justify-center px-4 pb-10">
+        <ClientOnly
           fallback={
             <div className="relative min-h-[200px] w-full max-w-2xl">
               <LoadingCover />
             </div>
           }
         >
-          <ConsentFormContent />
-        </Suspense>
+          <Suspense
+            fallback={
+              <div className="relative min-h-[200px] w-full max-w-2xl">
+                <LoadingCover />
+              </div>
+            }
+          >
+            <ConsentFormContent />
+          </Suspense>
+        </ClientOnly>
       </div>
     </div>
   );

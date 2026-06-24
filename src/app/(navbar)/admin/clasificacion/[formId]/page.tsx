@@ -6,6 +6,10 @@ import FormResponsesTable from "@/components/clasification/FormResponsesTable";
 import FormResponsesFilters, {
   ConsentStatusFilter,
 } from "@/components/clasification/FormResponsesFilters";
+import CheckPermission from "@/components/checkers/CheckPermission";
+import RegisterCollectFormPersonDialog from "@/components/dialogs/RegisterCollectFormPersonDialog";
+import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
+import { showDialog } from "@/utils/dialogs.utils";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useCollectFormResponses } from "@/hooks/useCollectFormResponses";
 import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
@@ -256,6 +260,20 @@ export default function FormClassificationPage() {
                 </div>
 
                 <div className="flex shrink-0 flex-wrap items-center gap-2">
+                  <CheckPermission group="collect" permission="create">
+                    <Button
+                      hierarchy="secondary"
+                      className="rounded-xl! border-[#0D9488]! bg-white! px-4! py-2.5! text-[13px]! font-semibold! text-[#0D9488]! hover:bg-[#F0FDFA]!"
+                      onClick={() =>
+                        showDialog(HTML_IDS_DATA.registerCollectFormPersonDialog)
+                      }
+                      startContent={
+                        <Icon icon="tabler:user-plus" className="text-base" />
+                      }
+                    >
+                      Registrar persona
+                    </Button>
+                  </CheckPermission>
                   <Button
                     href="/admin/clasificacion"
                     hierarchy="secondary"
@@ -348,6 +366,15 @@ export default function FormClassificationPage() {
           />
         </div>
       </div>
+
+      {companyId && formId ? (
+        <RegisterCollectFormPersonDialog
+          companyId={companyId}
+          collectFormId={formId}
+          formName={data?.name}
+          onRegistered={refresh}
+        />
+      ) : null}
     </div>
   );
 }

@@ -19,6 +19,7 @@ import { uploadFile } from "@/lib/upload.api";
 import { parseApiError } from "@/utils/parseApiError";
 import { createCompanyPolicyTemplate } from "@/lib/policyTemplate.api";
 import LoadingCover from "../layout/LoadingCover";
+import { useDialogBackdropClose } from "@/hooks/useDialogBackdropClose";
 
 const acceptedFiletypes = ["application/pdf"];
 
@@ -56,13 +57,10 @@ const UploadTemplateDialog = ({ refresh }: Props) => {
     },
   });
   const id = HTML_IDS_DATA.uploadTemplateDialog;
-
-  function handleClick(e: React.MouseEvent<HTMLDivElement, MouseEvent>) {
-    if (loading) return;
-    if ((e.target as HTMLElement).id === id) {
-      hideDialog(id);
-    }
-  }
+  const backdropClose = useDialogBackdropClose(() => hideDialog(id), {
+    matchId: id,
+    disabled: loading,
+  });
 
   async function onSubmit(data: any) {
     console.log("📤 onSubmit called", { data, errors });
@@ -140,7 +138,7 @@ const UploadTemplateDialog = ({ refresh }: Props) => {
   return (
     /* Wrapper */
     <div
-      onClick={handleClick}
+      {...backdropClose}
       id={id}
       className="dialog-wrapper fixed hidden w-full top-0 left-0 h-full z-20 justify-center items-center bg-stone-900/50"
     >

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom";
 import Button from "../base/Button";
 import { ConfirmDialogOptions } from "./ConfirmProvider";
+import { useDialogBackdropClose } from "@/hooks/useDialogBackdropClose";
 
 interface Props extends ConfirmDialogOptions {
   open: boolean;
@@ -36,6 +37,8 @@ const ConfirmDialog: React.FC<Props> = (props) => {
     }
   }, [open]);
 
+  const backdropClose = useDialogBackdropClose(onCancel, { disabled: loading });
+
   if (!open) return null;
 
   return ReactDOM.createPortal(
@@ -47,7 +50,7 @@ const ConfirmDialog: React.FC<Props> = (props) => {
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/40"
-        onClick={loading ? undefined : onCancel}
+        {...backdropClose}
       />
       {/* Card */}
       <div className="relative z-10 animate-appear w-[min(92vw,28rem)] rounded-lg bg-white p-5 shadow-xl">

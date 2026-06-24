@@ -12,6 +12,7 @@ import { usePolicyTemplates } from "@/hooks/usePolicyTemplates";
 import clsx from "clsx";
 import { PolicyTemplate } from "@/types/policyTemplate.types";
 import DialogPortal from "./DialogPortal";
+import { useDialogBackdropClose } from "@/hooks/useDialogBackdropClose";
 
 interface Props {
   items: PolicyTemplate[];
@@ -23,12 +24,7 @@ const SelectTemplateDialog = ({ value, onSelect, items }: Props) => {
   const user = useSessionStore((store) => store.user);
 
   const id = HTML_IDS_DATA.selectTemplateDialog;
-
-  function handleClick(e: React.MouseEvent<HTMLDivElement, MouseEvent>) {
-    if ((e.target as HTMLElement).id === id) {
-      hideDialog(id);
-    }
-  }
+  const backdropClose = useDialogBackdropClose(() => hideDialog(id), { matchId: id });
 
   function handleSelect(templateId: string) {
     onSelect(templateId);
@@ -38,7 +34,7 @@ const SelectTemplateDialog = ({ value, onSelect, items }: Props) => {
   return (
     <DialogPortal>
       <div
-        onClick={handleClick}
+        {...backdropClose}
         id={id}
         className="dialog-wrapper fixed inset-0 z-[100] hidden h-full w-full items-center justify-center bg-stone-900/50"
       >

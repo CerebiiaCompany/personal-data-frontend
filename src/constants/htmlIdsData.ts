@@ -11,4 +11,6 @@ export const HTML_IDS_DATA = {
   editProfileDialog: "editProfileDialog",
   sendConsentInvitationDialog: "sendConsentInvitationDialog",
   consentCampaignDialog: "consentCampaignDialog",
+  registerCollectFormPersonDialog: "registerCollectFormPersonDialog",
+  editCollectFormResponseDialog: "editCollectFormResponseDialog",
 };

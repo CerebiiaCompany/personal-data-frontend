@@ -47,6 +47,7 @@ export interface QueryParams {
 
   //for calc audience
   sourceForms?: string;
+  responseIds?: string;
   minAge?: number;
   maxAge?: number;
   gender?: CampaignAudienceGender;

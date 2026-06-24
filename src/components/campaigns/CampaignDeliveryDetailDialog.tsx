@@ -15,6 +15,7 @@ import {
 import { parseApiError } from "@/utils/parseApiError";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import { useEffect, useState } from "react";
+import { useDialogBackdropClose } from "@/hooks/useDialogBackdropClose";
 
 interface Props {
   open: boolean;
@@ -43,6 +44,7 @@ export default function CampaignDeliveryDetailDialog({
   const [detail, setDetail] = useState<CampaignDelivery | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const backdropClose = useDialogBackdropClose(onClose);
 
   useEffect(() => {
     if (!open || !delivery) {
@@ -97,7 +99,7 @@ export default function CampaignDeliveryDetailDialog({
         type="button"
         className="absolute inset-0 bg-black/40"
         aria-label="Cerrar"
-        onClick={onClose}
+        {...backdropClose}
       />
       <div className="relative z-10 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-[#E8EDF7] bg-white shadow-xl">
         <div className="flex items-start justify-between gap-3 border-b border-[#EEF2F8] px-5 py-4">

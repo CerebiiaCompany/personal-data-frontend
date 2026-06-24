@@ -1,6 +1,7 @@
 import { CampaignDeliveryChannel } from "@/types/campaign.types";
 import clsx from "clsx";
 import { FieldError, UseFormRegister, UseFormWatch } from "react-hook-form";
+import { inputErrorClass } from "@/utils/createScheduledCampaignWizard.utils";
 
 const NAVY = "#1A2B5B";
 const INPUT_CLASS =
@@ -21,6 +22,7 @@ interface Props {
   watch: UseFormWatch<any>;
   errors: import("react-hook-form").FieldErrors<any>;
   deliveryChannel: CampaignDeliveryChannel;
+  highlightErrors?: boolean;
 }
 
 export default function CreateScheduledCampaignStep3({
@@ -28,11 +30,13 @@ export default function CreateScheduledCampaignStep3({
   watch,
   errors,
   deliveryChannel,
+  highlightErrors = false,
 }: Props) {
   const contentErrors = errors.content as unknown as ContentErrors | undefined;
   const maxChars = deliveryChannel === "SMS" ? 160 : 1000;
   const bodyText = watch("content.bodyText") ?? "";
   const bodyLen = typeof bodyText === "string" ? bodyText.length : 0;
+  const bodyOverLimit = bodyLen > maxChars;
 
   const helperSuffix =
     deliveryChannel === "SMS"
@@ -60,7 +64,10 @@ export default function CreateScheduledCampaignStep3({
           id="campaign-content-name"
           type="text"
           placeholder="Nombre del anuncio"
-          className={INPUT_CLASS}
+          className={inputErrorClass(
+            Boolean(contentErrors?.name),
+            INPUT_CLASS
+          )}
           {...register("content.name")}
         />
         {contentErrors?.name && (
@@ -83,10 +90,20 @@ export default function CreateScheduledCampaignStep3({
           rows={6}
           placeholder="Texto principal de la campaña"
           maxLength={maxChars}
-          className={clsx(INPUT_CLASS, "min-h-[140px] resize-y")}
+          className={inputErrorClass(
+            Boolean(contentErrors?.bodyText) || (highlightErrors && bodyOverLimit),
+            clsx(INPUT_CLASS, "min-h-[140px] resize-y")
+          )}
           {...register("content.bodyText")}
         />
-        <p className="text-xs text-[#94A3B8]">
+        <p
+          className={clsx(
+            "text-xs",
+            bodyOverLimit || contentErrors?.bodyText
+              ? "font-medium text-red-600"
+              : "text-[#94A3B8]"
+          )}
+        >
           {bodyLen} / {maxChars} caracteres · {helperSuffix}
         </p>
         {contentErrors?.bodyText && (
@@ -108,7 +125,7 @@ export default function CreateScheduledCampaignStep3({
           id="campaign-content-link"
           type="text"
           placeholder="Ej: github.com/usuario"
-          className={INPUT_CLASS}
+          className={inputErrorClass(Boolean(contentErrors?.link), INPUT_CLASS)}
           {...register("content.link")}
         />
         {contentErrors?.link && (

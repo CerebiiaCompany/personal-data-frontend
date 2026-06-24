@@ -15,6 +15,7 @@ import {
 } from "@/types/collectFormResponse.types";
 import { useCompanyCreditsPricing } from "@/hooks/useCompanyCreditsPricing";
 import LoadingCover from "@/components/layout/LoadingCover";
+import { useDialogBackdropClose } from "@/hooks/useDialogBackdropClose";
 
 interface Props {
   response: CollectFormResponse | null;
@@ -42,11 +43,10 @@ const SendConsentInvitationDialog = ({
     }).format(value);
   };
 
-  function handleClick(e: React.MouseEvent<HTMLDivElement, MouseEvent>) {
-    if ((e.target as HTMLElement).id === id && !loading) {
-      hideDialog(id);
-    }
-  }
+  const backdropClose = useDialogBackdropClose(() => hideDialog(id), {
+    matchId: id,
+    disabled: loading,
+  });
 
   async function handleSend() {
     if (!response) return;
@@ -96,13 +96,12 @@ const SendConsentInvitationDialog = ({
 
   return (
     <div
-      onClick={handleClick}
+      {...backdropClose}
       id={id}
       className="dialog-wrapper fixed inset-0 z-50 flex items-center justify-center p-4"
     >
       <div
         className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col max-h-[85vh]"
-        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 sm:p-5 border-b border-disabled flex-shrink-0">

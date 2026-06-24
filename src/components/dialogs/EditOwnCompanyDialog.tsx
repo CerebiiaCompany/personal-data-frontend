@@ -12,6 +12,7 @@ import CustomInput from "@/components/forms/CustomInput";
 import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import { hideDialog } from "@/utils/dialogs.utils";
 import { parseApiError } from "@/utils/parseApiError";
+import { useDialogBackdropClose } from "@/hooks/useDialogBackdropClose";
 import { updateOwnCompany } from "@/lib/company.api";
 import { Company } from "@/types/company.types";
 
@@ -58,11 +59,10 @@ const EditOwnCompanyDialog = ({ company, onUpdated }: Props) => {
     });
   }, [company, reset]);
 
-  function handleClick(e: React.MouseEvent<HTMLDivElement, MouseEvent>) {
-    if ((e.target as HTMLElement).id === id && !loading) {
-      hideDialog(id);
-    }
-  }
+  const backdropClose = useDialogBackdropClose(() => hideDialog(id), {
+    matchId: id,
+    disabled: loading,
+  });
 
   async function onSubmit(values: FormValues) {
     setLoading(true);
@@ -86,7 +86,7 @@ const EditOwnCompanyDialog = ({ company, onUpdated }: Props) => {
 
   return (
     <div
-      onClick={handleClick}
+      {...backdropClose}
       id={id}
       className="dialog-wrapper fixed hidden w-full top-0 left-0 h-full z-20 justify-center items-center bg-stone-900/50"
     >

@@ -15,6 +15,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { parseApiError } from "@/utils/parseApiError";
 import { toast } from "sonner";
 import { loginUser, updatePassword } from "@/lib/auth.api";
+import { useDialogBackdropClose } from "@/hooks/useDialogBackdropClose";
 
 const schema = z
   .object({
@@ -33,12 +34,7 @@ const UpdatePasswordDialog = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
-
-  function handleClick(e: React.MouseEvent<HTMLDivElement, MouseEvent>) {
-    if ((e.target as HTMLElement).id === id) {
-      hideDialog(id);
-    }
-  }
+  const backdropClose = useDialogBackdropClose(() => hideDialog(id), { matchId: id });
 
   const {
     register,
@@ -74,7 +70,7 @@ const UpdatePasswordDialog = () => {
   return (
     /* Wrapper */
     <div
-      onClick={handleClick}
+      {...backdropClose}
       id={id}
       className="dialog-wrapper fixed hidden w-full top-0 left-0 h-full z-20 justify-center items-center bg-stone-900/50"
     >

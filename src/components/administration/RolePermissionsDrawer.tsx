@@ -12,6 +12,7 @@ import {
   ROLE_MODULE_TITLES,
   summarizeRolePermissions,
 } from "@/utils/companyRolePermissions.utils";
+import { useDialogBackdropClose } from "@/hooks/useDialogBackdropClose";
 
 const ACTION_ORDER = ["view", "create", "edit", "delete", "send"] as const;
 
@@ -42,6 +43,8 @@ export default function RolePermissionsDrawer({
     };
   }, [open, onClose]);
 
+  const backdropClose = useDialogBackdropClose(onClose);
+
   if (!open || !role) return null;
 
   const summary = summarizeRolePermissions(role.permissions);
@@ -52,7 +55,7 @@ export default function RolePermissionsDrawer({
         type="button"
         className="absolute inset-0 bg-slate-900/40 backdrop-blur-[1px] transition-opacity"
         aria-label="Cerrar panel"
-        onClick={onClose}
+        {...backdropClose}
       />
       <aside
         className="relative flex h-full w-full max-w-lg flex-col border-l border-[#E8EDF7] bg-white shadow-2xl"

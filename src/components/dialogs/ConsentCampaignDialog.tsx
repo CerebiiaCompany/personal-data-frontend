@@ -16,6 +16,7 @@ import { parseApiError } from "@/utils/parseApiError";
 import { CampaignDeliveryChannel } from "@/types/campaign.types";
 import { toDateTimeLocalString } from "@/utils/date.utils";
 import DialogPortal from "./DialogPortal";
+import { useDialogBackdropClose } from "@/hooks/useDialogBackdropClose";
 
 interface Props {
   companyId: string;
@@ -65,11 +66,10 @@ export default function ConsentCampaignDialog({ companyId, formId, formName, onS
     setCampaignName(`Campaña consentimiento${formName ? ` - ${formName}` : ""}`);
   }, [formName]);
 
-  function handleBackdrop(e: React.MouseEvent<HTMLDivElement>) {
-    if ((e.target as HTMLElement).id === id && !submitting) {
-      hideDialog(id);
-    }
-  }
+  const backdropClose = useDialogBackdropClose(() => hideDialog(id), {
+    matchId: id,
+    disabled: submitting,
+  });
 
   async function handleCreate(activate: boolean) {
     if (!canSubmit) {
@@ -187,13 +187,12 @@ export default function ConsentCampaignDialog({ companyId, formId, formName, onS
   return (
     <DialogPortal>
       <div
-        onClick={handleBackdrop}
+        {...backdropClose}
         id={id}
         className="dialog-wrapper fixed inset-0 z-[100] flex items-center justify-center p-4"
       >
       <div
         className="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh]"
-        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-stone-200 shrink-0">

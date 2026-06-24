@@ -28,6 +28,7 @@ import { usePolicyTemplates } from "@/hooks/usePolicyTemplates";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import CustomSelect from "../forms/CustomSelect";
 import clsx from "clsx";
+import { useDialogBackdropClose } from "@/hooks/useDialogBackdropClose";
 
 const acceptedFiletypes = [
   "application/vnd.ms-excel",
@@ -120,11 +121,6 @@ const UploadExcelTemplateDialog = ({ refresh }: Props) => {
     return policyTemplates.map((t) => ({ value: t._id, title: t.name }));
   }, [policyTemplates]);
 
-  function handleBackdropClick(e: React.MouseEvent<HTMLDivElement>) {
-    if (loading) return;
-    if ((e.target as HTMLElement).id === id) handleClose();
-  }
-
   function handleClose() {
     if (loading) return;
     hideDialog(id);
@@ -135,6 +131,11 @@ const UploadExcelTemplateDialog = ({ refresh }: Props) => {
       setErrorView(null);
     }, 200);
   }
+
+  const backdropClose = useDialogBackdropClose(handleClose, {
+    matchId: id,
+    disabled: loading,
+  });
 
   async function onSubmit(data: any) {
     if (loading || !isFormComplete) return;
@@ -209,7 +210,7 @@ const UploadExcelTemplateDialog = ({ refresh }: Props) => {
 
   return (
     <div
-      onClick={handleBackdropClick}
+      {...backdropClose}
       id={id}
       className="dialog-wrapper fixed hidden w-full top-0 left-0 h-full z-20 justify-center items-center bg-stone-900/50"
     >

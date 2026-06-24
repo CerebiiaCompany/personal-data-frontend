@@ -259,6 +259,53 @@ export interface CollectFormPermissions {
   restrictions?: CollectFormPermissionsRestrictions;
 }
 
+/** Registro manual desde admin (sin OTP). Campos opcionales según tipo de persona. */
+export interface AdminCollectFormRecordInput {
+  docType?: CollectFormDocType | string;
+  docNumber?: string | number;
+  name?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  razonSocial?: string;
+}
+
+export type CreateAdminCollectFormResponsesBody =
+  | AdminCollectFormRecordInput
+  | { records: AdminCollectFormRecordInput[] };
+
+export interface CreateAdminCollectFormResponsesResult {
+  created: number;
+  skipped: number;
+  skippedRecords?: AdminCollectFormRecordInput[];
+}
+
+/** Body parcial para PATCH de datos recolectados (solo campos a modificar). */
+export interface UpdateCollectFormResponseInput {
+  name?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  docType?: CollectFormDocType | string;
+  docNumber?: string | number;
+  razonSocial?: string | null;
+  age?: number;
+  gender?: UserGender | string;
+}
+
+export interface UpdateCollectFormResponseResult {
+  id: string;
+  userDocType?: string;
+  userDocNumber?: number;
+  userName?: string;
+  userLastName?: string;
+  userEmail?: string;
+  userPhone?: string;
+  consentStatus?: ConsentStatus | string;
+  dataProcessing?: boolean;
+  updatedAt?: string;
+}
+
 export interface CollectFormResponse {
   _id: string;
   /** Alias de `_id`. El backend envía ambos con el mismo valor. */

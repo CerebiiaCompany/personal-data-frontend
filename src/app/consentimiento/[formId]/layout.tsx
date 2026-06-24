@@ -6,7 +6,7 @@ export default function ConsentFormLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AnimatedRoute className="flex min-h-0 min-w-0 flex-1 flex-col">
+    <AnimatedRoute stagger={false} className="flex min-h-0 min-w-0 flex-1 flex-col">
       {children}
     </AnimatedRoute>
   );

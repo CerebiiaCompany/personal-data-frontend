@@ -15,6 +15,8 @@ import clsx from "clsx";
 import { useForm } from "react-hook-form";
 import SelectTemplateDialog from "../dialogs/SelectTemplateDialog";
 import ConsentCampaignDialog from "../dialogs/ConsentCampaignDialog";
+import RegisterCollectFormPersonDialog from "../dialogs/RegisterCollectFormPersonDialog";
+import CheckPermission from "../checkers/CheckPermission";
 import CustomInput from "../forms/CustomInput";
 import CustomSelect from "../forms/CustomSelect";
 import { createCollectForm, updateCollectForm } from "@/lib/collectForm.api";
@@ -690,6 +692,36 @@ const CreateCollectFormForm = ({ initialValues }: Props) => {
 
             {isEdit && formIdForLink && companyId && (
               <>
+                <CheckPermission group="collect" permission="create">
+                  <div className="rounded-2xl border border-[#99F6E4] bg-[#F0FDFA] px-5 py-5 flex flex-col gap-3 shadow-[0_2px_12px_rgba(13,148,136,0.08)]">
+                    <div className="flex items-start gap-3">
+                      <Icon
+                        icon="tabler:user-plus"
+                        className="text-xl text-[#0D9488] shrink-0 mt-0.5"
+                      />
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-bold text-[#0F172A]">
+                          Registro manual
+                        </p>
+                        <p className="text-[12px] text-[#64748B] mt-1 leading-snug">
+                          Agrega personas sin verificación OTP. Quedarán con
+                          consentimiento pendiente.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        showDialog(HTML_IDS_DATA.registerCollectFormPersonDialog)
+                      }
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#0D9488] px-4 py-2.5 text-[13px] font-semibold text-white hover:brightness-95 transition-all shadow-[0_4px_14px_rgba(13,148,136,0.30)]"
+                    >
+                      <Icon icon="tabler:user-plus" className="text-base" />
+                      Registrar persona
+                    </button>
+                  </div>
+                </CheckPermission>
+
                 <div className="rounded-2xl border border-emerald-200 bg-[#F0FDF4] px-5 py-5 flex flex-col gap-3 shadow-[0_2px_12px_rgba(16,185,129,0.08)]">
                   <div className="flex items-start gap-3">
                     <Icon
@@ -718,6 +750,12 @@ const CreateCollectFormForm = ({ initialValues }: Props) => {
                 <ConsentCampaignDialog
                   companyId={companyId}
                   formId={formIdForLink}
+                  formName={watch("name")}
+                />
+
+                <RegisterCollectFormPersonDialog
+                  companyId={companyId}
+                  collectFormId={formIdForLink}
                   formName={watch("name")}
                 />
               </>

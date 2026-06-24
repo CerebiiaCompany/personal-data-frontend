@@ -11,6 +11,7 @@ import { CompanyAreaUser } from "@/types/companyArea.types";
 import { useCompanyAreaUsers } from "@/hooks/useCompanyAreaUsers";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import LoadingCover from "../layout/LoadingCover";
+import { useDialogBackdropClose } from "@/hooks/useDialogBackdropClose";
 
 interface Props {
   companyAreaId?: string;
@@ -24,17 +25,12 @@ const CompanyAreaUsersModal = ({ companyAreaId, companyAreaName }: Props) => {
     areaId: companyAreaId,
   });
   const id = HTML_IDS_DATA.companyAreaUsersModal;
-
-  function handleClick(e: React.MouseEvent<HTMLDivElement, MouseEvent>) {
-    if ((e.target as HTMLElement).id === id) {
-      hideDialog(id);
-    }
-  }
+  const backdropClose = useDialogBackdropClose(() => hideDialog(id), { matchId: id });
 
   return (
     /* Wrapper */
     <div
-      onClick={handleClick}
+      {...backdropClose}
       id={id}
       className="dialog-wrapper fixed hidden w-full top-0 left-0 h-full z-20 justify-center items-center bg-stone-900/50"
     >

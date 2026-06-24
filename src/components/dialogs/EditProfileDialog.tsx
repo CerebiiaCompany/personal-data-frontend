@@ -15,6 +15,7 @@ import { useSessionStore } from "@/store/useSessionStore";
 import { hideDialog } from "@/utils/dialogs.utils";
 import { parseApiError } from "@/utils/parseApiError";
 import { SessionUser } from "@/types/user.types";
+import { useDialogBackdropClose } from "@/hooks/useDialogBackdropClose";
 
 const schema = z.object({
   name: z.string().min(1, "Nombre obligatorio"),
@@ -58,11 +59,10 @@ const EditProfileDialog = () => {
     });
   }, [user, reset]);
 
-  function handleClick(e: React.MouseEvent<HTMLDivElement, MouseEvent>) {
-    if ((e.target as HTMLElement).id === id && !loading) {
-      hideDialog(id);
-    }
-  }
+  const backdropClose = useDialogBackdropClose(() => hideDialog(id), {
+    matchId: id,
+    disabled: loading,
+  });
 
   async function onSubmit(values: FormValues) {
     setLoading(true);
@@ -94,7 +94,7 @@ const EditProfileDialog = () => {
 
   return (
     <div
-      onClick={handleClick}
+      {...backdropClose}
       id={id}
       className="dialog-wrapper fixed hidden w-full top-0 left-0 h-full z-20 justify-center items-center"
     >

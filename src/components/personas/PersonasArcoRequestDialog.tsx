@@ -24,6 +24,7 @@ import { Icon } from "@iconify/react/dist/iconify.js";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { useDialogBackdropClose } from "@/hooks/useDialogBackdropClose";
 import { toast } from "sonner";
 
 interface Props {
@@ -57,6 +58,7 @@ const PersonasArcoRequestDialog = ({
   >([{ field: "name", requestedValue: "" }]);
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const backdropClose = useDialogBackdropClose(onClose, { disabled: loading });
 
   useEffect(() => {
     setMounted(true);
@@ -193,7 +195,7 @@ const PersonasArcoRequestDialog = ({
         type="button"
         className="absolute inset-0 bg-black/40"
         aria-label="Cerrar"
-        onClick={loading ? undefined : onClose}
+        {...backdropClose}
         tabIndex={-1}
       />
       <div

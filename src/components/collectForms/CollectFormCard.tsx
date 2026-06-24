@@ -1,6 +1,6 @@
 import { CollectForm } from "@/types/collectForm.types";
 import { formatDateToString } from "@/utils/date.utils";
-import React, { useMemo, useCallback } from "react";
+import React, { useEffect, useMemo, useCallback, useState } from "react";
 import Button from "../base/Button";
 import { copyToClipboard } from "@/utils/clipboard.utils";
 import { Icon } from "@iconify/react/dist/iconify.js";
@@ -12,10 +12,11 @@ interface Props {
 }
 
 const CollectFormCard = ({ data, deleteHandler }: Props) => {
-  const formUrl = useMemo(
-    () => `${window.location.origin}/formularios/${data._id}`,
-    [data._id]
-  );
+  const [formUrl, setFormUrl] = useState("");
+
+  useEffect(() => {
+    setFormUrl(`${window.location.origin}/formularios/${data._id}`);
+  }, [data._id]);
 
   const channelsText = useMemo(
     () =>
@@ -40,6 +41,7 @@ const CollectFormCard = ({ data, deleteHandler }: Props) => {
   );
 
   const handleCopyLink = useCallback(() => {
+    if (!formUrl) return;
     copyToClipboard(formUrl, "Enlace copiado");
     // Además de copiar, abrir el formulario en una nueva pestaña.
     // `noopener,noreferrer` evita que la pestaña abierta acceda a `window.opener`.

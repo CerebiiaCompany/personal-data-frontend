@@ -18,6 +18,7 @@ import clsx from "clsx";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { importCompanyUsers } from "@/lib/user.api";
 import { ImportUsersResult } from "@/types/user.types";
+import { useDialogBackdropClose } from "@/hooks/useDialogBackdropClose";
 
 const ACCEPTED_FILE_TYPES = [
   "application/vnd.ms-excel",
@@ -56,11 +57,6 @@ const ImportUsersDialog = ({ refresh }: Props) => {
   const attachments = watch("attachments");
   const hasFile = Array.isArray(attachments) && attachments.length > 0;
 
-  function handleBackdropClick(e: React.MouseEvent<HTMLDivElement>) {
-    if (loading) return;
-    if ((e.target as HTMLElement).id === id) handleClose();
-  }
-
   function handleClose() {
     if (loading) return;
     hideDialog(id);
@@ -69,6 +65,11 @@ const ImportUsersDialog = ({ refresh }: Props) => {
       setResult(null);
     }, 200);
   }
+
+  const backdropClose = useDialogBackdropClose(handleClose, {
+    matchId: id,
+    disabled: loading,
+  });
 
   async function onSubmit(data: { attachments: File[] }) {
     if (loading || !companyId) return;
@@ -151,7 +152,7 @@ const ImportUsersDialog = ({ refresh }: Props) => {
 
   return (
     <div
-      onClick={handleBackdropClick}
+      {...backdropClose}
       id={id}
       className="dialog-wrapper fixed hidden w-full top-0 left-0 h-full z-20 justify-center items-center bg-stone-900/50"
     >

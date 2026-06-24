@@ -5,6 +5,7 @@ import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import { hideDialog } from "@/utils/dialogs.utils";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import Button from "../base/Button";
+import { useDialogBackdropClose } from "@/hooks/useDialogBackdropClose";
 
 interface Props {
   fullName: string;
@@ -31,21 +32,14 @@ const CollectFormResponseSavedModal = ({ fullName, onNewRegistration }: Props) =
     hideDialog(id);
   };
 
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    // Solo cerrar si se hace clic directamente en el backdrop, no en el modal
-    if (e.target === e.currentTarget) {
-      e.preventDefault();
-      e.stopPropagation();
-      hideDialog(id);
-    }
-  };
+  const backdropClose = useDialogBackdropClose(() => hideDialog(id));
 
   return (
     /* Wrapper */
     <div
       id={id}
       className="dialog-wrapper fixed w-full top-0 left-0 h-full z-20 justify-center items-center bg-black/50"
-      onClick={handleBackdropClick}
+      {...backdropClose}
     >
       {/* Modal */}
       <div 

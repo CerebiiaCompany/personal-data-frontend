@@ -86,6 +86,7 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
   // el backend deduplique, y se renueva solo al iniciar un nuevo registro.
   const idempotencyKeyRef = useRef<string>(generateIdempotencyKey());
   const otpPricing = useCompanyCreditsPricing();
+  const questions = data.questions ?? [];
   const fields: {
     [key: string]: {
       type: AnswerType;
@@ -93,11 +94,11 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
     };
   } = {};
 
-  data.questions.forEach(
+  questions.forEach(
     (question) =>
       (fields[question.title] = {
         type: question.answerType,
-        default: question.answerType === "TEXT" ? "" : new Date(),
+        default: question.answerType === "TEXT" ? "" : "",
       })
   );
 
@@ -796,9 +797,9 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
         </div>
       </div>
 
-      {data.questions.length ? (
+      {questions.length ? (
         <div className="rounded-xl border border-disabled p-10 flex flex-col items-stretch gap-5">
-          {data.questions.map((question) => (
+          {questions.map((question) => (
             <RenderQuestionInput
               key={question._id}
               {...register(`data.${question.title}`)}

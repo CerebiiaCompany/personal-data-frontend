@@ -28,10 +28,17 @@ import {
 } from "@/utils/campaignCredits.utils";
 import { creditsFormatter, priceFormatter } from "@/utils/formatters";
 import CampaignWizardStepper from "./CampaignWizardStepper";
+import CampaignWizardValidationBanner from "./CampaignWizardValidationBanner";
 import CreateScheduledCampaignStep1 from "./CreateScheduledCampaignStep1";
 import CreateScheduledCampaignStep2 from "./CreateScheduledCampaignStep2";
 import CreateScheduledCampaignStep3 from "./CreateScheduledCampaignStep3";
 import CreateScheduledCampaignStep4 from "./CreateScheduledCampaignStep4";
+import {
+  collectScheduledCampaignStepErrorMessages,
+  evaluateScheduledCampaignStep,
+  getScheduledCampaignStepFields,
+  ScheduledCampaignFormValues,
+} from "@/utils/createScheduledCampaignWizard.utils";
 
 const GOAL_SUMMARY_LABEL: Partial<Record<CampaignGoal, string>> = {
   SALES: "Ventas",
@@ -73,6 +80,7 @@ const CreateScheduledCampaignForm = () => {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState<boolean>(false);
+  const [stepSubmitted, setStepSubmitted] = useState<Record<number, boolean>>({});
   /** Evita doble POST: el índice único `name` en BD falla en el 2.º intento aunque el 1.º ya creó la campaña. */
   const submitLockRef = useRef(false);
 
@@ -90,10 +98,13 @@ const CreateScheduledCampaignForm = () => {
     formState: { errors },
     setValue,
     watch,
+    getValues,
     control: formControl,
     trigger,
-  } = useForm({
+  } = useForm<ScheduledCampaignFormValues>({
     resolver: zodResolver(createScheduledCampaignValidationSchema),
+    mode: "onChange",
+    reValidateMode: "onChange",
     defaultValues: {
       name: "",
       active: false,
@@ -102,7 +113,10 @@ const CreateScheduledCampaignForm = () => {
         gender: "ALL",
         minAge: 0,
         maxAge: 100,
+        count: 0,
       },
+      audienceSelectionMode: "FILTERS" as const,
+      targetedResponseIds: [] as string[],
       scheduling: {
         scheduledDateTime: getCurrentDateTimeLocal(),
       },
@@ -120,14 +134,30 @@ const CreateScheduledCampaignForm = () => {
 
   const sourceFormsValue = watch("sourceFormIds").join(",");
   const genderValue = watch("audience.gender") || "ALL";
+  const audienceSelectionMode = (watch("audienceSelectionMode") ||
+    "FILTERS") as ScheduledCampaignFormValues["audienceSelectionMode"];
+  const targetedResponseIds = (watch("targetedResponseIds") || []) as string[];
+  const targetedResponseIdsParam = targetedResponseIds.join(",");
+  const apiAudienceCount = Number(watch("audience.count") ?? 0);
+  const effectiveAudienceCount =
+    audienceSelectionMode === "MANUAL"
+      ? Math.max(apiAudienceCount, targetedResponseIds.length)
+      : apiAudienceCount;
 
-  const campaignAudience = useCampaignAudience({
-    companyId: companyId,
-    sourceForms: sourceFormsValue,
-    gender: genderValue,
-    minAge: minAge,
-    maxAge: maxAge,
-  });
+  const campaignAudience = useCampaignAudience(
+    audienceSelectionMode === "MANUAL"
+      ? {
+          companyId,
+          responseIds: targetedResponseIdsParam,
+        }
+      : {
+          companyId,
+          sourceForms: sourceFormsValue,
+          gender: genderValue,
+          minAge,
+          maxAge,
+        }
+  );
 
   const collectForms = useCollectForms({
     companyId: companyId,
@@ -185,12 +215,12 @@ const CreateScheduledCampaignForm = () => {
   });
 
   const totalCredits = getTotalCampaignCredits({
-    audienceCount: Number(watch("audience.count") ?? 0),
+    audienceCount: effectiveAudienceCount,
     deliveriesCount: 1,
     creditsPerMessage: selectedCreditsPerMessage,
   });
 
-  const audienceCount = Number(watch("audience.count") ?? 0);
+  const audienceCount = effectiveAudienceCount;
 
   const audienceCostPreview = useMemo(() => {
     const cpm = selectedCreditsPerMessage;
@@ -218,71 +248,90 @@ const CreateScheduledCampaignForm = () => {
   ]);
 
   useEffect(() => {
+    if (audienceSelectionMode === "MANUAL") {
+      const count = campaignAudience.data?.count ?? targetedResponseIds.length;
+      setValue("audience.count", count);
+      return;
+    }
+
     if (campaignAudience.data) {
       setValue("audience.count", campaignAudience.data.count);
     } else {
       setValue("audience.count", 0);
     }
-  }, [campaignAudience.data, setValue]);
+  }, [
+    campaignAudience.data,
+    audienceSelectionMode,
+    targetedResponseIds.length,
+    setValue,
+  ]);
+
+  const formValues = watch();
+  const wizardContext = useMemo(
+    () => ({
+      audienceLoading: campaignAudience.loading,
+      audienceError: campaignAudience.error,
+      effectiveAudienceCount,
+    }),
+    [campaignAudience.loading, campaignAudience.error, effectiveAudienceCount]
+  );
+
+  const stepEvaluation = useMemo(
+    () => evaluateScheduledCampaignStep(step, formValues, wizardContext),
+    [step, formValues, wizardContext]
+  );
+
+  const stepFieldErrorMessages = useMemo(
+    () =>
+      collectScheduledCampaignStepErrorMessages(
+        errors,
+        step,
+        audienceSelectionMode
+      ),
+    [errors, step, audienceSelectionMode]
+  );
+
+  const showStepValidation = Boolean(stepSubmitted[step]);
+  const validationBannerMessages = useMemo(() => {
+    if (!showStepValidation) return [];
+    return [...new Set([...stepEvaluation.messages, ...stepFieldErrorMessages])];
+  }, [showStepValidation, stepEvaluation.messages, stepFieldErrorMessages]);
+
+  const canProceedCurrentStep =
+    stepEvaluation.canProceed && stepFieldErrorMessages.length === 0;
+
+  const canSubmitCampaign = useMemo(() => {
+    const evaluation = evaluateScheduledCampaignStep(4, formValues, wizardContext);
+    return evaluation.canProceed && !loading;
+  }, [formValues, wizardContext, loading]);
 
   async function goNext() {
-    if (step === 1) {
-      const selectedForms = watch("sourceFormIds") as string[];
-      if (!selectedForms?.length) {
-        toast.error("Selecciona al menos un formulario para continuar.");
-        return;
-      }
-      const ok = await trigger(["goal", "deliveryChannel", "sourceFormIds"]);
-      if (!ok) {
-        toast.error("Revisa objetivo, canal y al menos un formulario.");
-        return;
-      }
-      setStep(2);
+    setStepSubmitted((current) => ({ ...current, [step]: true }));
+
+    const fields = getScheduledCampaignStepFields(
+      step,
+      audienceSelectionMode
+    );
+
+    const ok = await trigger(
+      fields as Parameters<typeof trigger>[0]
+    );
+    const evaluation = evaluateScheduledCampaignStep(
+      step,
+      getValues(),
+      wizardContext
+    );
+
+    if (!ok || !evaluation.canProceed) {
+      const message =
+        evaluation.messages[0] ||
+        "Revisa los campos marcados antes de continuar.";
+      toast.error(message);
       return;
     }
-    if (step === 2) {
-      const ok = await trigger([
-        "audience.minAge",
-        "audience.maxAge",
-        "audience.gender",
-        "audience.count",
-      ]);
-      if (!ok) {
-        toast.error("Revisa la audiencia (género, edad y personas en rango).");
-        return;
-      }
-      setStep(3);
-      return;
-    }
-    if (step === 3) {
-      const contentName = String(watch("content.name") ?? "").trim();
-      const contentBody = String(watch("content.bodyText") ?? "").trim();
-      const campaignName = String(watch("name") ?? "").trim();
-      if (!contentName || !contentBody || !campaignName) {
-        toast.error("Completa nombre del anuncio, texto y nombre de campaña.");
-        return;
-      }
-      const body = String(watch("content.bodyText") ?? "");
-      if (selectedDeliveryChannel === "SMS" && body.length > 160) {
-        toast.error(
-          "En SMS el texto principal admite como máximo 160 caracteres."
-        );
-        return;
-      }
-      const ok = await trigger([
-        "content.name",
-        "content.bodyText",
-        "content.link",
-        "name",
-        "scheduling.scheduledDateTime",
-      ]);
-      if (!ok) {
-        toast.error(
-          "Revisa el contenido del anuncio, el nombre de la campaña y la programación."
-        );
-        return;
-      }
-      setStep(4);
+
+    if (step < 4) {
+      setStep((current) => current + 1);
     }
   }
 
@@ -294,9 +343,21 @@ const CreateScheduledCampaignForm = () => {
     setStep((s) => s - 1);
   }
 
-  async function onSubmit(data: any) {
+  async function onSubmit(data: ScheduledCampaignFormValues) {
     if (!companyId) return;
     if (submitLockRef.current) return;
+
+    setStepSubmitted((current) => ({ ...current, 4: true }));
+    const ok = await trigger();
+    const evaluation = evaluateScheduledCampaignStep(4, data, wizardContext);
+    if (!ok || !evaluation.canProceed) {
+      toast.error(
+        evaluation.messages[0] ||
+          "Revisa el resumen y corrige los errores antes de crear la campaña."
+      );
+      return;
+    }
+
     submitLockRef.current = true;
     setLoading(true);
 
@@ -322,11 +383,18 @@ const CreateScheduledCampaignForm = () => {
         scheduling: {
           scheduledDateTime,
         },
+        ...(data.audienceSelectionMode === "MANUAL" &&
+        data.targetedResponseIds?.length
+          ? { targetedResponseIds: data.targetedResponseIds }
+          : {}),
       };
+
+      delete (payload as { audienceSelectionMode?: string })
+        .audienceSelectionMode;
 
       const res = await createCampaign(
         companyId,
-        payload
+        payload as unknown as Parameters<typeof createCampaign>[1]
       );
 
       if (res.error) {
@@ -418,16 +486,23 @@ const CreateScheduledCampaignForm = () => {
                   errors={errors}
                   collectForms={collectForms.data}
                   channelOptions={channelOptions}
+                  highlightErrors={showStepValidation}
                 />
               )}
 
               {step === 2 && (
                 <CreateScheduledCampaignStep2
+                  companyId={companyId || ""}
                   control={formControl}
                   register={register}
                   watch={watch}
+                  setValue={setValue}
                   errors={errors}
                   costPreview={audienceCostPreview}
+                  collectForms={collectForms.data ?? undefined}
+                  audienceLoading={campaignAudience.loading}
+                  audienceError={campaignAudience.error}
+                  highlightErrors={showStepValidation}
                 />
               )}
 
@@ -438,6 +513,7 @@ const CreateScheduledCampaignForm = () => {
                     watch={watch}
                     errors={errors}
                     deliveryChannel={selectedDeliveryChannel}
+                    highlightErrors={showStepValidation}
                   />
                   <section
                     className={clsx(
@@ -497,27 +573,37 @@ const CreateScheduledCampaignForm = () => {
                         ? selectedFormNames.join(", ")
                         : "—",
                     generoLabel:
-                      genderValue === "ALL"
-                        ? "Todos"
-                        : genderValue === "MALE"
-                          ? "Hombres"
-                          : genderValue === "FEMALE"
-                            ? "Mujeres"
-                            : "Otro",
+                      audienceSelectionMode === "MANUAL"
+                        ? "Selección manual"
+                        : genderValue === "ALL"
+                          ? "Todos"
+                          : genderValue === "MALE"
+                            ? "Hombres"
+                            : genderValue === "FEMALE"
+                              ? "Mujeres"
+                              : "Otro",
                     nombreCampaña: String(watch("name") ?? ""),
                     canalLabel:
                       deliveryChannelLabels[selectedDeliveryChannel] ??
                       selectedDeliveryChannel,
                     audienciaDestinatarios: audienceCostPreview.audienceCount,
-                    rangoEdadLabel: `${minAge} - ${maxAge}`,
+                    rangoEdadLabel:
+                      audienceSelectionMode === "MANUAL"
+                        ? `${targetedResponseIds.length} persona${targetedResponseIds.length === 1 ? "" : "s"}`
+                        : `${minAge} - ${maxAge}`,
                     totalLine: `COP ${priceFormatter.format(
                       Math.round(audienceCostPreview.totalCop)
                     )} (${creditsFormatter.format(
                       Math.round(audienceCostPreview.creditsNeeded)
                     )} créditos)`,
+                    audienceSelectionMode: audienceSelectionMode as
+                      | "FILTERS"
+                      | "MANUAL",
                   }}
                 />
               )}
+
+              <CampaignWizardValidationBanner messages={validationBannerMessages} />
 
               <div className="mt-2 border-t border-[#E5E7EB] pt-6 pb-4 md:pb-6 flex flex-col-reverse sm:flex-row sm:justify-between sm:items-center gap-3">
                 <Button
@@ -539,6 +625,7 @@ const CreateScheduledCampaignForm = () => {
                 {step < 4 ? (
                   <Button
                     type="button"
+                    disabled={!canProceedCurrentStep}
                     onClick={() => void goNext()}
                     className="rounded-xl! bg-[#1A2B5B]! border-[#1A2B5B]! text-[13px]! font-semibold!"
                     endContent={
@@ -551,6 +638,7 @@ const CreateScheduledCampaignForm = () => {
                   <Button
                     type="button"
                     loading={loading}
+                    disabled={!canSubmitCampaign}
                     onClick={() => void handleSubmit((data) => onSubmit(data))()}
                     className="rounded-xl! w-full sm:w-auto sm:min-w-[300px]! bg-emerald-600! border-emerald-600! text-[13px]! font-semibold! text-white!"
                     startContent={

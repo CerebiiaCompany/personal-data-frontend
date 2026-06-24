@@ -9,13 +9,23 @@ function isPublicClientContext(endpoint: string): boolean {
   return isPublicAppRoute(window.location.pathname);
 }
 
-// Build a query string from an object, skipping null/undefined/empty and the `id` key
+// Claves que van en la ruta (path) y no deben repetirse en query string.
+const PATH_PARAM_KEYS = new Set([
+  "id",
+  "companyId",
+  "areaId",
+  "roleId",
+  "responseId",
+  "campaignId",
+]);
+
+// Build a query string from an object, skipping null/undefined/empty and path params
 function buildQueryString(params?: QueryParams): string {
   if (!params) return "";
   const parts: string[] = [];
   for (const [key, value] of Object.entries(params)) {
     if (
-      key.toLowerCase().includes("id") ||
+      PATH_PARAM_KEYS.has(key) ||
       value === undefined ||
       value === null ||
       value === ""

@@ -5,6 +5,8 @@ export type CampaignGoal =
   | "PROMOTION"
   | "OTHER";
 
+export type CampaignStatus = "COMPLETED" | "EXPIRED" | "DRAFT" | "ACTIVE" | "SCHEDULED";
+
 export const campaignGoalLabels: Record<CampaignGoal, string> = {
   INTERACTION: "Interacción",
   POTENTIAL_CUSTOMERS: "Clientes potenciales",
@@ -36,6 +38,9 @@ export const deliveryChannelLabels: Record<CampaignDeliveryChannel, string> = {
 
 export type CampaignAudienceGender = "MALE" | "FEMALE" | "OTHER" | "ALL";
 
+/** Cómo definir destinatarios en el asistente de campaña. */
+export type CampaignAudienceSelectionMode = "FILTERS" | "MANUAL";
+
 export type CampaignDeliveryChannel = "SMS" | "EMAIL";
 
 export interface CreateCampaign {
@@ -61,6 +66,7 @@ export interface CreateCampaign {
     link?: string;
     imageUrl?: string;
   };
+  targetedResponseIds?: string[];
 }
 
 // Tipo para campañas programadas (con fecha/hora específica)
@@ -85,9 +91,8 @@ export interface CreateScheduledCampaign {
     link?: string;
     imageUrl?: string;
   };
+  targetedResponseIds?: string[];
 }
-
-export type CampaignStatus = "COMPLETED" | "EXPIRED" | "DRAFT" | "ACTIVE" | "SCHEDULED";
 
 export interface CreateConsentCampaign {
   type: "CONSENT_REQUEST";
@@ -134,6 +139,7 @@ export interface Campaign {
     link?: string;
     imageUrl?: string;
   };
+  targetedResponseIds?: string[];
   createdAt: Date | string;
   updatedAt: Date | string;
 }

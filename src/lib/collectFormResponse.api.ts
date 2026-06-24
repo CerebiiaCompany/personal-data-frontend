@@ -1,7 +1,11 @@
 import { APIResponse, QueryParams } from "@/types/api.types";
 import {
   CollectFormResponseUserPayload,
+  CreateAdminCollectFormResponsesBody,
+  CreateAdminCollectFormResponsesResult,
   CreateCollectFormResponse,
+  UpdateCollectFormResponseInput,
+  UpdateCollectFormResponseResult,
 } from "@/types/collectFormResponse.types";
 import { customFetch } from "@/utils/customFetch";
 
@@ -71,6 +75,24 @@ export async function registerConsentCampaignResponse(
   );
 }
 
+/**
+ * Registro manual de personas en un formulario de recolección (sesión activa,
+ * permiso collect.create). Sin verificación OTP; quedan con consentimiento PENDING.
+ */
+export async function createAdminCollectFormResponses(
+  companyId: string,
+  collectFormId: string,
+  data: CreateAdminCollectFormResponsesBody
+): Promise<APIResponse<CreateAdminCollectFormResponsesResult>> {
+  return customFetch<CreateAdminCollectFormResponsesResult>(
+    `/companies/${companyId}/collectForms/${collectFormId}/responses`,
+    {
+      method: "POST",
+      body: JSON.stringify(data),
+    }
+  );
+}
+
 export async function fetchCollectFormResponses(
   params: QueryParams
 ): Promise<APIResponse> {
@@ -95,6 +117,21 @@ export async function fetchAllCollectFormResponses(
   );
 
   return res;
+}
+
+export async function updateCollectFormResponse(
+  companyId: string,
+  collectFormId: string,
+  responseId: string,
+  data: UpdateCollectFormResponseInput
+): Promise<APIResponse<UpdateCollectFormResponseResult>> {
+  return customFetch<UpdateCollectFormResponseResult>(
+    `/companies/${companyId}/collectForms/${collectFormId}/responses/${responseId}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }
+  );
 }
 
 export async function deleteCollectFormResponse(

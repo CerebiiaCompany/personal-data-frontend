@@ -42,6 +42,7 @@ export interface CampaignReviewSummary {
   rangoEdadLabel: string;
   /** Texto completo de la fila TOTAL, ej. COP 571 (571 créditos) */
   totalLine: string;
+  audienceSelectionMode?: "FILTERS" | "MANUAL";
 }
 
 interface Props {
@@ -52,6 +53,7 @@ export default function CreateScheduledCampaignStep4({ summary }: Props) {
   const nombreDisplay = summary.nombreCampaña?.trim()
     ? summary.nombreCampaña.trim()
     : "—";
+  const isManual = summary.audienceSelectionMode === "MANUAL";
 
   return (
     <section className={clsx(cardClass, "flex flex-col gap-8")}>
@@ -66,7 +68,10 @@ export default function CreateScheduledCampaignStep4({ summary }: Props) {
         <div className="flex flex-col gap-6 sm:gap-7">
           <SummaryItem label="Objetivo" value={summary.goalLabel} />
           <SummaryItem label="Formulario" value={summary.formularioLabel} />
-          <SummaryItem label="Género" value={summary.generoLabel} />
+          <SummaryItem
+            label={isManual ? "Modo audiencia" : "Género"}
+            value={summary.generoLabel}
+          />
           <SummaryItem label="Nombre" value={nombreDisplay} />
         </div>
         <div className="flex flex-col gap-6 sm:gap-7">
@@ -75,7 +80,10 @@ export default function CreateScheduledCampaignStep4({ summary }: Props) {
             label="Audiencia"
             value={`${summary.audienciaDestinatarios.toLocaleString("es-CO")} destinatarios`}
           />
-          <SummaryItem label="Rango edad" value={summary.rangoEdadLabel} />
+          <SummaryItem
+            label={isManual ? "Personas seleccionadas" : "Rango edad"}
+            value={summary.rangoEdadLabel}
+          />
           <div className="flex flex-col gap-1 min-w-0">
             <dt className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#94A3B8]">
               Total

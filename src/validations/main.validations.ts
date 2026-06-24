@@ -315,19 +315,25 @@ export const createScheduledCampaignValidationSchema = z.object({
   deliveryChannel: z.string<CampaignDeliveryChannel>(
     "Selecciona una ruta de envío"
   ),
+  audienceSelectionMode: z.enum(["FILTERS", "MANUAL"]),
+  targetedResponseIds: z.array(z.string().min(1, "ID inválido")),
   audience: z
     .object({
       minAge: z.coerce
         .number<number>({ error: "Edad mínima obligatoria" })
-        .int("Debe ser entero"),
+        .int("Debe ser entero")
+        .min(0, "La edad mínima no puede ser negativa")
+        .max(120, "La edad máxima no puede superar 120 años"),
       maxAge: z.coerce
         .number<number>({ error: "Edad máxima obligatoria" })
-        .int("Debe ser entero"),
+        .int("Debe ser entero")
+        .min(0, "La edad mínima no puede ser negativa")
+        .max(120, "La edad máxima no puede superar 120 años"),
       gender: z.string<CampaignAudienceGender>("Selecciona una opción"),
       count: z.coerce
         .number<number>("Cantidad de usuarios objetivo obligatoria")
         .int("El número de audiencia debe ser un entero")
-        .min(1, "No puedes crear una campaña para 0 usuarios"),
+        .min(0, "Audiencia inválida"),
     })
     .superRefine(({ minAge, maxAge }, ctx) => {
       if (minAge > maxAge) {
@@ -352,7 +358,45 @@ export const createScheduledCampaignValidationSchema = z.object({
       .string({ error: "Texto obligatorio" })
       .min(1, "Texto obligatorio")
       .max(1000, "Máximo 1000 caracteres"),
-    link: z.string().optional(),
+    link: z
+      .string()
+      .optional()
+      .refine(
+        (val) => {
+          const raw = val?.trim();
+          if (!raw) return true;
+          const candidate = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+          return z.string().url().safeParse(candidate).success;
+        },
+        { message: "URL del enlace inválida" }
+      ),
     imageUrl: z.url({ error: "URL de imagen inválida" }).optional(),
   }),
+}).superRefine((data, ctx) => {
+  if (data.deliveryChannel === "SMS" && data.content.bodyText.length > 160) {
+    ctx.addIssue({
+      code: "custom",
+      message: "En SMS el texto admite máximo 160 caracteres",
+      path: ["content", "bodyText"],
+    });
+  }
+
+  if (data.audienceSelectionMode === "MANUAL") {
+    if (!data.targetedResponseIds?.length) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Selecciona al menos una persona",
+        path: ["targetedResponseIds"],
+      });
+    }
+    return;
+  }
+
+  if (!data.audience.count || data.audience.count < 1) {
+    ctx.addIssue({
+      code: "custom",
+      message: "No puedes crear una campaña para 0 usuarios",
+      path: ["audience", "count"],
+    });
+  }
 });

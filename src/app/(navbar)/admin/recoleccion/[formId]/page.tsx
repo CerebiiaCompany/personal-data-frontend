@@ -1,6 +1,7 @@
 "use client";
 
 import CreateCollectFormForm from "@/components/collectForms/CreateCollectFormForm";
+import ClientOnly from "@/components/layout/ClientOnly";
 import LoadingCover from "@/components/layout/LoadingCover";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useCollectForms } from "@/hooks/useCollectForms";
@@ -29,7 +30,15 @@ export default function EditCollectPage() {
         </div>
       )}
       {collectForm.data && (
-        <CreateCollectFormForm initialValues={collectForm.data} />
+        <ClientOnly
+          fallback={
+            <div className="relative min-h-[240px] w-full">
+              <LoadingCover />
+            </div>
+          }
+        >
+          <CreateCollectFormForm initialValues={collectForm.data} />
+        </ClientOnly>
       )}
     </div>
   );

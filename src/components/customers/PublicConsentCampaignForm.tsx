@@ -424,7 +424,7 @@ export default function PublicConsentCampaignForm({ data, cct, qct }: Props) {
   questions.forEach((q) => {
     fields[q.title] = {
       type: q.answerType,
-      default: q.answerType === "TEXT" ? "" : new Date(),
+      default: q.answerType === "TEXT" ? "" : "",
     };
   });
 

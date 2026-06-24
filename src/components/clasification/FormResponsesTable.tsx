@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import LoadingCover from "../layout/LoadingCover";
 import Button from "../base/Button";
 import SendConsentInvitationDialog from "../dialogs/SendConsentInvitationDialog";
+import EditCollectFormResponseDialog from "../dialogs/EditCollectFormResponseDialog";
 import { showDialog } from "@/utils/dialogs.utils";
 import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import { parseApiError } from "@/utils/parseApiError";
@@ -187,6 +188,7 @@ const FormResponsesTable = ({
   const confirm = useConfirm();
   const formId = useParams().formId!.toString();
   const [selectedResponse, setSelectedResponse] = React.useState<CollectFormResponse | null>(null);
+  const [editingResponse, setEditingResponse] = React.useState<CollectFormResponse | null>(null);
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
 
   const getOtp = (item: CollectFormResponse): OneTimeCodePopulated | null => {
@@ -235,6 +237,11 @@ const FormResponsesTable = ({
     showDialog(HTML_IDS_DATA.sendConsentInvitationDialog);
   }
 
+  function handleEditResponse(item: CollectFormResponse) {
+    setEditingResponse(item);
+    showDialog(HTML_IDS_DATA.editCollectFormResponseDialog);
+  }
+
   const totalCount = meta?.totalCount || 0;
   const calculatedTotalPages = totalCount > 0 ? Math.ceil(totalCount / pageSize) : 1;
   const totalPages = meta?.totalPages || calculatedTotalPages;
@@ -255,6 +262,13 @@ const FormResponsesTable = ({
         companyId={companyId || ""}
         collectFormId={formId}
         onSent={refresh}
+      />
+
+      <EditCollectFormResponseDialog
+        response={editingResponse}
+        companyId={companyId || ""}
+        collectFormId={formId}
+        onUpdated={refresh}
       />
 
       {!loading && items?.length ? (
@@ -547,6 +561,16 @@ const FormResponsesTable = ({
                           >
                             <Icon icon={expandedId === item._id ? "tabler:eye-off" : "tabler:eye"} className="text-[15px]" />
                           </button>
+                          {can("classification.edit") && (
+                            <button
+                              type="button"
+                              onClick={() => handleEditResponse(item)}
+                              className="h-7 w-7 rounded-lg text-[#667895] hover:bg-[#EFF3FA] inline-flex items-center justify-center"
+                              title="Editar información recolectada"
+                            >
+                              <Icon icon="tabler:edit" className="text-[15px]" />
+                            </button>
+                          )}
                           {consentStatus !== "ACTIVE" && (
                             <button
                               type="button"
