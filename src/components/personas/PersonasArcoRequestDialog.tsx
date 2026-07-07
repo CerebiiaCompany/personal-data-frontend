@@ -347,6 +347,28 @@ const PersonasArcoRequestDialog = ({
             </div>
           )}
 
+          {requestType === "PORTABILITY" && (
+            <div
+              className={clsx(
+                personasTheme.infoBox,
+                "flex gap-2 text-xs leading-relaxed"
+              )}
+            >
+              <Icon
+                icon="tabler:package-export"
+                className="shrink-0 text-lg text-primary-600"
+              />
+              <p className={personasTheme.body}>
+                Al resolver tu solicitud, la empresa generará una{" "}
+                <strong className="text-primary-900">
+                  copia de tus datos personales
+                </strong>{" "}
+                que podrás descargar en formato CSV o JSON desde el historial,
+                para llevarla a otro proveedor.
+              </p>
+            </div>
+          )}
+
           {requestType === "CANCELLATION" && (
             <div
               className={clsx(

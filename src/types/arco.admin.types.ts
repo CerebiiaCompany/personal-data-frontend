@@ -3,6 +3,7 @@ import {
   ArcoRectificationField,
   ArcoRequestStatus,
   ArcoRequestType,
+  PortabilityExportData,
 } from "@/types/arco.types";
 
 export interface ArcoSummary {
@@ -95,6 +96,26 @@ export interface ArcoAdminRequestDetail extends ArcoAdminRequestListItem {
   consentStatus?: string;
   updatedAt?: string;
   accessReport?: ArcoAccessReportFull;
+  /** Marca de tiempo de la última extensión de plazo (si hubo). */
+  dueDateExtendedAt?: string | null;
+  /** Motivo registrado de la última extensión de plazo. */
+  dueDateExtendedReason?: string | null;
+}
+
+/** Body de PATCH /arco/requests/:requestId/extend-deadline. */
+export interface ArcoExtendDeadlinePayload {
+  /** Entero positivo (días adicionales calculados según el motor de plazos). */
+  additionalDays: number;
+  /** Motivo no vacío; queda registrado en la trazabilidad. */
+  reason: string;
+}
+
+/** Respuesta del endpoint de extensión de plazo. */
+export interface ArcoExtendDeadlineResult {
+  id: string;
+  dueDate: string;
+  dueDateExtendedAt: string;
+  dueDateExtendedReason: string;
 }
 
 export interface ArcoOfficerUser {
@@ -235,6 +256,18 @@ export interface ArcoAccessReportDraftResponse {
   accessReport?: ArcoAccessReportFull;
   /** @deprecated Usar accessReport */
   savedReport?: ArcoAccessReportFull;
+}
+
+/**
+ * Respuesta del preview de portabilidad para el oficial
+ * (GET /companies/:companyId/arco/requests/:requestId/portability-export sin `format`).
+ *
+ * - alreadyResolved=false: el export se genera al vuelo (nunca persistido).
+ * - alreadyResolved=true: `portabilityExport` es el snapshot guardado al resolver.
+ */
+export interface ArcoPortabilityExportPreview {
+  alreadyResolved: boolean;
+  portabilityExport: PortabilityExportData;
 }
 
 export interface ArcoRequestsQuery {

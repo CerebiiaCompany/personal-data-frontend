@@ -40,4 +40,10 @@ export const SUPERADMIN_NAVBAR_DATA: NavbarData = [
     path: "/superadmin/administradores/crear",
     minRole: "SUPERADMIN",
   },
+  {
+    title: "Feriados",
+    path: "/superadmin/feriados",
+    icon: "tabler:calendar-event",
+    minRole: "SUPERADMIN",
+  },
 ];

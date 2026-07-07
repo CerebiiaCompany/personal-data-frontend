@@ -166,6 +166,13 @@ export const createCompanyRoleValidationSchema = z.object({
       view: z.boolean(),
       respond: z.boolean(),
     }),
+    treatments: z.object({
+      view: z.boolean(),
+      create: z.boolean(),
+      edit: z.boolean(),
+      activate: z.boolean(),
+      archive: z.boolean(),
+    }),
   }),
 });
 

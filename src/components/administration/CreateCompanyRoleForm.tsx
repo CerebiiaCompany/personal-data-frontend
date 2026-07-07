@@ -116,6 +116,17 @@ const permissionsGroup = [
       { title: "Gestionar y responder solicitudes", name: "respond" },
     ],
   }),
+  definePermissionGroup({
+    title: "Tratamientos (RAT)",
+    groupName: "treatments",
+    permissions: [
+      { title: "Ver tratamientos", name: "view" },
+      { title: "Crear tratamientos", name: "create" },
+      { title: "Editar tratamientos", name: "edit" },
+      { title: "Activar tratamientos", name: "activate" },
+      { title: "Archivar tratamientos", name: "archive" },
+    ],
+  }),
 ];
 
 const defaultPermissions: CompanyRolePermissions =
@@ -143,6 +154,9 @@ const CreateCompanyRoleForm = ({ initialValues }: Props) => {
             arcoRequests:
               initialValues.permissions.arcoRequests ??
               defaultPermissions.arcoRequests,
+            treatments:
+              initialValues.permissions.treatments ??
+              defaultPermissions.treatments,
           },
         }
       : {

@@ -25,7 +25,8 @@ export type ArcoRequestType =
   | "ACCESS"
   | "RECTIFICATION"
   | "CANCELLATION"
-  | "OPPOSITION";
+  | "OPPOSITION"
+  | "PORTABILITY";
 
 export type ArcoRequestStatus =
   | "PENDING"
@@ -74,6 +75,11 @@ export interface ArcoCompanyInfo {
   nit?: string;
   email?: string;
   phone?: string;
+  /**
+   * País de la empresa (ISO-3166-1 alfa-2). Se usa para habilitar derechos
+   * dependientes del país; por ejemplo, PORTABILITY solo aplica a Chile ("CL").
+   */
+  countryCode?: string;
   dataOfficer?: ArcoDataOfficer;
 }
 
@@ -184,6 +190,36 @@ export interface ArcoCreateRequestResult {
   createdAt: string;
 }
 
+/**
+ * Datos personales incluidos en el export de portabilidad (Ley 21.719, Chile).
+ * Provienen del último CollectFormResponse del titular en la empresa. Los
+ * campos ausentes llegan `undefined` (se omiten en JSON) salvo docType/docNumber
+ * que caen al valor original de la solicitud.
+ */
+export interface PortabilityExportPersonalData {
+  docType: string;
+  docNumber: string;
+  name?: string;
+  lastName?: string;
+  razonSocial?: string;
+  email?: string;
+  phone?: string;
+  gender?: string;
+  age?: number;
+}
+
+/** Contenido completo del export de portabilidad (formato PortabilityExportData del backend). */
+export interface PortabilityExportData {
+  companyName: string;
+  countryCode: string;
+  personalData: PortabilityExportPersonalData;
+  /** ISO 8601. Momento en que se generó/snapshotó el export. */
+  exportedAt: string;
+}
+
+/** Formatos de descarga soportados por los endpoints de export de portabilidad. */
+export type PortabilityExportFormat = "csv" | "json";
+
 export interface ArcoRequestListItem {
   requestId: string;
   company: {
@@ -201,6 +237,8 @@ export interface ArcoRequestListItem {
     respondedAt?: string;
   };
   accessReport?: ArcoAccessReportFull;
+  /** Presente solo cuando requestType === "PORTABILITY" y la solicitud ya fue resuelta. */
+  portabilityExport?: PortabilityExportData;
   createdAt: string;
 }
 
@@ -219,6 +257,7 @@ export const ARCO_REQUEST_TYPE_LABELS: Record<ArcoRequestType, string> = {
   RECTIFICATION: "Rectificación",
   CANCELLATION: "Cancelación",
   OPPOSITION: "Oposición",
+  PORTABILITY: "Portabilidad",
 };
 
 export const ARCO_REQUEST_STATUS_LABELS: Record<ArcoRequestStatus, string> = {

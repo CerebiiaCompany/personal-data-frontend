@@ -8,6 +8,7 @@ export const ROLE_MODULE_ORDER: (keyof CompanyRolePermissions)[] = [
   "campaigns",
   "audit",
   "arcoRequests",
+  "treatments",
 ];
 
 export const ROLE_MODULE_TITLES: Record<keyof CompanyRolePermissions, string> = {
@@ -18,6 +19,7 @@ export const ROLE_MODULE_TITLES: Record<keyof CompanyRolePermissions, string> = 
   campaigns: "Campañas",
   audit: "Auditoría",
   arcoRequests: "Solicitudes ARCO",
+  treatments: "Tratamientos (RAT)",
 };
 
 export const ACTION_SHORT_LABELS: Record<string, string> = {
@@ -26,6 +28,8 @@ export const ACTION_SHORT_LABELS: Record<string, string> = {
   edit: "Editar",
   delete: "Eliminar",
   send: "Enviar",
+  activate: "Activar",
+  archive: "Archivar",
 };
 
 export type ModulePermissionStat = {

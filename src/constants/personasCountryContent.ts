@@ -1,3 +1,4 @@
+import { ArcoRequestType } from "@/types/arco.types";
 import { CustomSelectOption } from "@/types/forms.types";
 import {
   PersonasCountryCode,
@@ -116,7 +117,19 @@ export const personasTips = [
   },
 ] as const;
 
-export const personasArcoActions = [
+export interface PersonasArcoAction {
+  value: ArcoRequestType;
+  label: string;
+  icon: string;
+  hint: string;
+  /**
+   * Si se define, la acción solo se muestra cuando la empresa activa pertenece
+   * a ese país. PORTABILITY solo existe (regulación sembrada) para Chile.
+   */
+  onlyCountry?: PersonasCountryCode;
+}
+
+export const personasArcoActions: PersonasArcoAction[] = [
   {
     value: "ACCESS",
     label: "Acceso",
@@ -141,7 +154,14 @@ export const personasArcoActions = [
     icon: "tabler:hand-stop",
     hint: "Oponerte al tratamiento",
   },
-] as const;
+  {
+    value: "PORTABILITY",
+    label: "Portabilidad",
+    icon: "tabler:package-export",
+    hint: "Llevar una copia de tus datos a otro proveedor",
+    onlyCountry: "CL",
+  },
+];
 
 export const personasFlowSteps = [
   { id: "documento", label: "Documento", path: "/personas/ingresar" },

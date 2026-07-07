@@ -19,6 +19,7 @@ const MODULE_NAMES: Record<keyof CompanyRolePermissions, string> = {
   campaigns: "Campañas",
   audit: "Auditoría",
   arcoRequests: "Solicitudes ARCO",
+  treatments: "Tratamientos (RAT)",
 };
 
 /** Etiquetas cortas para listados en tabla (densidad sin perder sentido). */
@@ -30,6 +31,7 @@ const MODULE_SHORT: Record<keyof CompanyRolePermissions, string> = {
   campaigns: "Campañas",
   audit: "Auditoría",
   arcoRequests: "ARCO",
+  treatments: "RAT",
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -38,6 +40,8 @@ const ACTION_LABELS: Record<string, string> = {
   edit: "Editar",
   delete: "Eliminar",
   send: "Enviar",
+  activate: "Activar",
+  archive: "Archivar",
   respond: "Responder",
 };
 

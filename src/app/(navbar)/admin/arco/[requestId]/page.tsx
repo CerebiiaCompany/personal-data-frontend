@@ -3,6 +3,8 @@
 import ArcoAuditTimeline from "@/components/arco/ArcoAuditTimeline";
 import ArcoAccessRespondDialog from "@/components/arco/ArcoAccessRespondDialog";
 import ArcoAccessReportSection from "@/components/arco/ArcoAccessReportSection";
+import ArcoPortabilitySection from "@/components/arco/ArcoPortabilitySection";
+import ArcoExtendDeadlineDialog from "@/components/arco/ArcoExtendDeadlineDialog";
 import ArcoRequestStatusBadge from "@/components/arco/ArcoRequestStatusBadge";
 import ArcoRespondDialog from "@/components/arco/ArcoRespondDialog";
 import Button from "@/components/base/Button";
@@ -66,6 +68,7 @@ export default function ArcoRequestDetailPage() {
 
   const [respondOpen, setRespondOpen] = useState(false);
   const [accessRespondOpen, setAccessRespondOpen] = useState(false);
+  const [extendOpen, setExtendOpen] = useState(false);
   const [statusLoading, setStatusLoading] = useState(false);
 
   const { data, loading, error, refresh } = useCompanyArcoRequestDetail(
@@ -117,7 +120,11 @@ export default function ArcoRequestDetailPage() {
   // para dejar claro que ese es el paso previo obligatorio.
   const canTakeAction = canRespond && (isPending || isInProgress);
   const canResolve = canRespond && isInProgress;
+  // El backend solo permite extender plazos de solicitudes abiertas
+  // (PENDING/IN_PROGRESS) y exige permiso arcoRequests.respond + oficial/admin.
+  const canExtendDeadline = canRespond && (isPending || isInProgress);
   const isAccessRequest = data?.requestType === "ACCESS";
+  const isPortabilityRequest = data?.requestType === "PORTABILITY";
   const isResolved = data?.status === "RESOLVED" || data?.status === "REJECTED";
 
   return (
@@ -200,6 +207,15 @@ export default function ArcoRequestDetailPage() {
                         startContent={<Icon icon="tabler:eye" />}
                       >
                         Ver informe de acceso
+                      </Button>
+                    )}
+                    {canExtendDeadline && (
+                      <Button
+                        hierarchy="secondary"
+                        onClick={() => setExtendOpen(true)}
+                        startContent={<Icon icon="tabler:calendar-plus" />}
+                      >
+                        Extender plazo
                       </Button>
                     )}
                   </div>
@@ -297,6 +313,25 @@ export default function ArcoRequestDetailPage() {
                       </div>
                     )}
                 </dl>
+                {data.dueDateExtendedAt && (
+                  <div className="mt-4 flex items-start gap-2 rounded-xl border border-[#DBE7FB] bg-[#F1F6FF] px-3 py-2.5 text-xs text-[#334155]">
+                    <Icon
+                      icon="tabler:calendar-plus"
+                      className="mt-0.5 shrink-0 text-base text-[#3357A5]"
+                    />
+                    <div>
+                      <p className="font-semibold text-[#1A2B5B]">
+                        Plazo extendido el{" "}
+                        {formatArcoDateTime(data.dueDateExtendedAt)}
+                      </p>
+                      {data.dueDateExtendedReason && (
+                        <p className="mt-0.5 text-[#64748B]">
+                          Motivo: {data.dueDateExtendedReason}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
                 {data.regulationSnapshot?.legalReference && (
                   <p className="mt-4 rounded-xl bg-[#F8FAFC] px-3 py-2 text-xs text-[#64748B]">
                     {data.regulationSnapshot.legalReference}
@@ -380,6 +415,14 @@ export default function ArcoRequestDetailPage() {
                     embeddedReport={data.accessReport}
                   />
                 )}
+
+              {isPortabilityRequest && companyId && (
+                <ArcoPortabilitySection
+                  companyId={companyId}
+                  requestId={requestId}
+                  status={data.status}
+                />
+              )}
 
               {data.response && (
                 <section className="rounded-2xl border border-emerald-200/80 bg-emerald-50/40 p-5">
@@ -509,6 +552,14 @@ export default function ArcoRequestDetailPage() {
             companyId={companyId}
             requestId={requestId}
             onClose={() => setAccessRespondOpen(false)}
+            onSuccess={refresh}
+          />
+          <ArcoExtendDeadlineDialog
+            open={extendOpen}
+            companyId={companyId}
+            requestId={requestId}
+            currentDueDate={data?.dueDate}
+            onClose={() => setExtendOpen(false)}
             onSuccess={refresh}
           />
         </>

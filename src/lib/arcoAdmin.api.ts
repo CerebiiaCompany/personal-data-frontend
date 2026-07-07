@@ -5,8 +5,11 @@ import {
   ArcoAccessReportDraftResponse,
   ArcoAuditQuery,
   ArcoCompanyAuditEntry,
+  ArcoExtendDeadlinePayload,
+  ArcoExtendDeadlineResult,
   ArcoMyAccess,
   ArcoOfficersResult,
+  ArcoPortabilityExportPreview,
   ArcoRequestAuditResponse,
   ArcoRequestsQuery,
   ArcoRespondPayload,
@@ -14,8 +17,13 @@ import {
   ArcoUpdateOfficersPayload,
   ArcoUpdateStatusPayload,
 } from "@/types/arco.admin.types";
-import { ArcoRequestStatus } from "@/types/arco.types";
+import { ArcoRequestStatus, PortabilityExportFormat } from "@/types/arco.types";
 import { customFetch } from "@/utils/customFetch";
+import {
+  filenameFromContentDisposition,
+  triggerBrowserDownload,
+} from "@/utils/downloadFile";
+import { API_BASE_URL } from "@/utils/env.utils";
 
 function arcoCompanyPath(companyId: string) {
   return `/companies/${companyId}/arco`;
@@ -146,6 +154,102 @@ export function respondArcoRequest(
     method: "PATCH",
     body: JSON.stringify(payload),
   });
+}
+
+/**
+ * Extiende el plazo legal de una solicitud (solo PENDING/IN_PROGRESS).
+ * Requiere permiso arcoRequests.respond + ser oficial designado o admin.
+ */
+export function extendArcoRequestDeadline(
+  companyId: string,
+  requestId: string,
+  payload: ArcoExtendDeadlinePayload
+) {
+  return customFetch<ArcoExtendDeadlineResult>(
+    `${arcoCompanyPath(companyId)}/requests/${requestId}/extend-deadline`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+/**
+ * Preview del export de portabilidad para el oficial (sin `format`, JSON).
+ *
+ * - Si la solicitud aún no fue resuelta, el backend genera el export al vuelo
+ *   (`alreadyResolved: false`) sin persistirlo.
+ * - Si ya fue resuelta, devuelve el snapshot guardado (`alreadyResolved: true`).
+ */
+export function fetchArcoPortabilityExportPreview(
+  companyId: string,
+  requestId: string
+) {
+  return customFetch<ArcoPortabilityExportPreview>(
+    `${arcoCompanyPath(companyId)}/requests/${requestId}/portability-export`
+  );
+}
+
+/**
+ * Descarga el export de portabilidad para el oficial como archivo (CSV o JSON).
+ * Antes de resolver descarga datos generados al vuelo; después de resolver, el
+ * snapshot guardado. Devuelve `{}` en éxito o `{ error }`.
+ */
+export async function downloadArcoPortabilityExport(
+  companyId: string,
+  requestId: string,
+  format: PortabilityExportFormat = "csv"
+): Promise<APIResponse<void>> {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}${arcoCompanyPath(companyId)}/requests/${requestId}/portability-export?format=${format}`,
+      {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+      }
+    );
+
+    if (!response.ok) {
+      let body: APIResponse<void> | null = null;
+      try {
+        body = (await response.json()) as APIResponse<void>;
+      } catch {}
+      return {
+        error: body?.error
+          ? { ...body.error, status: response.status }
+          : {
+              code: "http/unknown-error",
+              message: "No se pudo descargar el export de portabilidad.",
+              status: response.status,
+            },
+      };
+    }
+
+    const blob = await response.blob();
+    const filename =
+      filenameFromContentDisposition(
+        response.headers.get("content-disposition")
+      ) ?? `portabilidad-${requestId}.${format}`;
+    triggerBrowserDownload(blob, filename);
+    return {};
+  } catch (error) {
+    const message = (error as Error).message;
+    if (message.includes("Failed to fetch")) {
+      return {
+        error: {
+          code: "http/network-error",
+          message: "Error de conexión. Verifica tu red e intenta de nuevo.",
+        },
+      };
+    }
+    return {
+      error: {
+        code: "http/unknown-error",
+        message: "Error inesperado al descargar el export de portabilidad.",
+      },
+    };
+  }
 }
 
 export function fetchArcoOfficers(companyId: string) {

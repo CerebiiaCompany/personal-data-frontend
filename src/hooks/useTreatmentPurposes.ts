@@ -1,0 +1,37 @@
+import { fetchTreatmentPurposes } from "@/lib/treatment.api";
+import { TreatmentPurpose } from "@/types/treatment.types";
+import { useCallback, useEffect, useState } from "react";
+
+interface Params {
+  companyId: string | undefined;
+  enabled?: boolean;
+}
+
+/**
+ * Catálogo de finalidades (global + propias de la empresa) para el dropdown de
+ * `purposeId`. No pagina y falla en silencio: si no carga, el formulario sigue
+ * usable con la finalidad en null.
+ */
+export function useTreatmentPurposes({ companyId, enabled = true }: Params) {
+  const [data, setData] = useState<TreatmentPurpose[] | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const refresh = useCallback(async () => {
+    if (!companyId) return;
+    setLoading(true);
+    const res = await fetchTreatmentPurposes(companyId);
+    setLoading(false);
+    if (res.error) {
+      setData([]);
+      return;
+    }
+    setData(res.data ?? []);
+  }, [companyId]);
+
+  useEffect(() => {
+    if (!enabled || !companyId) return;
+    refresh();
+  }, [enabled, companyId, refresh]);
+
+  return { data, loading, refresh };
+}

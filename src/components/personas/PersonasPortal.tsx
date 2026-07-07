@@ -4,6 +4,7 @@ import Button from "@/components/base/Button";
 import LoadingCover from "@/components/layout/LoadingCover";
 import PersonasAnimateIn from "@/components/personas/PersonasAnimateIn";
 import PersonasAccessReportPanel from "@/components/personas/PersonasAccessReportPanel";
+import PersonasPortabilityPanel from "@/components/personas/PersonasPortabilityPanel";
 import PersonasArcoRequestDialog from "@/components/personas/PersonasArcoRequestDialog";
 import PersonasFlowStepper from "@/components/personas/PersonasFlowStepper";
 import PersonasPortalQuickGuide from "@/components/personas/PersonasPortalQuickGuide";
@@ -328,7 +329,17 @@ const PersonasPortal = () => {
                           </div>
 
                           <div className="grid gap-3 sm:grid-cols-2">
-                            {personasArcoActions.map((action) => (
+                            {personasArcoActions
+                              .filter(
+                                (action) =>
+                                  // Gating por país de la EMPRESA (fuente
+                                  // autoritativa del backend). Fail-closed: si
+                                  // el país no viene, la acción restringida se
+                                  // oculta en lugar de asumir un país por sesión.
+                                  !action.onlyCountry ||
+                                  action.onlyCountry === entry.company.countryCode
+                              )
+                              .map((action) => (
                               <button
                                 key={action.value}
                                 type="button"
@@ -475,6 +486,14 @@ const PersonasPortal = () => {
                     req.status === "RESOLVED" &&
                     req.accessReport && (
                       <PersonasAccessReportPanel accessReport={req.accessReport} />
+                    )}
+                  {req.requestType === "PORTABILITY" &&
+                    req.status === "RESOLVED" &&
+                    req.portabilityExport && (
+                      <PersonasPortabilityPanel
+                        requestId={req.requestId}
+                        portabilityExport={req.portabilityExport}
+                      />
                     )}
                 </li>
               ))}

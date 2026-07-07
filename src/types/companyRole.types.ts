@@ -34,6 +34,13 @@ export type CompanyRolePermissions = {
     view: boolean;
     respond: boolean;
   };
+  treatments: {
+    view: boolean;
+    create: boolean;
+    edit: boolean;
+    activate: boolean;
+    archive: boolean;
+  };
 };
 
 export interface CreateCompanyRole {

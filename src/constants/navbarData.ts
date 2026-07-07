@@ -82,6 +82,19 @@ export const NAVBAR_DATA: NavbarData = [
     requiredPermission: "arcoRequests.view",
   },
   {
+    title: "Tratamientos (RAT)",
+    path: "/admin/tratamientos",
+    icon: "tabler:list-details",
+    minRole: "USER",
+    requiredPermission: "treatments.view",
+  },
+  {
+    title: "Nuevo tratamiento",
+    path: "/admin/tratamientos/crear",
+    minRole: "USER",
+    requiredPermission: "treatments.create",
+  },
+  {
     title: "Crear Campaña",
     path: "/admin/campanas/crear",
     minRole: "USER",

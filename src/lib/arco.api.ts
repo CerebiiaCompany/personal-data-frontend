@@ -10,8 +10,13 @@ import {
   ArcoRequestListItem,
   ArcoVerifyPayload,
   ArcoVerifyResult,
+  PortabilityExportFormat,
 } from "@/types/arco.types";
 import { API_BASE_URL } from "@/utils/env.utils";
+import {
+  filenameFromContentDisposition,
+  triggerBrowserDownload,
+} from "@/utils/downloadFile";
 import {
   clearPersonasVerification,
   getArcoSessionToken,
@@ -176,4 +181,94 @@ export function arcoListRequests() {
     { method: "GET" },
     true
   );
+}
+
+/**
+ * Descarga el export de portabilidad ya resuelto del titular como archivo
+ * (CSV o JSON). A diferencia del listado, este endpoint devuelve un archivo con
+ * `Content-Disposition: attachment`, por lo que no se puede parsear como JSON.
+ *
+ * Devuelve `{}` en éxito (la descarga se dispara en el navegador) o `{ error }`.
+ */
+export async function arcoDownloadPortabilityExport(
+  requestId: string,
+  format: PortabilityExportFormat = "csv"
+): Promise<APIResponse<void>> {
+  const token = getArcoSessionToken();
+  if (!token) {
+    return {
+      error: {
+        code: "auth/unauthenticated",
+        message: "Tu sesión expiró. Ingresa de nuevo con tu documento.",
+      },
+    };
+  }
+
+  try {
+    const response = await fetch(
+      resolveArcoUrl(
+        `/arco/requests/${requestId}/portability-export?format=${format}`
+      ),
+      {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          "x-arco-token": token,
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      let body: APIResponse<void> | null = null;
+      try {
+        body = (await response.json()) as APIResponse<void>;
+      } catch {}
+      if (
+        response.status === 401 ||
+        body?.error?.code === "auth/unauthenticated"
+      ) {
+        clearPersonasVerification();
+        if (
+          typeof window !== "undefined" &&
+          window.location.pathname.startsWith("/personas")
+        ) {
+          window.location.href = "/personas/ingresar";
+        }
+      }
+      return {
+        error: body?.error
+          ? { ...body.error, status: response.status }
+          : {
+              code: "http/unknown-error",
+              message: "No se pudo descargar el export de portabilidad.",
+              status: response.status,
+            },
+      };
+    }
+
+    const blob = await response.blob();
+    const filename =
+      filenameFromContentDisposition(
+        response.headers.get("content-disposition")
+      ) ?? `portabilidad-${requestId}.${format}`;
+    triggerBrowserDownload(blob, filename);
+    return {};
+  } catch (error) {
+    const message = (error as Error).message;
+    if (message.includes("Failed to fetch")) {
+      return {
+        error: {
+          code: "http/network-error",
+          message: "Error de conexión. Verifica tu red e intenta de nuevo.",
+        },
+      };
+    }
+    return {
+      error: {
+        code: "http/unknown-error",
+        message: "Error inesperado al descargar el export de portabilidad.",
+      },
+    };
+  }
 }
