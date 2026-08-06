@@ -85,7 +85,7 @@ const EditCompanyCountryDialog = ({ company, onUpdated }: Props) => {
         </header>
 
         <p className="text-xs text-stone-500 -mt-2">
-          El país determina qué plantillas legales, tipos de documento y
+          El país determina qué políticas de tratamiento, tipos de documento y
           plazos ARCO aplican para esta empresa. Cámbialo solo si estás
           seguro — afecta comunicaciones y cálculos legales en curso.
         </p>

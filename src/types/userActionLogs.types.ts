@@ -73,7 +73,7 @@ export const userActionLogTargetModelOptions: CustomSelectOption<UserActionLogTa
       value: "COLLECT_FORM_RESPONSE",
     },
     {
-      title: "Plantilla",
+      title: "Política de tratamiento",
       value: "POLICY_TEMPLATE",
     },
     {

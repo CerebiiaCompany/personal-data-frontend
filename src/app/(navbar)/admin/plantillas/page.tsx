@@ -97,13 +97,15 @@ export default function TemplatesPage() {
 
   async function deleteTemplate(policyId: string) {
     const confirmed = await confirm({
-      title: "⚠️ Eliminar Plantilla",
+      title: "⚠️ Eliminar política de tratamiento",
       description: (
         <div className="space-y-3">
           <p className="font-semibold text-primary-900">
             Esta acción es irreversible y puede causar pérdida de datos.
           </p>
-          <p className="text-stone-600">Al eliminar esta plantilla:</p>
+          <p className="text-stone-600">
+            Al eliminar esta política de tratamiento de datos personales:
+          </p>
           <ul className="list-disc list-inside text-sm text-stone-600 space-y-1 ml-2">
             <li>Se eliminará permanentemente del sistema</li>
             <li>Los formularios que la usan podrían verse afectados</li>
@@ -114,7 +116,7 @@ export default function TemplatesPage() {
           </p>
         </div>
       ),
-      confirmText: "Sí, eliminar plantilla",
+      confirmText: "Sí, eliminar política",
       cancelText: "Cancelar",
       danger: true,
     });
@@ -129,7 +131,7 @@ export default function TemplatesPage() {
       return toast.error(parseApiError(res.error));
     }
 
-    toast.success("Plantilla eliminada");
+    toast.success("Política de tratamiento eliminada");
     refresh();
   }
 
@@ -160,15 +162,18 @@ export default function TemplatesPage() {
                       icon="tabler:chevron-right"
                       className="text-base shrink-0"
                     />
-                    <span className="text-[#1D2E56] font-semibold">Plantillas</span>
+                    <span className="text-[#1D2E56] font-semibold">
+                      Políticas de tratamiento
+                    </span>
                   </nav>
                   <ModuleHelpButton tourId="plantillas" />
                 </div>
                 <h1 className="text-[24px] sm:text-[26px] leading-tight font-bold text-[#0B1737]">
-                  Plantillas
+                  Políticas de tratamiento de datos personales
                 </h1>
                 <p className="text-[#6F7F9F] text-[13px] max-w-2xl leading-relaxed mt-1">
-                  Gestiona tus documentos legales y plantillas de formularios.
+                  Gestiona las políticas de tratamiento de datos personales que
+                  tus titulares deben aceptar.
                 </p>
               </div>
 
@@ -191,7 +196,7 @@ export default function TemplatesPage() {
                     type="button"
                     onClick={() =>
                       toast.info(
-                        "La creación de plantillas con IA estará disponible próximamente."
+                        "La creación de políticas de tratamiento con IA estará disponible próximamente."
                       )
                     }
                     className="inline-flex items-center gap-2 rounded-xl bg-[#2563EB] px-4 py-2.5 text-[13px] font-semibold text-white hover:brightness-95 transition-all shadow-[0_4px_14px_rgba(37,99,235,0.35)]"
@@ -228,7 +233,7 @@ export default function TemplatesPage() {
                   type="button"
                   onClick={() =>
                     toast.info(
-                      "La creación de plantillas con IA estará disponible próximamente."
+                      "La creación de políticas de tratamiento con IA estará disponible próximamente."
                     )
                   }
                   className={clsx(
@@ -243,10 +248,11 @@ export default function TemplatesPage() {
                   </div>
                   <div>
                     <p className="text-[15px] font-bold text-[#0B1737]">
-                      Crear plantilla con IA
+                      Crear política con IA
                     </p>
                     <p className="text-[13px] text-[#64748B] mt-1 max-w-[240px] mx-auto leading-snug">
-                      Genera políticas y consentimientos automáticamente
+                      Genera políticas de tratamiento de datos personales
+                      automáticamente
                     </p>
                   </div>
                 </button>
@@ -285,8 +291,8 @@ export default function TemplatesPage() {
                           type="button"
                           onClick={() => handleRename(policyTemplate)}
                           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#E3E9F4] text-[#64748B] hover:bg-[#F4F7FE] hover:text-[#2563EB] transition-colors"
-                          aria-label="Renombrar plantilla"
-                          title="Renombrar plantilla"
+                          aria-label="Renombrar política de tratamiento"
+                          title="Renombrar política de tratamiento"
                         >
                           <Icon icon="tabler:pencil" className="text-lg" />
                         </button>
@@ -346,7 +352,7 @@ export default function TemplatesPage() {
                           type="button"
                           onClick={() => deleteTemplate(policyTemplate._id)}
                           className="flex h-[88px] w-11 shrink-0 items-center justify-center self-stretch rounded-xl border border-red-200 bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
-                          aria-label="Eliminar plantilla"
+                          aria-label="Eliminar política de tratamiento"
                         >
                           <Icon icon="tabler:trash" className="text-xl" />
                         </button>
@@ -359,11 +365,12 @@ export default function TemplatesPage() {
             {!loading && data && data.length === 0 && (
               <div className="col-span-full flex flex-col items-center justify-center rounded-2xl border border-dashed border-[#CBD5E1] bg-white/80 py-14 px-4">
                 <p className="text-center text-[#64748B] text-sm font-medium">
-                  No hay plantillas para mostrar
+                  No hay políticas de tratamiento para mostrar
                 </p>
                 <CheckPermission group="templates" permission="create">
                   <p className="text-center text-[#94A3B8] text-xs mt-2 max-w-sm">
-                    Sube un archivo o crea una plantilla con IA para empezar.
+                    Sube un archivo o crea una política de tratamiento con IA
+                    para empezar.
                   </p>
                 </CheckPermission>
               </div>

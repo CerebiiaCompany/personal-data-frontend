@@ -11,7 +11,9 @@ import { CountryIsoCode } from "@/types/companyArea.types";
 export const createCollectFormValidationSchema = z.object({
   name: z.string().min(1, "Dale un nombre a tu formulario"),
   description: z.string().min(1, "Añade una descripción"),
-  policyTemplateId: z.string().min(1, "Selecciona una plantilla"),
+  policyTemplateId: z
+    .string()
+    .min(1, "Selecciona una política de tratamiento de datos personales"),
   marketingChannels: z
     .object({
       SMS: z.boolean(),

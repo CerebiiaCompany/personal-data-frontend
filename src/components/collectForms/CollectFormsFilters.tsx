@@ -11,7 +11,12 @@ const FILTER_OPTIONS: {
   icon: string;
 }[] = [
   { id: "ALL", label: "Todos", icon: "tabler:layout-grid" },
-  { id: "TEMPLATE", label: "Plantillas legales", icon: "tabler:file-certificate" },
+  {
+    id: "TEMPLATE",
+    label: "Políticas de tratamiento",
+    icon: "tabler:file-certificate",
+  },
+
   { id: "CUSTOM", label: "Personalizados", icon: "tabler:forms" },
 ];
 

@@ -14,7 +14,7 @@ export const ROLE_MODULE_ORDER: (keyof CompanyRolePermissions)[] = [
 export const ROLE_MODULE_TITLES: Record<keyof CompanyRolePermissions, string> = {
   dashboard: "Inicio / Dashboard",
   collect: "Recolección",
-  templates: "Plantillas",
+  templates: "Políticas de tratamiento",
   classification: "Clasificación",
   campaigns: "Campañas",
   audit: "Auditoría",

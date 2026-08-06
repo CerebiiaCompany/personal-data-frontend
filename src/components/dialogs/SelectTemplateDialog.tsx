@@ -42,7 +42,9 @@ const SelectTemplateDialog = ({ value, onSelect, items }: Props) => {
       <div className="w-full animate-appear max-w-xl rounded-xl overflow-hidden bg-white flex flex-col max-h-3/4 gap-4">
         <header className="border-b justify-between border-b-disabled flex items-center p-4">
           <span />
-          <h3 className="font-bold text-xl">Seleccionar plantilla</h3>
+          <h3 className="font-bold text-xl">
+            Seleccionar política de tratamiento
+          </h3>
 
           <button
             onClick={() => hideDialog(id)}
@@ -97,7 +99,8 @@ const SelectTemplateDialog = ({ value, onSelect, items }: Props) => {
                   Falta algo aquí
                 </h6>
                 <p className="text-stone-500">
-                  No has cargado ninguna plantilla aún
+                  Aún no has cargado ninguna política de tratamiento de datos
+                  personales
                 </p>
                 <Button
                   href="/admin/plantillas"

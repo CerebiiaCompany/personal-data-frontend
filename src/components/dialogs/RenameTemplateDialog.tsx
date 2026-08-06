@@ -50,7 +50,7 @@ const RenameTemplateDialog = ({ companyId, template, onUpdated }: Props) => {
       return toast.error(parseApiError(res.error));
     }
 
-    toast.success("Nombre de la plantilla actualizado");
+    toast.success("Nombre de la política actualizado");
     hideDialog(id);
     onUpdated?.();
   }
@@ -69,10 +69,11 @@ const RenameTemplateDialog = ({ companyId, template, onUpdated }: Props) => {
             </div>
             <div className="flex flex-col">
               <h3 className="font-bold text-xl text-primary-900">
-                Renombrar plantilla
+                Renombrar política de tratamiento
               </h3>
               <p className="text-stone-500 text-sm">
-                Cambia el nombre visible de la plantilla.
+                Cambia el nombre visible de la política de tratamiento de datos
+                personales.
               </p>
             </div>
           </div>
@@ -95,10 +96,10 @@ const RenameTemplateDialog = ({ companyId, template, onUpdated }: Props) => {
           className="flex flex-col gap-4"
         >
           <CustomInput
-            label="Nombre de la plantilla"
+            label="Nombre de la política"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Ej. Política de tratamiento de datos"
+            placeholder="Ej. Política de tratamiento de datos personales"
             maxLength={200}
             autoFocus
           />

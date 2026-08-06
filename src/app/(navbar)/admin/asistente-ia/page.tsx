@@ -82,11 +82,11 @@ export default function AsistenteIAPage() {
           </nav>
 
           <h1 className="text-[28px] font-bold leading-tight tracking-tight text-[#0B1737]">
-            Asistente IA · Plantillas legales
+            Asistente IA · Políticas de tratamiento
           </h1>
           <p className="mt-1 text-sm text-[#64748B]">
-            Genera políticas, autorizaciones y consentimientos conformes a la
-            normativa de protección de datos vigente en tu país.
+            Genera políticas de tratamiento de datos personales, autorizaciones
+            y consentimientos conformes a la normativa vigente en tu país.
           </p>
         </div>
 
@@ -96,11 +96,11 @@ export default function AsistenteIAPage() {
           </div>
 
           <h2 className="text-center text-[30px] font-bold leading-tight text-[#0B1737]">
-            ¿Qué plantilla necesitas hoy?
+            ¿Qué política necesitas hoy?
           </h2>
           <p className="mt-2 text-center text-sm text-[#64748B]">
-            Describe lo que necesitas y la IA generará una plantilla legal lista
-            para usar.
+            Describe lo que necesitas y la IA generará una política de
+            tratamiento de datos personales lista para usar.
           </p>
 
           <div className="mt-6 grid w-full grid-cols-1 gap-3 md:grid-cols-2">
@@ -134,7 +134,7 @@ export default function AsistenteIAPage() {
             <input
               type="text"
               disabled
-              placeholder="Describe la plantilla que necesitas..."
+              placeholder="Describe la política que necesitas..."
               className="w-full bg-transparent text-sm text-[#0F172A] outline-none placeholder:text-[#94A3B8]"
             />
             <button
@@ -145,7 +145,7 @@ export default function AsistenteIAPage() {
             </button>
           </div>
           <p className="mt-2 text-center text-[11px] text-[#94A3B8]">
-            La IA puede cometer errores. Revisa siempre la plantilla antes de
+            La IA puede cometer errores. Revisa siempre la política antes de
             usarla.
           </p>
         </div>

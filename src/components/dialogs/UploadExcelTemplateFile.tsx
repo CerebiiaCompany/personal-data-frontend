@@ -38,7 +38,9 @@ const acceptedFiletypes = [
 const formSchema = z
   .object({
     name: z.string().min(1, "Este campo es obligatorio"),
-    policyTemplateId: z.string().min(1, "Debes seleccionar una plantilla"),
+    policyTemplateId: z
+      .string()
+      .min(1, "Debes seleccionar una política de tratamiento"),
     marketingChannels: z.object({
       SMS: z.boolean(),
       EMAIL: z.boolean(),
@@ -432,14 +434,16 @@ const UploadExcelTemplateDialog = ({ refresh }: Props) => {
 
               <div className="flex flex-col gap-1">
                 <CustomSelect
-                  label="Plantilla de política"
+                  label="Política de tratamiento de datos personales"
                   options={policyTemplateOptions}
                   value={policyTemplateId}
                   onChange={(value) =>
                     setValue("policyTemplateId", value, { shouldValidate: true })
                   }
                   unselectedText={
-                    loadingTemplates ? "Cargando..." : "Selecciona una plantilla"
+                    loadingTemplates
+                      ? "Cargando..."
+                      : "Selecciona una política"
                   }
                   className={errors.policyTemplateId ? "opacity-50" : ""}
                 />
@@ -494,8 +498,8 @@ const UploadExcelTemplateDialog = ({ refresh }: Props) => {
 
               {!isFormComplete && !loading && (
                 <p className="text-xs text-stone-500 text-center leading-relaxed">
-                  Completa el nombre, la plantilla de política, al menos un canal
-                  y el archivo Excel para habilitar la subida.
+                  Completa el nombre, la política de tratamiento, al menos un
+                  canal y el archivo Excel para habilitar la subida.
                 </p>
               )}
 

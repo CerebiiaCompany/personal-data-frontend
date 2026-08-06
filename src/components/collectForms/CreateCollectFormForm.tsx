@@ -447,15 +447,15 @@ const CreateCollectFormForm = ({ initialValues }: Props) => {
               </div>
             </section>
 
-            {/* Plantilla legal */}
+            {/* Política de tratamiento de datos personales */}
             <section className={clsx(innerSectionClass, "p-7 sm:p-8 flex flex-col gap-5")}>
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-5">
                 <div>
                   <h2 className="text-[17px] font-bold text-[#0F172A]">
-                    Plantilla legal
+                    Política de tratamiento de datos personales
                   </h2>
                   <p className="text-[13px] text-[#64748B] mt-1">
-                    Adjunta una política de tratamiento de datos
+                    Adjunta la política que tus titulares deben aceptar
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2 shrink-0">
@@ -473,7 +473,7 @@ const CreateCollectFormForm = ({ initialValues }: Props) => {
                         className="inline-flex items-center gap-2 rounded-xl border border-[#E2E8F0] bg-white px-4 py-2.5 text-[13px] font-semibold text-[#334155] hover:bg-[#F8FAFC] transition-colors shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
                       >
                         <Icon icon="tabler:file-text" className="text-lg" />
-                        Seleccionar plantilla
+                        Seleccionar política
                       </button>
                       <button
                         type="button"
@@ -500,7 +500,7 @@ const CreateCollectFormForm = ({ initialValues }: Props) => {
                     type="button"
                     onClick={() => setValue("policyTemplateId", "")}
                     className="ml-auto inline-flex items-center justify-center rounded-md p-1.5 text-[#64748B] hover:bg-white hover:text-[#0F172A] transition-colors"
-                    aria-label="Quitar plantilla"
+                    aria-label="Quitar política de tratamiento"
                   >
                     <Icon icon="tabler:x" className="text-lg" />
                   </button>

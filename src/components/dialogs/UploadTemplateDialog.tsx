@@ -93,7 +93,7 @@ const UploadTemplateDialog = ({ refresh }: Props) => {
           return toast.error(parseApiError(policyTemplateRes.error));
         }
 
-        toast.success("Plantilla generada desde el RAT creada");
+        toast.success("Política de tratamiento generada desde el RAT");
         setLoading(false);
         refresh();
         reset();
@@ -160,7 +160,7 @@ const UploadTemplateDialog = ({ refresh }: Props) => {
       }
 
       console.log("✅ Plantilla creada exitosamente");
-      toast.success("Plantilla de política creada");
+      toast.success("Política de tratamiento de datos personales creada");
       setLoading(false);
       refresh();
       reset();
@@ -267,7 +267,7 @@ const UploadTemplateDialog = ({ refresh }: Props) => {
             </div>
 
             <CustomInput
-              placeholder="Nombre de la plantilla"
+              placeholder="Nombre de la política de tratamiento"
               {...register("name")}
               error={errors.name as FieldError}
             />
@@ -285,9 +285,10 @@ const UploadTemplateDialog = ({ refresh }: Props) => {
             ) : (
               <div className="flex flex-col gap-3 rounded-lg border border-disabled bg-stone-50 p-4">
                 <p className="text-sm text-stone-600">
-                  Esta plantilla se generará automáticamente a partir de los
-                  tratamientos activos del RAT de tu empresa — se actualiza
-                  sola cuando el RAT cambia, no es un archivo fijo.
+                  Esta política de tratamiento de datos personales se generará
+                  automáticamente a partir de los tratamientos activos del RAT
+                  de tu empresa — se actualiza sola cuando el RAT cambia, no es
+                  un archivo fijo.
                 </p>
                 <Button
                   type="button"
@@ -310,7 +311,9 @@ const UploadTemplateDialog = ({ refresh }: Props) => {
               className="w-full"
               onClick={() => console.log("🔘 Button clicked")}
             >
-              {sourceType === "RAT_GENERATED" ? "Crear plantilla" : "Subir archivo"}
+              {sourceType === "RAT_GENERATED"
+                ? "Crear política"
+                : "Subir archivo"}
             </Button>
           </form>
         </div>

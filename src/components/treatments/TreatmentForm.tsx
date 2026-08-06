@@ -252,7 +252,11 @@ const TreatmentForm = ({
 
   const consentTemplateOptions = useMemo<CustomSelectOption<string>[]>(() => {
     const base: CustomSelectOption<string>[] = [
-      { value: "", title: "— Selecciona una plantilla de consentimiento —" },
+      {
+        value: "",
+        title: "— Selecciona una política de tratamiento —",
+      },
+
     ];
     for (const t of consentTemplates ?? []) {
       base.push({ value: t._id, title: t.name });
@@ -500,10 +504,10 @@ const TreatmentForm = ({
           {form.legalBasis === "CONSENT" && (
             <div className="flex flex-col gap-1">
               <CustomSelect
-                label="Plantilla de consentimiento *"
+                label="Política de tratamiento de datos personales *"
                 options={consentTemplateOptions}
                 value={form.consentTemplateId}
-                unselectedText="— Selecciona una plantilla de consentimiento —"
+                unselectedText="— Selecciona una política de tratamiento —"
                 onChange={(v) => patch("consentTemplateId", v)}
               />
               <p className="pl-2 text-xs text-[#8B97AB]">

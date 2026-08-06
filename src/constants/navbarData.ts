@@ -48,7 +48,7 @@ export const NAVBAR_DATA: NavbarData = [
     requiredPermission: "collect.create",
   },
   {
-    title: "Plantillas",
+    title: "Políticas de tratamiento",
     path: "/admin/plantillas",
     icon: "radix-icons:file-text",
     minRole: "USER",

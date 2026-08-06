@@ -75,12 +75,12 @@ const permissionsGroup = [
     ],
   }),
   definePermissionGroup({
-    title: "Plantillas",
+    title: "Políticas de tratamiento",
     groupName: "templates",
     permissions: [
-      { title: "Cargar Plantillas", name: "create" },
-      { title: "Visualizar Plantillas", name: "view" },
-      { title: "Eliminar Plantillas", name: "delete" },
+      { title: "Cargar políticas de tratamiento", name: "create" },
+      { title: "Visualizar políticas de tratamiento", name: "view" },
+      { title: "Eliminar políticas de tratamiento", name: "delete" },
     ],
   }),
   definePermissionGroup({

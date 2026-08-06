@@ -66,7 +66,7 @@ export const MODULE_TOURS: Record<ModuleTourId, ModuleTourDefinition> = {
         target: "recoleccion-filters",
         title: "Filtros",
         description:
-          "Segmenta entre formularios propios e importados desde plantillas según tu necesidad.",
+          "Segmenta entre formularios propios e importados desde políticas de tratamiento según tu necesidad.",
       },
       {
         target: "recoleccion-list",
@@ -78,13 +78,13 @@ export const MODULE_TOURS: Record<ModuleTourId, ModuleTourDefinition> = {
   },
   plantillas: {
     id: "plantillas",
-    title: "Tutorial de plantillas",
+    title: "Tutorial de políticas de tratamiento",
     steps: [
       {
         target: "plantillas-header",
-        title: "Plantillas de política",
+        title: "Políticas de tratamiento de datos personales",
         description:
-          "Aquí gestionas las políticas de tratamiento que tus titulares deben aceptar.",
+          "Aquí gestionas las políticas de tratamiento de datos personales que tus titulares deben aceptar.",
       },
       {
         target: "plantillas-actions",
@@ -94,9 +94,9 @@ export const MODULE_TOURS: Record<ModuleTourId, ModuleTourDefinition> = {
       },
       {
         target: "plantillas-list",
-        title: "Tus plantillas",
+        title: "Tus políticas",
         description:
-          "Consulta, previsualiza, renombra o elimina cada política. Úsalas luego en formularios y campañas.",
+          "Consulta, previsualiza, renombra o elimina cada política de tratamiento. Úsalas luego en formularios y campañas.",
       },
     ],
   },

@@ -385,7 +385,7 @@ export const TREATMENT_ACTIVATION_FIELD_LABELS: Record<string, string> = {
   // dataCategories incluye GEOLOCATION.
   geolocation: "Datos de geolocalización (duración y comunicación a terceros)",
   // Item CON-001/B8 (Art. 12 + Art. 14) — solo aplica cuando legalBasis === "CONSENT".
-  consentTemplateId: "Plantilla de consentimiento vinculada",
+  consentTemplateId: "Política de tratamiento vinculada",
 };
 
 // --- Historial de versiones (trazabilidad legal) ---
@@ -418,7 +418,7 @@ export const TREATMENT_VERSION_FIELD_LABELS: Record<string, string> = {
   purposeDetail: "Detalle de la finalidad",
   legalBasis: "Base legal",
   legalBasisJustification: "Justificación de la base legal",
-  consentTemplateId: "Plantilla de consentimiento vinculada",
+  consentTemplateId: "Política de tratamiento vinculada",
   retentionValue: "Duración de la retención",
   retentionUnit: "Unidad de la retención",
   retentionStartEvent: "Evento que inicia el conteo de la retención",

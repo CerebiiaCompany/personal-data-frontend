@@ -14,7 +14,7 @@ interface Props {
 const MODULE_NAMES: Record<keyof CompanyRolePermissions, string> = {
   dashboard: "Inicio / Dashboard",
   collect: "Recolección",
-  templates: "Plantillas",
+  templates: "Políticas de tratamiento",
   classification: "Clasificación",
   campaigns: "Campañas",
   audit: "Auditoría",
@@ -26,7 +26,7 @@ const MODULE_NAMES: Record<keyof CompanyRolePermissions, string> = {
 const MODULE_SHORT: Record<keyof CompanyRolePermissions, string> = {
   dashboard: "Inicio",
   collect: "Recolección",
-  templates: "Plantillas",
+  templates: "Políticas",
   classification: "Clasif.",
   campaigns: "Campañas",
   audit: "Auditoría",

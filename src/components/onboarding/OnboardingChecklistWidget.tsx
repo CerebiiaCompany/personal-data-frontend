@@ -29,7 +29,7 @@ const STEP_COPY: Record<
     title: "Sube o genera tu primera política de tratamiento",
     description:
       "Es el documento legal que tus titulares deben aceptar antes de entregarte sus datos.",
-    ctaLabel: "Ir a plantillas",
+    ctaLabel: "Ir a políticas de tratamiento",
     href: "/admin/plantillas",
   },
   firstCollectForm: {
