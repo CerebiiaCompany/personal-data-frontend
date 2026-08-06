@@ -4,6 +4,7 @@ import {
   PersonasCountryCode,
   PersonasDocTypeId,
 } from "@/types/personas.types";
+import { PlanFeature } from "@/utils/planFeatures.utils";
 
 export interface PersonasCountryContent {
   code: PersonasCountryCode;
@@ -127,6 +128,13 @@ export interface PersonasArcoAction {
    * a ese país. PORTABILITY solo existe (regulación sembrada) para Chile.
    */
   onlyCountry?: PersonasCountryCode;
+  /**
+   * Item 6: si se define, la acción solo se muestra cuando el plan de la
+   * empresa alcanza el tier mínimo de esta feature (hasFeature() en
+   * @/utils/planFeatures.utils). Módulos de Fase 2 futuros solo agregan este
+   * campo a su entrada — no requieren tocar el filtro que lo consume.
+   */
+  requiresFeature?: PlanFeature;
 }
 
 export const personasArcoActions: PersonasArcoAction[] = [
@@ -159,6 +167,19 @@ export const personasArcoActions: PersonasArcoAction[] = [
     label: "Portabilidad",
     icon: "tabler:package-export",
     hint: "Llevar una copia de tus datos a otro proveedor",
+    onlyCountry: "CL",
+    // Item 6: funcionalidad de Fase 2, solo disponible desde plan PROFESIONAL.
+    requiresFeature: "PORTABILITY",
+  },
+  {
+    value: "BLOCKING",
+    label: "Bloqueo preventivo",
+    icon: "tabler:lock",
+    hint: "Pausar el uso de tus datos mientras se resuelve otra solicitud",
+    // Art. 8 ter (Ley 21.719) — mismo criterio que PORTABILITY: solo existe
+    // regulación sembrada (arcoBlockingRegulation.seed.ts) para Chile,
+    // ningún documento de referencia describe un derecho equivalente en la
+    // Ley 1581 colombiana.
     onlyCountry: "CL",
   },
 ];
@@ -238,7 +259,9 @@ export const PERSONAS_COUNTRY_CONTENT: Record<
     code: "CL",
     label: "Chile",
     flag: "🇨🇱",
-    legalBadge: "Ley 19.628 · Ley 21.719",
+    // Ley 19.628 fue derogada; el marco vigente es la Ley 21.719 (mismo
+    // criterio que getDataProtectionLegalNotice en legalNotices.ts/.utils.ts).
+    legalBadge: "Ley 21.719 · Protección de Datos Personales",
     heroTitle: "Gestiona tus datos personales en",
     heroHighlight: "Chile con trazabilidad",
     heroDescription:
@@ -255,7 +278,7 @@ export const PERSONAS_COUNTRY_CONTENT: Record<
       {
         icon: "tabler:scale",
         label: "Marco legal",
-        value: "Ley 19.628 / 21.719",
+        value: "Ley 21.719",
       },
       {
         icon: "tabler:clock",
@@ -266,8 +289,11 @@ export const PERSONAS_COUNTRY_CONTENT: Record<
     ],
     responseDaysLabel: "plazo legal aplicable",
     legalReferences: [
-      { icon: "tabler:gavel", text: "Ley 19.628 de 1999" },
-      { icon: "tabler:file-text", text: "Ley 21.719 de 2024" },
+      { icon: "tabler:gavel", text: "Ley 21.719 de 2024" },
+      {
+        icon: "tabler:building-bank",
+        text: "Agencia de Protección de Datos Personales (APDP)",
+      },
       { icon: "tabler:shield-lock", text: "Derechos del titular" },
     ],
     faq: [
@@ -279,7 +305,7 @@ export const PERSONAS_COUNTRY_CONTENT: Record<
       {
         question: "¿Qué leyes aplican en Chile?",
         answer:
-          "La Ley 19.628 sobre protección de la vida privada y la Ley 21.719 que moderniza el marco de datos personales.",
+          "La Ley 21.719 sobre Protección de Datos Personales, que reemplazó a la anterior Ley 19.628.",
       },
       {
         question: "¿Qué documento debo usar?",

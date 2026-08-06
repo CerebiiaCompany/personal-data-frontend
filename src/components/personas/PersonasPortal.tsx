@@ -10,7 +10,9 @@ import PersonasFlowStepper from "@/components/personas/PersonasFlowStepper";
 import PersonasPortalQuickGuide from "@/components/personas/PersonasPortalQuickGuide";
 import PersonasRightsAttentionCard from "@/components/personas/PersonasRightsAttentionCard";
 import { personasArcoActions } from "@/constants/personasData";
+import { PERSONAS_COUNTRY_CONTENT } from "@/constants/personasCountryContent";
 import { personasTheme } from "@/constants/personasTheme";
+import { PersonasCountryCode } from "@/types/personas.types";
 import {
   arcoGetCompanyPolicy,
   arcoListCompanies,
@@ -35,7 +37,22 @@ import { Icon } from "@iconify/react/dist/iconify.js";
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
 import { getConsentStatusLabel } from "@/types/collectFormResponse.types";
+import { getJuridicaDocType } from "@/types/user.types";
+import { hasFeature } from "@/utils/planFeatures.utils";
 import { useCallback, useEffect, useState } from "react";
+
+/**
+ * Resuelve el país de la empresa (código ISO del backend) al contenido legal
+ * del portal para mostrar bandera + marco normativo aplicable. Fail-soft: si el
+ * país no viene o no está soportado, devuelve null y la UI oculta el badge.
+ */
+function getCompanyCountryContent(countryCode?: string) {
+  if (!countryCode) return null;
+  const code = countryCode.toUpperCase();
+  return code in PERSONAS_COUNTRY_CONTENT
+    ? PERSONAS_COUNTRY_CONTENT[code as PersonasCountryCode]
+    : null;
+}
 
 function requestStatusHint(status: string) {
   switch (status) {
@@ -93,6 +110,21 @@ const PersonasPortal = () => {
   const [loadingPolicyId, setLoadingPolicyId] = useState<string | null>(null);
 
   const selectedCompany = companies.find((c) => c.companyId === selectedCompanyId);
+
+  // Bug reportado: el header/footer del portal (usePersonasCountryContent)
+  // mostraba el país que el titular eligió en /personas/ingresar ANTES de
+  // identificarse — una selección global, previa, que no tiene por qué
+  // coincidir con el país real de la empresa cuyos datos está viendo. Una
+  // vez que hay una empresa seleccionada, su countryCode real (el que
+  // devuelve el backend, ARCO_getCompanies) es la fuente de verdad — no la
+  // elección inicial. Sin esto, un titular con datos en una empresa CL veía
+  // "Colombia" y "Ley 1581" en todo el portal si no cambió el toggle inicial.
+  useEffect(() => {
+    const realCountryCode = selectedCompany?.company?.countryCode;
+    if (realCountryCode === "CO" || realCountryCode === "CL") {
+      setCountry(realCountryCode);
+    }
+  }, [selectedCompany, setCountry]);
 
   const loadPortalData = useCallback(async () => {
     setLoading(true);
@@ -234,6 +266,9 @@ const PersonasPortal = () => {
             <ul className="space-y-3">
               {companies.map((entry) => {
                 const isSelected = selectedCompanyId === entry.companyId;
+                const countryContent = getCompanyCountryContent(
+                  entry.company.countryCode
+                );
                 return (
                   <li key={entry.companyId}>
                     <div
@@ -271,8 +306,29 @@ const PersonasPortal = () => {
                             </h3>
                             {entry.company.nit && (
                               <p className="text-sm text-zinc-500">
-                                NIT {entry.company.nit}
+                                {getJuridicaDocType(entry.company.countryCode)}{" "}
+                                {entry.company.nit}
                               </p>
+                            )}
+                            {countryContent && (
+                              <div
+                                className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-primary-50 bg-primary-50/60 px-2.5 py-1 text-xs text-primary-900"
+                                title={`Esta empresa se rige por: ${countryContent.legalBadge}`}
+                              >
+                                <span
+                                  aria-hidden
+                                  className="text-base leading-none"
+                                >
+                                  {countryContent.flag}
+                                </span>
+                                <span className="font-semibold">
+                                  {countryContent.label}
+                                </span>
+                                <span className="text-primary-300">·</span>
+                                <span className="text-primary-700">
+                                  {countryContent.legalBadge}
+                                </span>
+                              </div>
                             )}
                             <div className="mt-2 flex flex-wrap gap-2">
                               <span className="rounded-md bg-primary-50 px-2 py-0.5 text-xs text-primary-900">
@@ -336,8 +392,16 @@ const PersonasPortal = () => {
                                   // autoritativa del backend). Fail-closed: si
                                   // el país no viene, la acción restringida se
                                   // oculta en lugar de asumir un país por sesión.
-                                  !action.onlyCountry ||
-                                  action.onlyCountry === entry.company.countryCode
+                                  (!action.onlyCountry ||
+                                    action.onlyCountry === entry.company.countryCode) &&
+                                  // Item 6: gating por plan comercial (Fase 2).
+                                  // Fail-closed: sin tier conocido, la acción
+                                  // restringida se oculta.
+                                  (!action.requiresFeature ||
+                                    hasFeature(
+                                      entry.company.planTier,
+                                      action.requiresFeature
+                                    ))
                               )
                               .map((action) => (
                               <button
@@ -430,7 +494,9 @@ const PersonasPortal = () => {
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-medium text-zinc-500">
                         {req.company.name}
-                        {req.company.nit ? ` · NIT ${req.company.nit}` : ""}
+                        {req.company.nit
+                          ? ` · ${getJuridicaDocType(req.company.countryCode)} ${req.company.nit}`
+                          : ""}
                       </p>
                       <p className="mt-0.5 font-semibold text-primary-900">
                         Solicitud de{" "}
@@ -485,7 +551,7 @@ const PersonasPortal = () => {
                   {req.requestType === "ACCESS" &&
                     req.status === "RESOLVED" &&
                     req.accessReport && (
-                      <PersonasAccessReportPanel accessReport={req.accessReport} />
+                      <PersonasAccessReportPanel requestId={req.requestId} accessReport={req.accessReport} />
                     )}
                   {req.requestType === "PORTABILITY" &&
                     req.status === "RESOLVED" &&
@@ -508,6 +574,7 @@ const PersonasPortal = () => {
           companyId={selectedCompany.companyId}
           companyName={selectedCompany.company.name}
           requestType={dialogType}
+          myRequests={requests}
           onClose={() => setDialogType(null)}
           onSuccess={loadPortalData}
         />

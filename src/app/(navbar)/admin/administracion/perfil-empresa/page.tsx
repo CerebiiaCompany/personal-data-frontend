@@ -5,6 +5,7 @@ import { Icon } from "@iconify/react";
 
 import { useSessionStore } from "@/store/useSessionStore";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";
+import { getDataProtectionLegalNotice } from "@/utils/legalNotices.utils";
 
 import IdentificationSection from "@/components/company-profile/IdentificationSection";
 import LegalRepresentativeSection from "@/components/company-profile/LegalRepresentativeSection";
@@ -84,7 +85,9 @@ export default function CompanyProfilePage() {
             </h1>
             <p className="max-w-2xl text-[13px] leading-relaxed text-[#64748B] sm:text-sm">
               Completa y mantén actualizada la información de tu empresa para el
-              cumplimiento de la Ley 1581 de Protección de Datos.
+              cumplimiento de la{" "}
+              {getDataProtectionLegalNotice(profile?.countryCode).lawReference} de
+              Protección de Datos.
             </p>
           </div>
         </section>

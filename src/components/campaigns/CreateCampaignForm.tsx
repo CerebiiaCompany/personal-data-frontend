@@ -30,10 +30,10 @@ import {
   utcToLocalDate,
 } from "@/utils/date.utils";
 import { useCampaignAudience } from "@/hooks/useCampaignAudience";
-import { useAppSetting } from "@/hooks/useAppSetting";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
+import { useCompanyCreditsPricing } from "@/hooks/useCompanyCreditsPricing";
 import {
-  asFiniteNumber,
+  formatBillingCurrencyLabel,
   getCreditsPerMessage,
   getTotalCampaignCredits,
 } from "@/utils/campaignCredits.utils";
@@ -45,11 +45,7 @@ interface Props {
 
 const CreateCampaignForm = ({ initialValues }: Props) => {
   const companyId = useActiveCompanyId();
-  const trmCopSetting = useAppSetting("TRM_COP");
-  const smsCampaignPriceSetting = useAppSetting(
-    "SMS_CAMPAIGN_PRICE_PER_MESSAGE_MASIVAPP"
-  );
-  const emailCampaignPriceSetting = useAppSetting("EMAIL_CAMPAIGN_PRICE_PER_MESSAGE");
+  const creditsPricing = useCompanyCreditsPricing();
 
   const [loading, setLoading] = useState<boolean>(false);
   /** Evita doble envío (p. ej. doble clic) que duplica POST y choca con índice único en `name`. */
@@ -213,20 +209,21 @@ const CreateCampaignForm = ({ initialValues }: Props) => {
     }
   }, [campaignAudience.data]);
 
-  const trmCop = asFiniteNumber(trmCopSetting.data?.value);
-  const smsCampaignPrice = asFiniteNumber(smsCampaignPriceSetting.data?.value);
-  const emailCampaignPrice = asFiniteNumber(emailCampaignPriceSetting.data?.value);
+  const smsCampaignPrice = creditsPricing.data?.smsCampaignPricePerMessage;
+  const emailCampaignPrice = creditsPricing.data?.emailCampaignPricePerMessage;
+  const billingCurrency = formatBillingCurrencyLabel(
+    creditsPricing.data?.currency
+  );
+  const trmCop = creditsPricing.data?.trm;
 
   const smsCreditsPerMessage = getCreditsPerMessage({
     deliveryChannel: "SMS",
-    trmCop,
     smsCampaignPricePerMessage: smsCampaignPrice,
     emailCampaignPricePerMessage: emailCampaignPrice,
   });
 
   const emailCreditsPerMessage = getCreditsPerMessage({
     deliveryChannel: "EMAIL",
-    trmCop,
     smsCampaignPricePerMessage: smsCampaignPrice,
     emailCampaignPricePerMessage: emailCampaignPrice,
   });
@@ -238,7 +235,6 @@ const CreateCampaignForm = ({ initialValues }: Props) => {
 
   const selectedCreditsPerMessage = getCreditsPerMessage({
     deliveryChannel: selectedDeliveryChannel,
-    trmCop,
     smsCampaignPricePerMessage: smsCampaignPrice,
     emailCampaignPricePerMessage: emailCampaignPrice,
   });
@@ -466,9 +462,12 @@ const CreateCampaignForm = ({ initialValues }: Props) => {
               </b>{" "}
               por mensaje
             </p>
-            {trmCop != null && (
-              <p className="text-xs text-stone-500">TRM usada: {creditsFormatter.format(trmCop)}</p>
-            )}
+            <p className="text-xs text-stone-500">
+              Moneda: {billingCurrency}
+              {billingCurrency === "COP" && trmCop != null
+                ? ` · TRM: ${creditsFormatter.format(trmCop)}`
+                : ""}
+            </p>
           </div>
         </div>
       )}

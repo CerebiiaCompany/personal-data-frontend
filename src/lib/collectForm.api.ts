@@ -40,10 +40,20 @@ export async function getPublicCollectFormPrefill(
   );
 }
 
-export type PublicCollectFormPolicyUrlResponse = PolicyTemplateFileUrlResponse & {
+export type PublicCollectFormPolicyUrlResponse = Omit<
+  PolicyTemplateFileUrlResponse,
+  "file"
+> & {
+  // Ausente cuando source === "generated" (no hay archivo, ver abajo).
+  file?: PolicyTemplateFileUrlResponse["file"];
   policyTemplate: PolicyTemplateFileUrlResponse["policyTemplate"] & {
     versionLabel?: string;
   };
+  // Item 7: presente solo cuando la política es RAT_GENERATED — `url` sigue
+  // siendo el link legible de siempre (mismo endpoint HTML), `pdfUrl` es el
+  // extra para el botón de descarga en PDF.
+  source?: "generated";
+  pdfUrl?: string;
 };
 
 /** URL firmada de la política del formulario (sin sesión; no requiere cct). */

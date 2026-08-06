@@ -68,6 +68,18 @@ export async function updateCompanyPlan(
   return res;
 }
 
+export async function updateCompanyCountryCode(
+  companyId: string,
+  countryCode: string
+): Promise<APIResponse> {
+  const res = await customFetch(`/companies/${companyId}/country`, {
+    method: "PATCH",
+    body: JSON.stringify({ countryCode }),
+  });
+
+  return res;
+}
+
 export async function fetchCompanyCreditsByMonth(params: {
   year: number;
   month: number;

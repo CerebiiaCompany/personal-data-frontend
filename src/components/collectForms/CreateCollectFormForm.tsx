@@ -27,6 +27,7 @@ import { createCollectFormValidationSchema } from "@/validations/main.validation
 import { showDialog } from "@/utils/dialogs.utils";
 import { usePolicyTemplates } from "@/hooks/usePolicyTemplates";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
+import { useTreatments } from "@/hooks/useTreatments";
 import LoadingCover from "../layout/LoadingCover";
 import Link from "next/link";
 
@@ -42,6 +43,7 @@ function toFormDefaults(
       name: "",
       description: "",
       policyTemplateId: "",
+      treatmentId: "",
       marketingChannels: {
         SMS: true,
         EMAIL: false,
@@ -55,6 +57,7 @@ function toFormDefaults(
     name: initial.name,
     description: initial.description,
     policyTemplateId: initial.policyTemplateId,
+    treatmentId: initial.treatmentId ?? "",
     marketingChannels: {
       SMS: initial.marketingChannels.SMS,
       EMAIL: initial.marketingChannels.EMAIL,
@@ -72,6 +75,7 @@ function toFormDefaults(
 function toApiPayload(data: CreateCollectForm): CreateCollectForm {
   return {
     ...data,
+    treatmentId: data.treatmentId || null,
     marketingChannels: {
       ...data.marketingChannels,
       WHATSAPP: false,
@@ -112,10 +116,15 @@ const CreateCollectFormForm = ({ initialValues }: Props) => {
   const policyTemplates = usePolicyTemplates({
     companyId: companyId,
   });
+  // Item E (RF-73) — catálogo para vincular el formulario a un Treatment
+  // del RAT; pageSize alto porque, igual que policyTemplates, se espera un
+  // catálogo chico por empresa, no paginado en la UI.
+  const treatments = useTreatments({ companyId, pageSize: 200 });
 
   const marketingChannels = watch("marketingChannels");
   const questions = watch("questions");
   const policyTemplateId = watch("policyTemplateId");
+  const treatmentId = watch("treatmentId");
 
   const selectedTemplateName = useMemo(() => {
     if (!policyTemplates.data) return null;
@@ -517,6 +526,36 @@ const CreateCollectFormForm = ({ initialValues }: Props) => {
                 }
               />
             )}
+
+            {/* Item E (RF-73) — vínculo opcional al RAT. Cuando el
+                tratamiento vinculado trata geolocalización, el widget
+                público muestra InlineGeoNotice automáticamente (texto
+                derivado del RAT, no configurado acá). */}
+            <section className={clsx(innerSectionClass, "p-7 sm:p-8 flex flex-col gap-4")}>
+              <div>
+                <h2 className="text-[17px] font-bold text-[#0F172A]">
+                  Tratamiento vinculado (RAT)
+                </h2>
+                <p className="text-[13px] text-[#64748B] mt-1">
+                  Opcional. Si el tratamiento incluye geolocalización, el
+                  formulario público mostrará un aviso adicional al titular.
+                </p>
+              </div>
+              <CustomSelect
+                unselectedText="— Sin tratamiento vinculado —"
+                value={treatmentId ?? ""}
+                onChange={(v) =>
+                  setValue("treatmentId", v, { shouldDirty: true })
+                }
+                options={[
+                  { value: "", title: "— Sin tratamiento vinculado —" },
+                  ...(treatments.data ?? []).map((t) => ({
+                    value: t.id,
+                    title: t.name,
+                  })),
+                ]}
+              />
+            </section>
 
             {/* Preguntas personalizadas */}
             <section className={clsx(innerSectionClass, "p-7 sm:p-8 flex flex-col gap-5")}>

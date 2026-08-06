@@ -13,6 +13,9 @@ export const ARCO_DOC_TYPE_LABELS: Record<ArcoDocType, string> = {
   TI: "Tarjeta de identidad",
   NIT: "NIT",
   OTHER: "Otro",
+  RUT: "RUT",
+  CI: "Cédula de identidad",
+  PASSPORT: "Pasaporte",
 };
 
 export function formatArcoDateTime(iso?: string): string {

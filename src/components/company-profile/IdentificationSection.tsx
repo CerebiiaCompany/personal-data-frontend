@@ -13,6 +13,7 @@ import ProfileSectionCard from "./ProfileSectionCard";
 import { updateCompanyIdentification } from "@/lib/company.api";
 import { CompanyProfile } from "@/types/company.types";
 import { parseApiError } from "@/utils/parseApiError";
+import { getJuridicaDocType } from "@/types/user.types";
 
 const schema = z.object({
   company_name: z.string().optional(),
@@ -34,6 +35,7 @@ interface Props {
 
 const IdentificationSection = ({ companyId, profile }: Props) => {
   const [loading, setLoading] = React.useState(false);
+  const juridicaDocLabel = getJuridicaDocType(profile?.countryCode);
 
   const {
     register,
@@ -87,7 +89,7 @@ const IdentificationSection = ({ companyId, profile }: Props) => {
     <ProfileSectionCard
       icon="tabler:building-skyscraper"
       title="Identificación de la empresa"
-      description="Nombre, NIT, dirección, ciudad, departamento, teléfonos, sitio web y correo institucional."
+      description={`Nombre, ${juridicaDocLabel}, dirección, ciudad, departamento, teléfonos, sitio web y correo institucional.`}
       onSubmit={handleSubmit(onSubmit)}
       loading={loading}
     >
@@ -99,8 +101,10 @@ const IdentificationSection = ({ companyId, profile }: Props) => {
           error={errors.company_name}
         />
         <CustomInput
-          label="NIT"
-          placeholder="Ej. 820507899-5"
+          label={juridicaDocLabel}
+          placeholder={
+            juridicaDocLabel === "RUT" ? "Ej. 76.123.456-7" : "Ej. 820507899-5"
+          }
           {...register("nit")}
           error={errors.nit}
         />

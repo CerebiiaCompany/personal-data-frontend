@@ -34,7 +34,9 @@ interface Props {
 const CreatePaymentForm = ({ initialValues }: Props) => {
   const user = useSessionStore((store) => store.user);
   const [loading, setLoading] = useState<boolean>(false);
-  const companies = useCompanies({});
+  // El selector necesita todas las empresas, no solo la primera página del
+  // backend (que por defecto devuelve 10). Pedimos el máximo permitido.
+  const companies = useCompanies({ pageSize: 100 });
 
   const {
     register,

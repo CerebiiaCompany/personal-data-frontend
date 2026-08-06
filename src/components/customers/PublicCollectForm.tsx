@@ -19,7 +19,17 @@ import {
   buildCollectFormUserPayload,
   parseNitDocNumber,
 } from "@/utils/collectFormUser.utils";
-import { DocType, docTypesOptions } from "@/types/user.types";
+import {
+  DocType,
+  getDocTypeOptionsByCountry,
+  getJuridicaDocType,
+} from "@/types/user.types";
+import {
+  formatRutDisplay,
+  isValidRut,
+  normalizeRut,
+  RUT_INVALID_MESSAGE,
+} from "@/utils/rutValidator";
 import { CustomSelectOption } from "@/types/forms.types";
 import CustomInput from "../forms/CustomInput";
 import CustomSelect from "../forms/CustomSelect";
@@ -32,9 +42,10 @@ import { generateOtpCode, validateOtpCode, resendOtpCodeByEmail } from "@/lib/on
 import { getPublicCollectFormPolicyUrl } from "@/lib/collectForm.api";
 import LoadingCover from "../layout/LoadingCover";
 import { CampaignDeliveryChannel } from "@/types/campaign.types";
-import { useCompanyCreditsPricing } from "@/hooks/useCompanyCreditsPricing";
 import { checkActiveSession } from "@/lib/auth.api";
 import ReauthSessionModal from "../dialogs/ReauthSessionModal";
+import InternationalTransferNotice from "./InternationalTransferNotice";
+import InlineGeoNotice from "./InlineGeoNotice";
 
 interface Props {
   data: CollectForm;
@@ -70,10 +81,22 @@ const phoneCountryCodeOptions: CustomSelectOption<PhoneCountryCode>[] = [
 ];
 
 const PublicCollectForm = ({ data, initialValues }: Props) => {
+  // País de la empresa dueña del formulario — determina tipos de documento
+  // (solo RUT en CL vs CC/TI/OTHER en CO) y el código telefónico por defecto
+  // (+56 vs +57). Nunca fijo: mismo patrón que InternationalTransferNotice.
+  const companyCountryCode = data.company?.countryCode;
+  const docTypeOptionsForCountry = getDocTypeOptionsByCountry(companyCountryCode);
+  const defaultPhoneCountryCode: PhoneCountryCode =
+    companyCountryCode === "CL" ? "56" : "57";
+  const juridicaDocType = getJuridicaDocType(companyCountryCode);
+  const juridicaDocLabel = companyCountryCode === "CL" ? "RUT" : "NIT";
+
   const [personKind, setPersonKind] = useState<PersonKind>("NATURAL");
   const [pendingOtpId, setPendingOtpId] = useState<string | null>(null);
   const [fullName, setFullName] = useState<string>("");
   const [policyUrl, setPolicyUrl] = useState<string | null>(null);
+  // Item 7: solo se llena cuando la política del formulario es RAT_GENERATED.
+  const [policyPdfUrl, setPolicyPdfUrl] = useState<string | null>(null);
   const [formKey, setFormKey] = useState<number>(0); // Para forzar el reseteo del formulario
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false); // Estado de loading para el botón
   const [isSendingOtp, setIsSendingOtp] = useState<boolean>(false); // Estado de loading para envío de OTP
@@ -85,7 +108,6 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
   // actual. Se mantiene igual entre reintentos (automáticos o manuales) para que
   // el backend deduplique, y se renueva solo al iniciar un nuevo registro.
   const idempotencyKeyRef = useRef<string>(generateIdempotencyKey());
-  const otpPricing = useCompanyCreditsPricing();
   const questions = data.questions ?? [];
   const fields: {
     [key: string]: {
@@ -163,34 +185,65 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
   // Memoize schema and default values from `fields`
   const schema = React.useMemo(() => buildSchemaFromFields(fields), [data]);
 
-  const naturalDocNumber = z.preprocess(
-    (v) => (v === "" ? undefined : v),
-    z.coerce.number("Número de documento inválido")
+  const isChile = companyCountryCode === "CL";
+
+  // Chile: RUT con dígito verificador módulo 11 (0-9 o K). No se coerción a
+  // Number — eso rompería cualquier RUT terminado en K. Colombia mantiene
+  // el comportamiento numérico histórico.
+  const chileRutDocNumber = z.preprocess(
+    (v) => (typeof v === "string" || typeof v === "number" ? String(v) : v),
+    z
+      .string()
+      .min(1, "Documento requerido")
+      .refine((v) => isValidRut(v), { message: RUT_INVALID_MESSAGE })
+      .transform((v) => normalizeRut(v))
   );
 
-  const juridicaDocNumber = z.preprocess((v) => {
-    if (v === "" || v === undefined || v === null) return undefined;
-    const parsed = parseNitDocNumber(String(v));
-    return Number.isNaN(parsed) ? undefined : parsed;
-  }, z.number("Número de NIT inválido"));
+  const naturalDocNumber = isChile
+    ? chileRutDocNumber
+    : z.preprocess(
+        (v) => (v === "" ? undefined : v),
+        z.coerce.number("Número de documento inválido")
+      );
+
+  const juridicaDocNumber = isChile
+    ? chileRutDocNumber
+    : z.preprocess((v) => {
+        if (v === "" || v === undefined || v === null) return undefined;
+        const parsed = parseNitDocNumber(String(v));
+        return Number.isNaN(parsed) ? undefined : parsed;
+      }, z.number(`Número de ${juridicaDocLabel} inválido`));
+
+  // 9 dígitos para teléfonos chilenos, 10 para colombianos (y cualquier otro
+  // país no reconocido, comportamiento histórico).
+  const phoneDigitCount = isChile ? 9 : 10;
 
   const sharedUserFields = {
     email: z.email("Correo inválido").min(1, "Este campo es obligatorio"),
     phone: z.preprocess(
       (v: string) =>
         typeof v === "string" ? v.replace(/[^\d]/g, "") : (v as string),
-      z.string().regex(/^\d{10}$/, "Ingresa 10 dígitos (solo números)")
+      z
+        .string()
+        .regex(
+          new RegExp(`^\\d{${phoneDigitCount}}$`),
+          `Ingresa ${phoneDigitCount} dígitos (solo números)`
+        )
     ),
     phoneCountryCode: z.string().min(1, "Código de país requerido"),
   };
 
   const validationSchema = React.useMemo(() => {
+    const naturalDocTypeValues = docTypeOptionsForCountry.options.map(
+      (o) => o.value
+    ) as [DocType, ...DocType[]];
+
     const userSchema =
       personKind === "JURIDICA"
         ? z.object({
             ...sharedUserFields,
             docNumber: juridicaDocNumber,
-            docType: z.literal("NIT"),
+            docType: z.literal(juridicaDocType),
             razonSocial: z.string().min(1, "Este campo es obligatorio"),
             name: z.string().min(1, "Este campo es obligatorio"),
             lastName: z.string().min(1, "Este campo es obligatorio"),
@@ -200,7 +253,7 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
         : z.object({
             ...sharedUserFields,
             docNumber: naturalDocNumber,
-            docType: z.enum(["CC", "TI", "OTHER"]),
+            docType: z.enum(naturalDocTypeValues),
             name: z.string().min(1, "Este campo es obligatorio"),
             lastName: z.string().min(1, "Este campo es obligatorio"),
             age: z.preprocess(
@@ -220,7 +273,7 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
       otpCode: z.string().min(1, "El código OTP es obligatorio"),
       otpCodeId: z.string().optional(),
     });
-  }, [personKind, schema]);
+  }, [personKind, schema, companyCountryCode]);
 
   const dynamicDefaultValues = React.useMemo(() => {
     return Object.fromEntries(
@@ -241,14 +294,14 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
           };
         }
       }
-      // Si no se encuentra código, asumir que ya está en formato sin código y usar 57 por defecto
+      // Si no se encuentra código, asumir que ya está en formato sin código y usar el código por defecto del país de la empresa
       return {
         phone: phone.length > 10 ? phone.substring(phone.length - 10) : phone,
-        phoneCountryCode: "57",
+        phoneCountryCode: defaultPhoneCountryCode,
       };
     }
-    return { phone: "", phoneCountryCode: "57" };
-  }, [initialValues]);
+    return { phone: "", phoneCountryCode: defaultPhoneCountryCode };
+  }, [initialValues, defaultPhoneCountryCode]);
 
   const resolver = React.useMemo(
     () => zodResolver(validationSchema),
@@ -279,8 +332,8 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
             phoneCountryCode: getInitialPhoneData.phoneCountryCode,
           }
         : {
-            docType: "CC",
-            phoneCountryCode: "57",
+            docType: docTypeOptionsForCountry.defaultValue,
+            phoneCountryCode: defaultPhoneCountryCode,
             razonSocial: "",
           },
       otpCode: "",
@@ -296,11 +349,11 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
     setValue("otpCodeId", "");
 
     if (kind === "JURIDICA") {
-      setValue("user.docType", "NIT" as unknown as DocType);
+      setValue("user.docType", juridicaDocType);
       setValue("user.age", undefined as unknown as number);
       setValue("user.gender", undefined as UserGender | undefined);
     } else {
-      setValue("user.docType", "CC");
+      setValue("user.docType", docTypeOptionsForCountry.defaultValue);
       setValue("user.razonSocial", "");
     }
   };
@@ -315,9 +368,9 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
       data: dynamicDefaultValues,
       dataProcessing: false,
       user: {
-        docType: "CC" as DocType,
+        docType: docTypeOptionsForCountry.defaultValue,
         docNumber: undefined,
-        phoneCountryCode: "57",
+        phoneCountryCode: defaultPhoneCountryCode,
         phone: "",
         name: "",
         lastName: "",
@@ -373,7 +426,8 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
 
     try {
       // Concatenar código de país con el número de teléfono
-      const phoneCountryCode = watch("user.phoneCountryCode") || "57";
+      const phoneCountryCode =
+        watch("user.phoneCountryCode") || defaultPhoneCountryCode;
       const fullPhoneNumber = `${phoneCountryCode}${formData.user.phone}`;
 
       // Validar el código OTP (ahora es obligatorio)
@@ -394,7 +448,11 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
           ? fullPhoneNumber
           : (formData.user.email as string);
 
-      const userPayload = buildCollectFormUserPayload(formData.user, personKind);
+      const userPayload = buildCollectFormUserPayload(
+        formData.user,
+        personKind,
+        companyCountryCode
+      );
 
       const res = await registerCollectFormResponse(
         data._id,
@@ -434,22 +492,13 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
     }
   }
 
-  const formatPricing = (value?: number) => {
-    if (typeof value !== "number" || Number.isNaN(value)) return "—";
-    // Importante: en es-CO el separador decimal es ",".
-    // Evitamos `toFixed` (que usa ".") porque visualmente parece miles (ej: 10.000).
-    return new Intl.NumberFormat("es-CO", {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    }).format(value);
-  };
-
   async function createOtpCode(channel: CampaignDeliveryChannel) {
     // Evitar doble envío si ya hay uno en curso.
     if (isSendingOtp) return;
 
     const phone = watch("user.phone");
-    const phoneCountryCode = watch("user.phoneCountryCode") || "57";
+    const phoneCountryCode =
+      watch("user.phoneCountryCode") || defaultPhoneCountryCode;
     const email = watch("user.email");
 
     // Validaciones síncronas (baratas) ANTES de marcar loading, para no mostrar
@@ -589,6 +638,7 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
         }
 
         setPolicyUrl(res.data.url);
+        setPolicyPdfUrl(res.data.source === "generated" ? res.data.pdfUrl ?? null : null);
       } catch (error) {
         console.error("Error al obtener URL de la política:", error);
         toast.error("Error al obtener la URL del archivo");
@@ -637,18 +687,18 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
                   <span className="font-semibold text-blue-900">
                     Persona natural seleccionada:
                   </span>{" "}
-                  completa tus nombres, apellidos, tipo y número de documento
-                  (C.C., T.I., etc.), género y edad. Debes ser tú quien autoriza
-                  el tratamiento de tus datos personales.
+                  {isChile
+                    ? "completa tus nombres, apellidos, RUT, género y edad. Debes ser tú quien autoriza el tratamiento de tus datos personales."
+                    : "completa tus nombres, apellidos, tipo y número de documento (C.C., T.I., etc.), género y edad. Debes ser tú quien autoriza el tratamiento de tus datos personales."}
                 </p>
               ) : (
                 <p className="text-sm text-blue-800 leading-relaxed border-t border-blue-200/80 pt-2">
                   <span className="font-semibold text-blue-900">
                     Persona jurídica seleccionada:
                   </span>{" "}
-                  ingresa la razón social y el NIT de la empresa, y los nombres
-                  y apellidos del representante legal que registra el
-                  consentimiento en nombre de la organización.
+                  ingresa la razón social y el {juridicaDocLabel} de la empresa,
+                  y los nombres y apellidos del representante legal que
+                  registra el consentimiento en nombre de la organización.
                 </p>
               )}
             </div>
@@ -678,20 +728,51 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
             error={errors.user?.lastName}
           />
         </div>
-        <div className="flex gap-5">
-          <div>
-            <CustomSelect
-              label="Tipo de documento"
-              options={docTypesOptions}
-              value={watch("user.docType")}
-              onChange={(value) => setValue("user.docType", value)}
+        <div className="flex flex-col gap-1">
+          <div className="flex gap-5">
+            {!isChile ? (
+              <div>
+                <CustomSelect
+                  label="Tipo de documento"
+                  options={docTypeOptionsForCountry.options}
+                  value={watch("user.docType")}
+                  onChange={(value) => setValue("user.docType", value)}
+                />
+              </div>
+            ) : (
+              <CustomInput
+                label="Tipo de documento"
+                value="RUT"
+                readOnly
+                tabIndex={-1}
+                className="max-w-[140px] flex-none"
+              />
+            )}
+            <CustomInput
+              label={isChile ? "RUT" : "Número de documento"}
+              name="user.docNumber"
+              value={String(watch("user.docNumber") ?? "")}
+              placeholder={isChile ? "Ej. 12.345.678-5" : "Ej. 1234567890"}
+              autoComplete="off"
+              spellCheck={false}
+              onChange={(e) => {
+                const next = isChile
+                  ? formatRutDisplay(e.target.value)
+                  : e.target.value;
+                setValue("user.docNumber", next as never, {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                });
+              }}
+              error={errors.user?.docNumber as FieldError}
             />
           </div>
-          <CustomInput
-            label="Número de documento"
-            {...register("user.docNumber")}
-            error={errors.user?.docNumber as FieldError}
-          />
+          {isChile && !errors.user?.docNumber && (
+            <p className="pl-2 text-xs text-stone-400">
+              Formato: números + guion + dígito verificador (0-9 o K). Ejemplo:{" "}
+              12.345.678-5
+            </p>
+          )}
         </div>
 
         <div className="flex gap-5">
@@ -755,14 +836,29 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
               />
             </div>
             <CustomInput
-              label="NIT"
-              {...register("user.docNumber")}
-              placeholder="Ej. 900123456 o 900123456-7"
+              label={juridicaDocLabel}
+              name="user.docNumber"
+              value={String(watch("user.docNumber") ?? "")}
+              placeholder={
+                isChile ? "Ej. 76.123.456-7" : "Ej. 900123456 o 900123456-7"
+              }
+              autoComplete="off"
+              spellCheck={false}
+              onChange={(e) => {
+                const next = isChile
+                  ? formatRutDisplay(e.target.value)
+                  : e.target.value;
+                setValue("user.docNumber", next as never, {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                });
+              }}
               error={errors.user?.docNumber as FieldError}
             />
             <p className="text-xs text-stone-500 -mt-2 pl-2">
-              Ingresa el NIT con o sin dígito de verificación; se enviará solo
-              el número principal.
+              {isChile
+                ? "RUT de la empresa con dígito verificador (módulo 11). La letra K es válida cuando el cálculo da 10."
+                : `Ingresa el ${juridicaDocLabel} con o sin dígito de verificación; se enviará solo el número principal.`}
             </p>
           </>
         )}
@@ -779,7 +875,10 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
             <div className="w-32 flex-shrink-0">
               <CustomSelect<PhoneCountryCode>
                 label="Código"
-                value={(watch("user.phoneCountryCode") || "57") as PhoneCountryCode}
+                value={
+                  (watch("user.phoneCountryCode") ||
+                    defaultPhoneCountryCode) as PhoneCountryCode
+                }
                 onChange={(value) => setValue("user.phoneCountryCode", value)}
                 options={phoneCountryCodeOptions}
                 unselectedText="Código"
@@ -851,24 +950,6 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
                   ? "Se enviará un código al teléfono ingresado."
                   : "Se enviará un código al correo ingresado."}
               </div>
-
-              {otpPricing.loading && (
-                <div className="relative w-20 h-4">
-                  <LoadingCover size="sm" />
-                </div>
-              )}
-
-              {!otpPricing.loading && otpPricing.data && (
-                <div className="text-xs text-stone-600">
-                  <span className={otpChannel === "SMS" ? "font-semibold text-primary-900" : ""}>
-                    SMS: COP {formatPricing(otpPricing.data.smsPricePerMessage)} / mensaje
-                  </span>
-                  <span className="mx-2 text-stone-400">·</span>
-                  <span className={otpChannel === "EMAIL" ? "font-semibold text-primary-900" : ""}>
-                    Correo: COP {formatPricing(otpPricing.data.emailPricePerMessage)} / mensaje
-                  </span>
-                </div>
-              )}
             </div>
           </div>
           <div className="flex items-end gap-3">
@@ -923,24 +1004,42 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
             </div>
           )}
         </div>
+        {/* Item E (RF-73) — ANTES del checkbox de consentimiento, a
+            propósito: es un aviso que debe leerse antes de aceptar, no
+            junto a la política general. */}
+        <InlineGeoNotice notice={data.geolocationNotice} />
+
         {policyUrl ? (
-          <CustomCheckbox
-            {...register("dataProcessing")}
-            label={
-              <p>
-                Acepto la{" "}
-                <a 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  href={policyUrl} 
-                  className="underline text-primary-600 hover:text-primary-800 transition-colors font-medium"
-                >
-                  política de tratamiento de datos personales.
-                </a>
-              </p>
-            }
-            error={errors.dataProcessing as FieldError}
-          />
+          <>
+            <CustomCheckbox
+              {...register("dataProcessing")}
+              label={
+                <p>
+                  Acepto la{" "}
+                  <a
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    href={policyUrl}
+                    className="underline text-primary-600 hover:text-primary-800 transition-colors font-medium"
+                  >
+                    política de tratamiento de datos personales.
+                  </a>
+                </p>
+              }
+              error={errors.dataProcessing as FieldError}
+            />
+            {policyPdfUrl && (
+              <a
+                href={policyPdfUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex w-fit items-center gap-1.5 text-xs text-primary-600 hover:text-primary-800 transition-colors underline"
+              >
+                <Icon icon="tabler:file-type-pdf" className="text-sm" />
+                Descargar política en PDF
+              </a>
+            )}
+          </>
         ) : data.policyTemplateFile ? (
           <div className="w-10 h-10 relative">
             <LoadingCover size="sm" />
@@ -954,9 +1053,11 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
         )}
       </div>
 
+      <InternationalTransferNotice countryCode={data.company?.countryCode} />
+
       <div className="flex gap-4 mt-8 justify-center">
-        <Button 
-          className="w-full max-w-lg" 
+        <Button
+          className="w-full max-w-lg"
           type="submit"
           loading={isSubmitting}
           disabled={isSubmitting || !pendingOtpId || !isValid}

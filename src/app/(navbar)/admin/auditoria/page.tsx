@@ -3,6 +3,7 @@
 import AuditLogsTable from "@/components/audit/AuditLogsTable";
 import Button from "@/components/base/Button";
 import Pagination from "@/components/base/Pagination";
+import ModuleHelpButton from "@/components/tour/ModuleHelpButton";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useCompanyActionLogs } from "@/hooks/useCompanyActionLogs";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -87,15 +88,21 @@ export default function AuditoriaPage() {
   return (
     <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col bg-[#F8FAFC]">
       <div className="w-full px-5 pt-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
-        <header className="rounded-2xl border border-[#E8EDF7] bg-white px-5 py-5 shadow-[0_2px_12px_rgba(15,35,70,0.04)] sm:px-6 sm:py-6">
+        <header
+          data-tour="auditoria-header"
+          className="rounded-2xl border border-[#E8EDF7] bg-white px-5 py-5 shadow-[0_2px_12px_rgba(15,35,70,0.04)] sm:px-6 sm:py-6"
+        >
           <div className="flex flex-col gap-4">
-            <nav className="flex flex-wrap items-center gap-2 text-sm text-[#64748B]">
-              <Link href="/admin" className="hover:underline">
-                Inicio
-              </Link>
-              <Icon icon="tabler:chevron-right" className="text-base text-[#94A3B8]" />
-              <span className="font-semibold text-[#1A2B5B]">Auditoría</span>
-            </nav>
+            <div className="flex items-start justify-between gap-3">
+              <nav className="flex flex-wrap items-center gap-2 text-sm text-[#64748B]">
+                <Link href="/admin" className="hover:underline">
+                  Inicio
+                </Link>
+                <Icon icon="tabler:chevron-right" className="text-base text-[#94A3B8]" />
+                <span className="font-semibold text-[#1A2B5B]">Auditoría</span>
+              </nav>
+              <ModuleHelpButton tourId="auditoria" />
+            </div>
             <div className="space-y-2">
               <h1 className="text-[26px] font-bold leading-tight tracking-tight text-[#1A2B5B] sm:text-[28px]">
                 Auditoría
@@ -109,7 +116,10 @@ export default function AuditoriaPage() {
       </div>
 
       <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col px-5 py-6 sm:px-6 sm:py-7 lg:px-8 lg:py-8 xl:px-10 2xl:px-12">
-        <section className="rounded-2xl border border-[#E8EDF7] bg-white p-4 shadow-[0_2px_12px_rgba(15,35,70,0.04)] sm:p-5">
+        <section
+          data-tour="auditoria-filters"
+          className="rounded-2xl border border-[#E8EDF7] bg-white p-4 shadow-[0_2px_12px_rgba(15,35,70,0.04)] sm:p-5"
+        >
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#EEF3FF] text-primary-700">
@@ -224,6 +234,7 @@ export default function AuditoriaPage() {
 
         <section
           id="audit-table-container"
+          data-tour="auditoria-table"
           className="mt-4 flex w-full min-w-0 flex-col overflow-visible rounded-2xl border border-[#E8EDF7] bg-white shadow-[0_2px_12px_rgba(15,35,70,0.04)]"
         >
           <div className="overflow-visible p-4 sm:p-5">

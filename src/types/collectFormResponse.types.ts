@@ -6,7 +6,9 @@ export type CollectFormDocType = DocType | "NIT";
 export const parseCollectFormDocTypeToString = (type: CollectFormDocType): string => {
   if (type === "NIT") return "NIT";
   return (
-    { CC: "C.C.", TI: "T.I.", OTHER: "Otro" }[type] ?? "Tipo de documento inválido"
+    { CC: "C.C.", TI: "T.I.", OTHER: "Otro", RUT: "RUT", CI: "Cédula de identidad" }[
+      type
+    ] ?? "Tipo de documento inválido"
   );
 };
 
@@ -132,7 +134,8 @@ export interface CollectFormPrefill {
 
 export interface CollectFormResponseUserNatural {
   docType: DocType;
-  docNumber: number;
+  /** String para RUT chileno (puede terminar en K); number para CC/TI/NIT CO. */
+  docNumber: string | number;
   name: string;
   lastName: string;
   age: number;
@@ -142,8 +145,10 @@ export interface CollectFormResponseUserNatural {
 }
 
 export interface CollectFormResponseUserJuridica {
-  docType: Extract<CollectFormDocType, "NIT">;
-  docNumber: number;
+  // NIT (CO) o RUT (CL) — ver getJuridicaDocType en user.types.ts.
+  docType: Extract<CollectFormDocType, "NIT" | "RUT">;
+  /** String para RUT chileno (puede terminar en K); number para NIT CO. */
+  docNumber: string | number;
   razonSocial: string;
   name: string;
   lastName: string;

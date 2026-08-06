@@ -5,6 +5,7 @@ import Button from "@/components/base/Button";
 import LoadingCover from "@/components/layout/LoadingCover";
 import { showApiErrorToast } from "@/components/feedback/ApiErrorToast";
 import {
+  downloadArcoAccessReportPdf,
   fetchArcoAccessReport,
   respondArcoRequest,
 } from "@/lib/arcoAdmin.api";
@@ -16,6 +17,7 @@ import {
 import {
   chileOfficerFieldRequired,
   EMPTY_PROCESSING_PURPOSE,
+  getMissingDataBannerMessage,
   getMissingOverrideFields,
   getOverrideDescription,
   getResolvedAccessReport,
@@ -54,6 +56,7 @@ const ArcoAccessRespondDialog = ({
   const [loadingDraft, setLoadingDraft] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [finalStatus, setFinalStatus] = useState<"RESOLVED" | "REJECTED">(
     "RESOLVED"
   );
@@ -271,6 +274,15 @@ const ArcoAccessRespondDialog = ({
     onClose();
   }
 
+  async function handleDownloadPdf() {
+    setDownloadingPdf(true);
+    const res = await downloadArcoAccessReportPdf(companyId, requestId);
+    setDownloadingPdf(false);
+    if (res.error) {
+      showApiErrorToast(res.error, res.error.status);
+    }
+  }
+
   return (
     <div
       className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-4 sm:items-center"
@@ -319,7 +331,12 @@ const ArcoAccessRespondDialog = ({
               </p>
               <ArcoAccessReportPreview
                 report={reportToShow}
-                showOfficerSection={readOnly}
+                // Item ARCO-007/ARCO-008: thirdParties/retentionPeriod/
+                // automatedDecisions ahora pueden llegar autocompletados
+                // desde el RAT (buildAccessReportAutoData) incluso ANTES de
+                // resolver — se muestran siempre que existan (los guards
+                // internos del componente ya ocultan lo vacío).
+                showOfficerSection
                 showDataOrigin={
                   readOnly || !showDataOriginOverride
                 }
@@ -337,8 +354,7 @@ const ArcoAccessRespondDialog = ({
                 icon="tabler:info-circle"
                 className="mt-0.5 shrink-0 text-base"
               />
-              Algunos datos no pudieron autocompletarse (registro antiguo). Complétalos
-              en la sección del oficial.
+              {getMissingDataBannerMessage(missingOverrides)}
             </p>
           )}
 
@@ -402,17 +418,12 @@ const ArcoAccessRespondDialog = ({
                         Origen de los datos{" "}
                         <span className="text-red-500">*</span>
                       </label>
-                      {getOverrideDescription(
-                        officerFields?.missingDataOverrides,
-                        "dataOriginOverride"
-                      ) && (
-                        <p className="text-xs text-[#64748B]">
-                          {getOverrideDescription(
-                            officerFields?.missingDataOverrides,
-                            "dataOriginOverride"
-                          )}
-                        </p>
-                      )}
+                      <p className="text-xs text-[#64748B]">
+                        {getOverrideDescription(
+                          officerFields?.missingDataOverrides,
+                          "dataOriginOverride"
+                        )}
+                      </p>
                       {dataOriginHint &&
                         !isArcoDataOriginFromSystem(autoPopulated?.dataOriginRaw) && (
                           <p className="rounded-xl border border-amber-200/80 bg-amber-50/80 px-3 py-2 text-xs text-amber-950">
@@ -435,17 +446,12 @@ const ArcoAccessRespondDialog = ({
                         Estado del consentimiento{" "}
                         <span className="text-red-500">*</span>
                       </label>
-                      {getOverrideDescription(
-                        officerFields?.missingDataOverrides,
-                        "consentStatusOverride"
-                      ) && (
-                        <p className="text-xs text-[#64748B]">
-                          {getOverrideDescription(
-                            officerFields?.missingDataOverrides,
-                            "consentStatusOverride"
-                          )}
-                        </p>
-                      )}
+                      <p className="text-xs text-[#64748B]">
+                        {getOverrideDescription(
+                          officerFields?.missingDataOverrides,
+                          "consentStatusOverride"
+                        )}
+                      </p>
                       <textarea
                         value={consentStatusOverride}
                         onChange={(e) =>
@@ -464,17 +470,12 @@ const ArcoAccessRespondDialog = ({
                         Finalidades del tratamiento{" "}
                         <span className="text-red-500">*</span>
                       </label>
-                      {getOverrideDescription(
-                        officerFields?.missingDataOverrides,
-                        "processingPurposesOverride"
-                      ) && (
-                        <p className="text-xs text-[#64748B]">
-                          {getOverrideDescription(
-                            officerFields?.missingDataOverrides,
-                            "processingPurposesOverride"
-                          )}
-                        </p>
-                      )}
+                      <p className="text-xs text-[#64748B]">
+                        {getOverrideDescription(
+                          officerFields?.missingDataOverrides,
+                          "processingPurposesOverride"
+                        )}
+                      </p>
                       {processingPurposesOverride.map((row, index) => (
                         <div
                           key={index}
@@ -689,14 +690,24 @@ const ArcoAccessRespondDialog = ({
 
         <div className="shrink-0 border-t border-[#EEF2F8] px-6 py-4">
           {readOnly ? (
-            <Button
-              type="button"
-              hierarchy="secondary"
-              onClick={onClose}
-              className="w-full sm:ml-auto sm:w-auto"
-            >
-              Cerrar
-            </Button>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button
+                type="button"
+                hierarchy="secondary"
+                onClick={onClose}
+              >
+                Cerrar
+              </Button>
+              <Button
+                type="button"
+                hierarchy="primary"
+                loading={downloadingPdf}
+                onClick={handleDownloadPdf}
+                startContent={<Icon icon="tabler:download" />}
+              >
+                Descargar informe PDF
+              </Button>
+            </div>
           ) : (
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <Button

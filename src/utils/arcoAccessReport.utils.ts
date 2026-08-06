@@ -48,11 +48,49 @@ export function needsProcessingPurposesOverride(
   return missing.has("processingPurposesOverride");
 }
 
+const FRIENDLY_OVERRIDE_DESCRIPTIONS: Record<ArcoMissingOverrideField, string> = {
+  dataOriginOverride:
+    "Indica cómo se obtuvieron los datos (ej: formulario físico en tienda, campaña 2021).",
+  consentStatusOverride:
+    "Describe el estado del consentimiento en lenguaje claro (ej: otorgado verbalmente antes del sistema digital).",
+  processingPurposesOverride:
+    "Completa tipo de dato y finalidad. Lo ideal es que vengan del RAT (tratamientos ACTIVE).",
+};
+
 export function getOverrideDescription(
   overrides: ArcoMissingDataOverride[] | undefined,
   field: ArcoMissingOverrideField
-): string | undefined {
-  return overrides?.find((o) => o.field === field)?.description;
+): string {
+  const fromApi = overrides?.find((o) => o.field === field)?.description?.trim();
+  // Evita filtrar a la UI descripciones técnicas del backend (ej. "array de objetos").
+  if (fromApi && !/array de objetos|\{.*dataType/i.test(fromApi)) {
+    return fromApi;
+  }
+  return FRIENDLY_OVERRIDE_DESCRIPTIONS[field];
+}
+
+/** Mensaje del banner según qué campos faltan (no siempre es "registro antiguo"). */
+export function getMissingDataBannerMessage(
+  missing: Set<ArcoMissingOverrideField>
+): string {
+  const legacyOnly =
+    (missing.has("dataOriginOverride") || missing.has("consentStatusOverride")) &&
+    !missing.has("processingPurposesOverride");
+  const purposesOnly =
+    missing.has("processingPurposesOverride") &&
+    !missing.has("dataOriginOverride") &&
+    !missing.has("consentStatusOverride");
+
+  if (purposesOnly) {
+    return "No se encontraron finalidades en el RAT (tratamientos ACTIVE). Complétalas abajo o activa un tratamiento con finalidad en Tratamientos (RAT).";
+  }
+  if (legacyOnly) {
+    return "Algunos datos del consentimiento no estánieron autocompletarse (registro sin trazabilidad completa). Complétalos en la sección del oficial.";
+  }
+  if (missing.has("processingPurposesOverride")) {
+    return "Faltan datos para el informe: finalidades del RAT y/o información de consentimiento. Complétalos en la sección del oficial.";
+  }
+  return "Algunos datos no pudieron autocompletarse. Complétalos en la sección del oficial.";
 }
 
 export function chileOfficerFieldRequired(

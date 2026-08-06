@@ -27,9 +27,16 @@ async function selectByLabel(page: Page, label: string, optionTitle: string) {
     .click();
 }
 
-/** Devuelve el título de la primera finalidad real del catálogo, o null. */
-async function pickFirstPurpose(page: Page): Promise<string | null> {
-  const labelEl = page.getByText("Finalidad", { exact: true });
+/** Devuelve el título de la primera opción real de un CustomSelect (que no
+ * contenga `skipSubstring`, el placeholder de "sin selección"), o null si
+ * no hay ninguna — usado tanto para "Finalidad" como para "Responsable
+ * interno", que comparten el mismo patrón de dropdown por catálogo. */
+async function pickFirstOption(
+  page: Page,
+  label: string,
+  skipSubstring: string
+): Promise<string | null> {
+  const labelEl = page.getByText(label, { exact: true });
   const container = labelEl.locator("xpath=..");
   await container.locator("button").first().click();
   const optionButtons = container.locator("ul button");
@@ -37,7 +44,7 @@ async function pickFirstPurpose(page: Page): Promise<string | null> {
   let chosen: string | null = null;
   for (let i = 0; i < count; i++) {
     const text = (await optionButtons.nth(i).innerText()).trim();
-    if (text && !text.includes("Sin finalidad")) {
+    if (text && !text.includes(skipSubstring)) {
       chosen = text;
       break;
     }
@@ -49,6 +56,15 @@ async function pickFirstPurpose(page: Page): Promise<string | null> {
     await container.locator("button").first().click();
   }
   return chosen;
+}
+
+/** Selecciona una opción de un <select> nativo ubicándolo por su etiqueta
+ * hermana (mismo patrón visual que selectByLabel, pero para <select> HTML
+ * planos como los de TreatmentsFilters, no CustomSelect). */
+async function selectNativeByLabel(page: Page, label: string, optionText: string) {
+  const labelEl = page.getByText(label, { exact: true });
+  const container = labelEl.locator("xpath=..");
+  await container.locator("select").selectOption({ label: optionText });
 }
 
 test("RAT: crear, activar, editar en 2 pestañas y archivar", async ({
@@ -92,11 +108,30 @@ test("RAT: crear, activar, editar en 2 pestañas y archivar", async ({
   });
 
   // --- Paso 3: completar y activar ---
+  // Item B5: canActivate ahora también exige internalOwnerId, retención
+  // estructurada (valor+unidad+evento) y al menos 1 medida de seguridad —
+  // se completan los 3 aquí para que el flujo de activación siga pasando.
   await page.goto(editUrl);
-  const purpose = await pickFirstPurpose(page);
+  const purpose = await pickFirstOption(page, "Finalidad", "Sin finalidad");
   await selectByLabel(page, "Base legal", "Obligación legal");
   await page.getByRole("button", { name: "Identificación" }).click();
   await page.getByRole("button", { name: "Empleados" }).click();
+  // "Responsable interno" solo se renderiza si la empresa tiene usuarios
+  // (ownerOptions) — no debería faltar (el propio admin logueado cuenta),
+  // pero se protege igual que "Finalidad" lo hace más abajo con test.skip.
+  const hasOwnerField = await page.getByText("Responsable interno", { exact: true }).count();
+  let owner: string | null = null;
+  if (hasOwnerField > 0) {
+    owner = await pickFirstOption(page, "Responsable interno", "Sin responsable");
+  }
+  await page.getByLabel("Duración de la retención").fill("5");
+  await selectByLabel(page, "Unidad", "Años");
+  await selectByLabel(
+    page,
+    "¿Qué evento inicia el conteo?",
+    "Desde el fin de la relación con el titular"
+  );
+  await page.getByRole("button", { name: "Cifrado en reposo" }).click();
   await page.getByRole("button", { name: "Guardar cambios" }).click();
   await expect(page.getByText("Cambios guardados")).toBeVisible();
 
@@ -105,6 +140,10 @@ test("RAT: crear, activar, editar en 2 pestañas y archivar", async ({
   test.skip(
     !purpose,
     "No hay finalidades en el catálogo; no se puede activar (sembrar TreatmentPurpose global)."
+  );
+  test.skip(
+    hasOwnerField > 0 && !owner,
+    "El catálogo de responsables (usuarios de la empresa) está vacío; no se puede activar (item B5)."
   );
 
   await page.getByRole("button", { name: "Activar" }).click();
@@ -175,4 +214,47 @@ test("RAT: crear, activar, editar en 2 pestañas y archivar", async ({
     path: `${SHOTS}/rat-05-archivar-sin-motivo.png`,
     fullPage: true,
   });
+});
+
+// Item B7: filtros del listado. Auto-contenido — crea su propio tratamiento
+// (nace en Borrador, no hace falta activarlo para probar el filtro por
+// estado) y usa el buscador por nombre para no interferir con otros
+// tratamientos que ya existan en la empresa de prueba.
+test("RAT: filtro por estado en el listado", async ({ page }) => {
+  await login(page, adminCredentials());
+
+  const name = `E2E RAT filtro ${Date.now()}`;
+  await page.goto("/admin/tratamientos/crear");
+  await page.getByPlaceholder("Ej. Gestión de nómina de empleados").fill(name);
+  await page.getByRole("button", { name: "Crear tratamiento" }).click();
+  await page.waitForURL(
+    (url) =>
+      /^\/admin\/tratamientos\/[^/]+$/.test(url.pathname) &&
+      !url.pathname.endsWith("/crear"),
+    { timeout: 15_000 }
+  );
+
+  await page.goto("/admin/tratamientos");
+  await page.getByPlaceholder("Buscar por nombre...").fill(name);
+
+  // El recién creado nace en Borrador: debe aparecer con status=Borrador...
+  await selectNativeByLabel(page, "Estado", "Borrador");
+  await expect(page.getByText(name)).toBeVisible();
+  await page.screenshot({
+    path: `${SHOTS}/rat-07-filtro-borrador.png`,
+    fullPage: true,
+  });
+
+  // ...y NO aparecer con status=Activo (sigue siendo Borrador).
+  await selectNativeByLabel(page, "Estado", "Activo");
+  await expect(page.getByText(name)).not.toBeVisible();
+  await expect(page.getByText("Aún no hay tratamientos")).toBeVisible();
+  await page.screenshot({
+    path: `${SHOTS}/rat-08-filtro-activo-vacio.png`,
+    fullPage: true,
+  });
+
+  // Limpiar el filtro de estado vuelve a mostrarlo.
+  await selectNativeByLabel(page, "Estado", "Todos");
+  await expect(page.getByText(name)).toBeVisible();
 });

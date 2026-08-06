@@ -22,6 +22,8 @@ import { Company } from "@/types/company.types";
 import { CreateCollectFormResponse } from "@/types/collectFormResponse.types";
 import { checkActiveSession } from "@/lib/auth.api";
 import ReauthSessionModal from "../dialogs/ReauthSessionModal";
+import { getDataProtectionLegalNotice } from "@/utils/legalNotices.utils";
+import InternationalTransferNotice from "./InternationalTransferNotice";
 
 interface Props {
   data: CollectForm;
@@ -59,6 +61,7 @@ const PublicConsentForm = ({ data }: Props) => {
   const [otpLastSentChannel, setOtpLastSentChannel] =
     useState<CampaignDeliveryChannel | null>(null);
   const [companyData, setCompanyData] = useState<Company | null>(null);
+  const [companyCountryCode, setCompanyCountryCode] = useState<string | null>(null);
   const [showReauthModal, setShowReauthModal] = useState(false);
 
   async function ensureActiveSession() {
@@ -102,6 +105,7 @@ const PublicConsentForm = ({ data }: Props) => {
 
   // Observar el estado del checkbox de aceptación
   const hasAcceptedPolicy = watchConsent("dataProcessing");
+  const { lawReference } = getDataProtectionLegalNotice(companyCountryCode);
 
   // Cargar información de la empresa y URL de la política
   React.useEffect(() => {
@@ -110,6 +114,9 @@ const PublicConsentForm = ({ data }: Props) => {
     if (formData.company?.name) {
       // Si el backend ya incluye el nombre de la empresa, usarlo directamente
       setCompanyData({ name: formData.company.name } as Company);
+    }
+    if (formData.company?.countryCode) {
+      setCompanyCountryCode(formData.company.countryCode);
     }
 
     // Obtener URL de la política
@@ -558,7 +565,7 @@ const PublicConsentForm = ({ data }: Props) => {
                     Al continuar, aceptarás la política de tratamiento de datos
                     personales de <span className="font-semibold">{companyData?.name || "la empresa"}</span>.
                     Esta autorización es necesaria para procesar tu información de
-                    acuerdo con la Ley 1581 de 2012.
+                    acuerdo con la {lawReference}.
                   </p>
                   {policyUrl && (
                     <a
@@ -576,13 +583,15 @@ const PublicConsentForm = ({ data }: Props) => {
               </div>
             </div>
 
+            <InternationalTransferNotice countryCode={companyCountryCode} />
+
             {/* Checkbox de aceptación */}
             <div className="bg-gradient-to-br from-blue-50 to-primary-50 border-2 border-primary-200 rounded-xl p-4">
               <CustomCheckbox
                 label={
                   <span className="text-primary-900 font-medium">
                     Acepto la política de tratamiento de datos personales y autorizo el uso de mi información de acuerdo con la{" "}
-                    <span className="font-bold text-primary-700">Ley 1581 de 2012</span>
+                    <span className="font-bold text-primary-700">{lawReference}</span>
                   </span>
                 }
                 {...(registerConsent("dataProcessing") as any)}
@@ -647,7 +656,7 @@ const PublicConsentForm = ({ data }: Props) => {
               Aceptación de política de datos
             </h2>
             <p className="text-sm text-stone-600 mb-1">
-              Ley 1581 de 2012 - Protección de datos personales
+              {lawReference} - Protección de datos personales
             </p>
             <p className="text-xs text-stone-500">
               Para continuar, verifica tu identidad ingresando tu documento
@@ -694,7 +703,7 @@ const PublicConsentForm = ({ data }: Props) => {
                 className="text-blue-600 text-lg flex-shrink-0 mt-0.5"
               />
               <p className="text-xs text-blue-900">
-                <span className="font-semibold">¿Por qué necesitamos tu autorización?</span> La Ley 1581 de 2012 exige tu consentimiento previo para recolectar, almacenar y usar tus datos personales.
+                <span className="font-semibold">¿Por qué necesitamos tu autorización?</span> La {lawReference} exige tu consentimiento previo para recolectar, almacenar y usar tus datos personales.
               </p>
             </div>
           </div>

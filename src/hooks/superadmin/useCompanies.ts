@@ -1,47 +1,53 @@
-import { fetchCollectForms } from "@/lib/collectForm.api";
 import { fetchCompanies } from "@/lib/company.api";
-import { fetchCompanyAreas } from "@/lib/companyArea.api";
-import { fetchCompanyUsers } from "@/lib/user.api";
-import { QueryParams } from "@/types/api.types";
-import { CollectForm } from "@/types/collectForm.types";
+import { APIResponse, QueryParams } from "@/types/api.types";
 import { Company } from "@/types/company.types";
-import { CompanyArea } from "@/types/companyArea.types";
-import { SessionUser } from "@/types/user.types";
 import { parseApiError } from "@/utils/parseApiError";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
+type CompaniesMeta = NonNullable<APIResponse["meta"]>;
+
 export function useCompanies<T = Company[]>(params: QueryParams) {
+  const { companyId, search, page, pageSize } = params;
+
   const [data, setData] = useState<T | null>(null);
+  const [meta, setMeta] = useState<CompaniesMeta | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function fetch() {
+  const fetch = useCallback(async () => {
     setLoading(true);
-    const fetchedData = await fetchCompanies(params);
+    setError(null);
 
-    console.log(fetchedData);
+    const fetchedData = await fetchCompanies({
+      companyId,
+      search,
+      page,
+      pageSize,
+    });
 
     if (fetchedData.error) {
-      let parsedError = parseApiError(fetchedData.error);
+      const parsedError = parseApiError(fetchedData.error);
       setError(parsedError);
       setLoading(false);
       toast.error(parsedError);
       return;
     }
 
-    setLoading(false);
     setData(fetchedData.data);
-  }
+    setMeta(fetchedData.meta ?? null);
+    setLoading(false);
+  }, [companyId, search, page, pageSize]);
 
   useEffect(() => {
     fetch();
-  }, [params.companyId]);
+  }, [fetch]);
 
   return {
     data,
     loading,
     error,
+    meta,
     refresh: fetch,
   };
 }

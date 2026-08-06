@@ -24,8 +24,23 @@ export interface CreateCollectForm {
   name: string;
   description: string;
   policyTemplateId: string;
+  /** Item E (RF-73) — opcional: vincula el formulario a un Treatment del RAT. */
+  treatmentId?: string | null;
   marketingChannels: MarketingChannels;
   questions: Omit<CollectFormQuestion, "_id">[];
+}
+
+/**
+ * Item E (RF-73) — armado en el backend desde el Treatment vinculado (ver
+ * buildGeolocationNotice), NUNCA texto fijo en el frontend. `enabled: false`
+ * cuando no hay Treatment vinculado o el vinculado no trata geolocalización.
+ */
+export interface GeolocationNotice {
+  enabled: boolean;
+  purpose: string | null;
+  duration: string | null;
+  sharedWithThirdParties: boolean;
+  thirdPartiesIdentity: string | null;
 }
 
 export interface CreateCollectFormFromTemplate
@@ -39,6 +54,7 @@ export interface CollectForm extends CreateCollectForm {
   company?: {
     name?: string;
     _id?: string;
+    countryCode?: string;
   };
   /** Alternativa: nombre comercial en raíz (según contrato del API) */
   companyName?: string;
@@ -54,6 +70,8 @@ export interface CollectForm extends CreateCollectForm {
     CustomFile,
     "_id" | "originalName" | "key" | "contentType"
   >;
+  /** Solo presente en la respuesta del endpoint público (PUBLIC_COLLECT_FORM_get). */
+  geolocationNotice?: GeolocationNotice;
 }
 
 /** Resumen global devuelto por GET .../collectForms/clasification */

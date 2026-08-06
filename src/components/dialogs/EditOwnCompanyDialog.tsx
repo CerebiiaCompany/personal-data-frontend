@@ -15,10 +15,11 @@ import { parseApiError } from "@/utils/parseApiError";
 import { useDialogBackdropClose } from "@/hooks/useDialogBackdropClose";
 import { updateOwnCompany } from "@/lib/company.api";
 import { Company } from "@/types/company.types";
+import { getJuridicaDocType } from "@/types/user.types";
 
 const schema = z.object({
   name: z.string().min(1, "Nombre obligatorio"),
-  nit: z.string().min(1, "NIT obligatorio"),
+  nit: z.string().min(1, "Documento obligatorio"),
   email: z.string().email("Correo inválido").min(1, "Correo obligatorio"),
   phone: z.string().min(1, "Teléfono obligatorio"),
 });
@@ -33,6 +34,7 @@ interface Props {
 const EditOwnCompanyDialog = ({ company, onUpdated }: Props) => {
   const id = HTML_IDS_DATA.editOwnCompanyDialog;
   const [loading, setLoading] = useState(false);
+  const juridicaDocLabel = getJuridicaDocType(company?.countryCode);
 
   const {
     register,
@@ -128,8 +130,12 @@ const EditOwnCompanyDialog = ({ company, onUpdated }: Props) => {
               error={errors.name}
             />
             <CustomInput
-              label="NIT"
-              placeholder="Ej. 820507899-5"
+              label={juridicaDocLabel}
+              placeholder={
+                juridicaDocLabel === "RUT"
+                  ? "Ej. 76.123.456-7"
+                  : "Ej. 820507899-5"
+              }
               {...register("nit")}
               error={errors.nit}
             />

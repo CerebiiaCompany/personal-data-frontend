@@ -5,6 +5,8 @@ import { useCallback, useEffect, useState } from "react";
 interface Params {
   companyId: string | undefined;
   enabled?: boolean;
+  /** item B26: la pantalla de ABM también necesita ver las desactivadas. */
+  includeInactive?: boolean;
 }
 
 /**
@@ -12,21 +14,21 @@ interface Params {
  * `purposeId`. No pagina y falla en silencio: si no carga, el formulario sigue
  * usable con la finalidad en null.
  */
-export function useTreatmentPurposes({ companyId, enabled = true }: Params) {
+export function useTreatmentPurposes({ companyId, enabled = true, includeInactive = false }: Params) {
   const [data, setData] = useState<TreatmentPurpose[] | null>(null);
   const [loading, setLoading] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!companyId) return;
     setLoading(true);
-    const res = await fetchTreatmentPurposes(companyId);
+    const res = await fetchTreatmentPurposes(companyId, { includeInactive });
     setLoading(false);
     if (res.error) {
       setData([]);
       return;
     }
     setData(res.data ?? []);
-  }, [companyId]);
+  }, [companyId, includeInactive]);
 
   useEffect(() => {
     if (!enabled || !companyId) return;

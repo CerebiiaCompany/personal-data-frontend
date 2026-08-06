@@ -11,16 +11,13 @@ import Button from "../base/Button";
 import { updateCampaign } from "@/lib/campaign.api";
 import { toast } from "sonner";
 import { parseApiError } from "@/utils/parseApiError";
-import { useAppSetting } from "@/hooks/useAppSetting";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import clsx from "clsx";
-import {
-  asFiniteNumber,
-  getCampaignInstanceCredits,
-} from "@/utils/campaignCredits.utils";
+import { getCampaignInstanceCredits } from "@/utils/campaignCredits.utils";
 import { creditsFormatter, priceFormatter } from "@/utils/formatters";
 import { usePermissionCheck } from "@/hooks/usePermissionCheck";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
+import { useCompanyCreditsPricing } from "@/hooks/useCompanyCreditsPricing";
 import { useConfirm } from "../dialogs/ConfirmProvider";
 
 interface Props {
@@ -134,19 +131,9 @@ const CampaignsTable = ({ items, loading, error, refresh, embedded }: Props) => 
     setLocalItems(items);
   }, [items]);
 
-  const trmCopSetting = useAppSetting("TRM_COP");
-  const smsCampaignPriceSetting = useAppSetting(
-    "SMS_CAMPAIGN_PRICE_PER_MESSAGE_MASIVAPP"
-  );
-  const emailCampaignPriceSetting = useAppSetting(
-    "EMAIL_CAMPAIGN_PRICE_PER_MESSAGE"
-  );
-
-  const trmCop = asFiniteNumber(trmCopSetting.data?.value);
-  const smsCampaignPrice = asFiniteNumber(smsCampaignPriceSetting.data?.value);
-  const emailCampaignPrice = asFiniteNumber(
-    emailCampaignPriceSetting.data?.value
-  );
+  const creditsPricing = useCompanyCreditsPricing();
+  const smsCampaignPrice = creditsPricing.data?.smsCampaignPricePerMessage;
+  const emailCampaignPrice = creditsPricing.data?.emailCampaignPricePerMessage;
 
   async function setCampaignActive(id: string, value: boolean) {
     if (value === false) {
@@ -253,7 +240,6 @@ const CampaignsTable = ({ items, loading, error, refresh, embedded }: Props) => 
 
                 const credits = getCampaignInstanceCredits({
                   item,
-                  trmCop,
                   smsCampaignPricePerMessage: smsCampaignPrice,
                   emailCampaignPricePerMessage: emailCampaignPrice,
                 });

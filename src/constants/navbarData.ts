@@ -28,6 +28,13 @@ export const NAVBAR_DATA: NavbarData = [
     requiredPermission: "dashboard.view",
   },
   {
+    title: "Cumplimiento",
+    path: "/admin/cumplimiento",
+    icon: "tabler:shield-check",
+    minRole: "USER",
+    requiredPermission: "dashboard.view",
+  },
+  {
     title: "Recolección",
     path: "/admin/recoleccion",
     icon: "tabler:clipboard-list",
@@ -78,6 +85,13 @@ export const NAVBAR_DATA: NavbarData = [
     title: "Solicitudes ARCO",
     path: "/admin/arco",
     icon: "tabler:scale",
+    minRole: "USER",
+    requiredPermission: "arcoRequests.view",
+  },
+  {
+    title: "Plazos",
+    path: "/admin/plazos",
+    icon: "tabler:clock-exclamation",
     minRole: "USER",
     requiredPermission: "arcoRequests.view",
   },

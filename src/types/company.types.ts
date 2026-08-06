@@ -4,6 +4,14 @@ import { DocType } from "./user.types";
 export type CompanyManagerDocType = "CC";
 export type PlanStatus = "ACTIVE" | "INACTIVE";
 
+/** Países soportados hoy por el sistema (plantillas legales, DocType, ArcoRegulation). */
+export type CompanyCountryCode = "CO" | "CL";
+
+export const COMPANY_COUNTRY_CODE_OPTIONS: { value: CompanyCountryCode; title: string }[] = [
+  { value: "CO", title: "Colombia" },
+  { value: "CL", title: "Chile" },
+];
+
 export interface CreateCompany {
   name: string;
   nit: string;
@@ -15,6 +23,12 @@ export interface CreateCompany {
   email: string;
   phone: string;
   planId: string;
+  countryCode: CompanyCountryCode;
+  /** El admin de la empresa se crea junto con ella (isActivated:false) —
+   * activa su cuenta después desde /login con `email` de arriba + un
+   * código enviado a ese correo. No se pide contraseña acá. */
+  adminName: string;
+  adminLastName: string;
 }
 
 export interface Company extends CreateCompany {
@@ -39,16 +53,28 @@ export interface CompanyDataOfficer {
   };
 }
 
+export type BillingCurrency = "COP" | "USD";
+export type BillingRegion = "CO" | "INTERNATIONAL";
+
 export interface CompanyCreditsCurrentMonth {
   creditsUsed: number;
   month: number;
   year: number;
   period: string;
+  currency?: BillingCurrency;
+  billingRegion?: BillingRegion;
+  trm?: number;
 }
 
 export interface CompanyCreditsPricing {
   smsPricePerMessage: number;
   emailPricePerMessage: number;
+  smsCampaignPricePerMessage?: number;
+  emailCampaignPricePerMessage?: number;
+  currency?: BillingCurrency;
+  billingRegion?: BillingRegion;
+  trm?: number;
+  smsProvider?: string;
 }
 
 // --- Company Profile Types ---
@@ -114,6 +140,11 @@ export interface CompanyProfile {
   _id: string;
   name?: string;
   nit?: string;
+  // Escalar de Company — el backend YA lo devuelve en GET /companies/:id/profile
+  // (Prisma incluye todos los campos escalares aunque el `include` de la query
+  // solo liste relaciones); solo faltaba declararlo en este tipo para poder
+  // usarlo en el frontend (item 2 de la corrección de bloqueantes).
+  countryCode?: CompanyCountryCode;
   email?: string;
   phone?: string;
   mainAddress?: string;

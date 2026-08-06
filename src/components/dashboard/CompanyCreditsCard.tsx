@@ -62,9 +62,16 @@ const CompanyCreditsCard = ({ data, loading, error }: Props) => {
             <>
               <div className="flex items-baseline gap-1.5">
                 <span className="text-[46px] font-bold leading-none tracking-[-0.03em]">
-                  {data.creditsUsed}
+                  {data.currency === "USD"
+                    ? data.creditsUsed.toLocaleString("es-CO", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 4,
+                      })
+                    : data.creditsUsed.toLocaleString("es-CO")}
                 </span>
-                <span className="text-[20px] leading-none text-white/95">pesos</span>
+                <span className="text-[20px] leading-none text-white/95">
+                  {data.currency === "USD" ? "USD" : "pesos"}
+                </span>
               </div>
               <p className="text-[14px] leading-none text-white/90">
                 {getMonthName(data.month)} {data.year}

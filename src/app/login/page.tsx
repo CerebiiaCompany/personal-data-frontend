@@ -1,13 +1,9 @@
 "use client";
 
-import Image from "next/image";
-import LogoSquaredLight from "@public/logo-squared-light.svg";
-import CustomInput from "@/components/forms/CustomInput";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import Button from "@/components/base/Button";
-import CustomCheckbox from "@/components/forms/CustomCheckbox";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import { Suspense, useEffect, useState } from "react";
 import { useSessionStore } from "@/store/useSessionStore";
@@ -16,6 +12,8 @@ import { toast } from "sonner";
 import { getSession, loginUser, getPermissions } from "@/lib/auth.api";
 import { UserPermissionsResponse } from "@/types/user.types";
 import { parseApiError } from "@/utils/parseApiError";
+import AccountActivationForm from "@/components/auth/AccountActivationForm";
+import AuthShell from "@/components/auth/AuthShell";
 
 const schema = z.object({
   username: z.string().min(1, "Ingresa tu usuario"),
@@ -25,16 +23,19 @@ const schema = z.object({
   }),
 });
 
+const inputClassName =
+  "w-full rounded-xl border border-[#D8E0EF] bg-[#F8FAFC] px-4 py-3.5 pl-11 text-sm font-medium text-primary-900 placeholder:text-[#94A3B8] outline-none transition-all focus:border-primary-500 focus:bg-white focus:ring-2 focus:ring-primary-500/15";
+
 function LoginForm() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callback_url");
 
   const router = useRouter();
-  const { user, loading, error, setUser, setError, setLoading, setPermissions } =
+  const { loading, setUser, setError, setLoading, setPermissions } =
     useSessionStore();
   const [shownPassword, setShownPassword] = useState<boolean>(false);
+  const [mode, setMode] = useState<"login" | "activate">("login");
 
-  // Limpiar errores cuando se monta el componente de login
   useEffect(() => {
     setError(undefined);
   }, [setError]);
@@ -43,8 +44,6 @@ function LoginForm() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-    setValue,
-    watch,
   } = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -56,7 +55,7 @@ function LoginForm() {
 
   async function onSubmit(data: any) {
     setLoading(true);
-    setError(undefined); // Limpiar errores previos
+    setError(undefined);
 
     const loginRes = await loginUser(data.username, data.password);
 
@@ -67,7 +66,6 @@ function LoginForm() {
       return toast.error(parsedError);
     }
 
-    // Obtener sesión del usuario
     const session = await getSession();
 
     if (session.error) {
@@ -79,31 +77,19 @@ function LoginForm() {
 
     setUser(session.data);
 
-    // Obtener permisos del usuario
     const permissionsRes = await getPermissions();
 
     if (permissionsRes.error) {
-      // Si falla obtener permisos, mostrar advertencia pero continuar
       console.error("Error al obtener permisos:", permissionsRes.error);
       toast.warning("No se pudieron cargar los permisos del usuario");
     } else if (permissionsRes.data) {
-      // Normalizar estructura de permisos (por si viene envuelta en metadatos de Mongoose)
-      const raw = (permissionsRes.data as UserPermissionsResponse).permissions as any;
+      const raw = (permissionsRes.data as UserPermissionsResponse)
+        .permissions as any;
 
       const normalizedPermissions = (() => {
         if (!raw) return permissionsRes.data.permissions;
-
-        // 1) Preferir _doc si existe
-        if (raw._doc) {
-          return raw._doc;
-        }
-
-        // 2) O $__parent.permissions
-        if (raw.$__parent?.permissions) {
-          return raw.$__parent.permissions;
-        }
-
-        // 3) En caso contrario, asumir que ya viene plano
+        if (raw._doc) return raw._doc;
+        if (raw.$__parent?.permissions) return raw.$__parent.permissions;
         return raw;
       })();
 
@@ -113,125 +99,147 @@ function LoginForm() {
       });
     }
 
-    setLoading(false); // ✅ Importante: desactivar loading después del login exitoso
+    setLoading(false);
     toast.success(`Bienvenid@ ${session.data?.name}`);
 
-    // Determinar URL de redirección según rol y callback
     let redirectUrl: string;
     const userRole = session.data?.role || "USER";
-    
+
     if (callbackUrl) {
-      // Si hay callback, verificar que el usuario tenga permisos para acceder
       if (callbackUrl.includes("/superadmin")) {
-        // Solo SUPERADMIN puede acceder a /superadmin
         redirectUrl = userRole === "SUPERADMIN" ? callbackUrl : "/admin";
       } else if (callbackUrl.includes("/admin")) {
-        // SUPERADMIN y COMPANY_ADMIN pueden acceder a /admin
         redirectUrl = ["SUPERADMIN", "COMPANY_ADMIN"].includes(userRole)
           ? callbackUrl
           : "/admin";
       } else {
-        // Otras rutas, usar callback
         redirectUrl = callbackUrl;
       }
     } else {
-      // Sin callback, redirigir según rol
       redirectUrl = userRole === "SUPERADMIN" ? "/superadmin" : "/admin";
     }
-    
+
     router.push(redirectUrl);
   }
 
-  return (
-    <div className="flex flex-col p-8 bg-[linear-gradient(180deg,#301AAC_0.96%,#150668_48.56%,#030014_100%)] w-full flex-1 justify-center items-center">
-      <div className="w-full max-w-md bg-white/20 px-12 py-20 rounded-xl flex flex-col gap-10">
-        <div className="flex flex-col items-center gap-3">
-          <Image
-            src={LogoSquaredLight}
-            alt="Logo cerebiia cuadrado"
-            width={75}
-            className="h-auto"
-          />
-          <h6 className="font-bold text-lg text-white">Iniciar Sesión</h6>
-        </div>
+  if (mode === "activate") {
+    return <AccountActivationForm onBackToLogin={() => setMode("login")} />;
+  }
 
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
-          <div className="flex flex-col items-left w-full gap-1">
+  return (
+    <AuthShell
+      title="Bienvenido de nuevo"
+      subtitle="Ingresa con tu usuario y contraseña."
+    >
+      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
+        <div className="flex flex-col gap-1.5">
+          <label
+            htmlFor="username"
+            className="text-xs font-semibold text-[#475569]"
+          >
+            Usuario
+          </label>
+          <div className="relative">
+            <Icon
+              icon="tabler:user"
+              className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-lg text-[#94A3B8]"
+            />
             <input
-              placeholder="Usuario"
+              id="username"
+              placeholder="Tu usuario"
               type="text"
-              className="px-5 text-white font-medium py-3 bg-white/30 rounded-lg placeholder:text-white/80"
+              autoComplete="username"
+              className={inputClassName}
               {...register("username")}
             />
-            {errors.username && (
-              <span className="text-red-400 text-sm font-semibold">
-                {errors.username.message}
-              </span>
-            )}
           </div>
-          <div className="flex flex-col items-left w-full gap-1">
-            <div className="w-full flex items-center gap-2">
-              <input
-                placeholder="Clave"
-                type={shownPassword ? "text" : "password"}
-                className="px-5 flex-1 min-w-0 text-white font-medium py-3 bg-white/30 rounded-lg placeholder:text-white/80"
-                {...register("password")}
-              />
+          {errors.username && (
+            <span className="text-sm font-medium text-red-500">
+              {errors.username.message}
+            </span>
+          )}
+        </div>
 
-              <button
-                onClick={(_) => setShownPassword(!shownPassword)}
-                type="button"
-                className="h-11 w-11 bg-white/30 rounded-lg grid place-content-center flex-shrink-0"
-              >
-                <Icon
-                  icon={shownPassword ? "tabler:eye" : "tabler:eye-closed"}
-                  className="text-2xl text-white"
-                />
-              </button>
-            </div>
-            {errors.password && (
-              <span className="text-red-400 text-sm font-semibold">
-                {errors.password.message}
-              </span>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-1 items-start">
-            {/* <CustomCheckbox
-              {...register("tyc")}
-              className="text-white"
-              label="Acepto los términos y condiciones"
-            /> */}
-            <label className={"custom-checkbox"}>
-              <input
-                {...register("tyc")}
-                className="peer hidden"
-                type="checkbox"
-              />
-              <div className="checkbox-visual peer-checked:bg-white! after:border-primary-900! peer-checked:border-white!"></div>
-              <span className="text-white text-sm!">
-                Acepto los términos y condiciones
-              </span>
-            </label>
-            {errors.tyc && (
-              <span className="text-red-400 text-sm font-semibold">
-                {errors.tyc.message}
-              </span>
-            )}
-          </div>
-
-          <Button
-            type="submit"
-            hierarchy="secondary"
-            className="bg-white text-primary-900 mt-5"
-            loading={isSubmitting || loading}
-            disabled={isSubmitting || loading}
+        <div className="flex flex-col gap-1.5">
+          <label
+            htmlFor="password"
+            className="text-xs font-semibold text-[#475569]"
           >
-            Ingresar
-          </Button>
-        </form>
-      </div>
-    </div>
+            Contraseña
+          </label>
+          <div className="relative">
+            <Icon
+              icon="tabler:lock"
+              className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-lg text-[#94A3B8]"
+            />
+            <input
+              id="password"
+              placeholder="Tu contraseña"
+              type={shownPassword ? "text" : "password"}
+              autoComplete="current-password"
+              className={`${inputClassName} pr-12`}
+              {...register("password")}
+            />
+            <button
+              onClick={() => setShownPassword(!shownPassword)}
+              type="button"
+              aria-label={
+                shownPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+              }
+              className="absolute top-1/2 right-2.5 grid size-9 -translate-y-1/2 place-content-center rounded-lg text-[#94A3B8] transition-colors hover:bg-[#EEF2F8] hover:text-primary-700"
+            >
+              <Icon
+                icon={shownPassword ? "tabler:eye" : "tabler:eye-closed"}
+                className="text-xl"
+              />
+            </button>
+          </div>
+          {errors.password && (
+            <span className="text-sm font-medium text-red-500">
+              {errors.password.message}
+            </span>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label className="custom-checkbox">
+            <input
+              {...register("tyc")}
+              className="peer hidden"
+              type="checkbox"
+            />
+            <div className="checkbox-visual peer-checked:bg-primary-900! after:border-white! peer-checked:border-primary-900!"></div>
+            <span className="text-sm! text-[#475569]">
+              Acepto los términos y condiciones
+            </span>
+          </label>
+          {errors.tyc && (
+            <span className="text-sm font-medium text-red-500">
+              {errors.tyc.message}
+            </span>
+          )}
+        </div>
+
+        <Button
+          type="submit"
+          hierarchy="primary"
+          className="mt-1 h-12 rounded-xl! bg-primary-900! text-white shadow-[0_10px_24px_rgba(0,11,80,0.22)] transition-transform hover:scale-[1.01] hover:bg-primary-700! active:scale-[0.99]"
+          loading={isSubmitting || loading}
+          disabled={isSubmitting || loading}
+        >
+          Ingresar
+        </Button>
+
+        <button
+          type="button"
+          onClick={() => setMode("activate")}
+          className="inline-flex items-center justify-center gap-2 pt-1 text-sm font-medium text-primary-700 transition-colors hover:text-primary-500"
+        >
+          <Icon icon="tabler:key" className="text-base" />
+          ¿Primera vez? Activar cuenta
+        </button>
+      </form>
+    </AuthShell>
   );
 }
 
@@ -239,14 +247,13 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex flex-col p-8 bg-[linear-gradient(180deg,#301AAC_0.96%,#150668_48.56%,#030014_100%)] w-full flex-1 justify-center items-center">
-          <div className="w-full max-w-md bg-white/20 px-12 py-20 rounded-xl flex flex-col gap-10">
-            <div className="flex flex-col items-center gap-3">
-              <div className="animate-pulse bg-white/30 rounded-lg h-20 w-20"></div>
-              <div className="animate-pulse bg-white/30 rounded h-6 w-32"></div>
-            </div>
+        <AuthShell title="Bienvenido de nuevo" subtitle="Cargando…">
+          <div className="flex flex-col gap-4">
+            <div className="h-12 animate-pulse rounded-xl bg-[#EEF2F8]" />
+            <div className="h-12 animate-pulse rounded-xl bg-[#EEF2F8]" />
+            <div className="mt-2 h-12 animate-pulse rounded-xl bg-[#E2E8F0]" />
           </div>
-        </div>
+        </AuthShell>
       }
     >
       <LoginForm />

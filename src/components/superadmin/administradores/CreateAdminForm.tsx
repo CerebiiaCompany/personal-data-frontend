@@ -26,7 +26,10 @@ import { createCompanyPayment } from "@/lib/payment.api";
 import { useCompanies } from "@/hooks/superadmin/useCompanies";
 import CustomDateInput from "@/components/forms/CustomDateInput";
 import { planPeriodTypeOptions } from "@/types/plan.types";
-import { CreateUser, docTypesOptions } from "@/types/user.types";
+import {
+  CreateUser,
+  getAdminDocTypeOptionsByCountry,
+} from "@/types/user.types";
 import { createCompanyUser } from "@/lib/user.api";
 import { createUserValidationSchema } from "@/validations/main.validations";
 import CustomTextarea from "@/components/forms/CustomTextarea";
@@ -38,7 +41,9 @@ interface Props {
 const CreateAdminForm = ({ initialValues }: Props) => {
   const user = useSessionStore((store) => store.user);
   const [loading, setLoading] = useState<boolean>(false);
-  const companies = useCompanies({});
+  // El selector necesita todas las empresas, no solo la primera página del
+  // backend (que por defecto devuelve 10). Pedimos el máximo permitido.
+  const companies = useCompanies({ pageSize: 100 });
 
   const {
     register,
@@ -69,6 +74,12 @@ const CreateAdminForm = ({ initialValues }: Props) => {
   const [companiesOptions, setCompaniesOptions] = useState<
     CustomSelectOption<string>[] | null
   >(null);
+  const selectedCompanyCountryCode = companies.data?.find(
+    (company) => company._id === companyId
+  )?.countryCode;
+  const { options: docTypeOptions, defaultValue: docTypeDefault } =
+    getAdminDocTypeOptionsByCountry(selectedCompanyCountryCode);
+  const currentDocType = watch("companyUserData.docType");
 
   useEffect(() => {
     const scrollContainer = document.getElementById("scrollContainer");
@@ -111,6 +122,15 @@ const CreateAdminForm = ({ initialValues }: Props) => {
       );
     }
   }, [companies.data]);
+
+  useEffect(() => {
+    const isValid = docTypeOptions.some(
+      (option) => option.value === currentDocType
+    );
+    if (!isValid) {
+      setValue("companyUserData.docType", docTypeDefault);
+    }
+  }, [currentDocType, docTypeDefault, docTypeOptions, setValue]);
 
   console.log(errors);
 
@@ -254,8 +274,8 @@ const CreateAdminForm = ({ initialValues }: Props) => {
           <div>
             <CustomSelect
               label="Tipo de documento"
-              options={docTypesOptions}
-              value={watch("companyUserData.docType")}
+              options={docTypeOptions}
+              value={currentDocType}
               onChange={(value) => setValue("companyUserData.docType", value)}
             />
           </div>

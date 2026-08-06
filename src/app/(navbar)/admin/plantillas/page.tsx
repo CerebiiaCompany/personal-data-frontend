@@ -2,12 +2,15 @@
 
 import Button from "@/components/base/Button";
 import UploadTemplateDialog from "@/components/dialogs/UploadTemplateDialog";
+import RenameTemplateDialog from "@/components/dialogs/RenameTemplateDialog";
 import LoadingCover from "@/components/layout/LoadingCover";
 import CheckPermission from "@/components/checkers/CheckPermission";
+import ModuleHelpButton from "@/components/tour/ModuleHelpButton";
 import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import { usePolicyTemplates } from "@/hooks/usePolicyTemplates";
 import { deletePolicyTemplate } from "@/lib/policyTemplate.api";
 import { getPolicyTemplateFileUrl } from "@/lib/policyTemplate.api";
+import { downloadGeneratedPolicyPreviewPdf } from "@/lib/policyTemplate.api";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { parseApiError } from "@/utils/parseApiError";
 import { showDialog } from "@/utils/dialogs.utils";
@@ -17,9 +20,11 @@ import { usePermissionCheck } from "@/hooks/usePermissionCheck";
 import { useConfirm } from "@/components/dialogs/ConfirmProvider";
 import Link from "next/link";
 import clsx from "clsx";
+import { useState } from "react";
 import type { PolicyTemplate } from "@/types/policyTemplate.types";
 
 function formatTemplateFileMeta(file: PolicyTemplate["file"]): string {
+  if (!file) return "Generada desde el RAT";
   const ext = (file.originalName.split(".").pop() || "pdf").toUpperCase();
   const kb = Math.max(1, Math.round(Number(file.size) / 1024));
   return `${ext} - ${kb} KB`;
@@ -35,6 +40,26 @@ export default function TemplatesPage() {
   const { data, loading, error, refresh } = usePolicyTemplates({
     companyId: companyId,
   });
+  const [renamingTemplate, setRenamingTemplate] = useState<PolicyTemplate | null>(
+    null
+  );
+  const [previewingCompanyId, setPreviewingCompanyId] = useState<string | null>(
+    null
+  );
+
+  async function previewGenerated(templateCompanyId: string) {
+    setPreviewingCompanyId(templateCompanyId);
+    const res = await downloadGeneratedPolicyPreviewPdf(templateCompanyId);
+    setPreviewingCompanyId(null);
+    if (res.error) {
+      toast.error(parseApiError(res.error));
+    }
+  }
+
+  function handleRename(template: PolicyTemplate) {
+    setRenamingTemplate(template);
+    showDialog(HTML_IDS_DATA.renameTemplateDialog);
+  }
 
   async function viewInWeb(policyTemplateId: string, download?: string) {
     if (!companyId) {
@@ -111,23 +136,34 @@ export default function TemplatesPage() {
   return (
     <div className="flex flex-col h-full min-h-0 min-w-0 w-full bg-[#F9FBFF]">
       <UploadTemplateDialog refresh={refresh} />
+      <RenameTemplateDialog
+        companyId={companyId}
+        template={renamingTemplate}
+        onUpdated={refresh}
+      />
 
       {/* Tarjeta superior (mismo patrón que /admin/recoleccion) */}
       <div className="px-5 md:px-6 pt-4 shrink-0">
         <div className="max-w-[1200px] mx-auto w-full">
-          <section className={clsx(topCardClass, "px-5 md:px-6 py-4 md:py-5")}>
+          <section
+            data-tour="plantillas-header"
+            className={clsx(topCardClass, "px-5 md:px-6 py-4 md:py-5")}
+          >
             <header className="w-full flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0 space-y-2">
-                <nav className="flex flex-wrap items-center gap-2 text-sm text-[#7384A6]">
-                  <Link href="/admin" className="hover:underline">
-                    Inicio
-                  </Link>
-                  <Icon
-                    icon="tabler:chevron-right"
-                    className="text-base shrink-0"
-                  />
-                  <span className="text-[#1D2E56] font-semibold">Plantillas</span>
-                </nav>
+                <div className="flex items-start justify-between gap-3">
+                  <nav className="flex flex-wrap items-center gap-2 text-sm text-[#7384A6]">
+                    <Link href="/admin" className="hover:underline">
+                      Inicio
+                    </Link>
+                    <Icon
+                      icon="tabler:chevron-right"
+                      className="text-base shrink-0"
+                    />
+                    <span className="text-[#1D2E56] font-semibold">Plantillas</span>
+                  </nav>
+                  <ModuleHelpButton tourId="plantillas" />
+                </div>
                 <h1 className="text-[24px] sm:text-[26px] leading-tight font-bold text-[#0B1737]">
                   Plantillas
                 </h1>
@@ -137,7 +173,10 @@ export default function TemplatesPage() {
               </div>
 
               <CheckPermission group="templates" permission="create">
-                <div className="flex flex-wrap items-center gap-2 lg:gap-3 shrink-0">
+                <div
+                  data-tour="plantillas-actions"
+                  className="flex flex-wrap items-center gap-2 lg:gap-3 shrink-0"
+                >
                   <button
                     type="button"
                     onClick={() =>
@@ -175,6 +214,7 @@ export default function TemplatesPage() {
           )}
 
           <div
+            data-tour="plantillas-list"
             className={clsx(
               "w-full grid gap-5",
               can("templates.create")
@@ -240,38 +280,66 @@ export default function TemplatesPage() {
                           {formatTemplateFileMeta(policyTemplate.file)}
                         </p>
                       </div>
+                      <CheckPermission group="templates" permission="create">
+                        <button
+                          type="button"
+                          onClick={() => handleRename(policyTemplate)}
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#E3E9F4] text-[#64748B] hover:bg-[#F4F7FE] hover:text-[#2563EB] transition-colors"
+                          aria-label="Renombrar plantilla"
+                          title="Renombrar plantilla"
+                        >
+                          <Icon icon="tabler:pencil" className="text-lg" />
+                        </button>
+                      </CheckPermission>
                     </div>
 
                     <div className="mt-5 flex gap-3 items-stretch">
                       <div className="flex min-w-0 flex-1 flex-col gap-2">
-                        <Button
-                          onClick={() => viewInWeb(policyTemplate._id)}
-                          startContent={
-                            <Icon
-                              icon="tabler:external-link"
-                              className="text-base"
-                            />
-                          }
-                          className="w-full! rounded-xl! border-[#E3E9F4]! text-[13px]! py-2.5! justify-center"
-                          hierarchy="secondary"
-                        >
-                          Ver en la web
-                        </Button>
-                        <Button
-                          onClick={() =>
-                            viewInWeb(
-                              policyTemplate._id,
-                              `${policyTemplate.name}.${policyTemplate.file.originalName.split(".").pop()}`
-                            )
-                          }
-                          startContent={
-                            <Icon icon="tabler:download" className="text-base" />
-                          }
-                          className="w-full! rounded-xl! border-[#E3E9F4]! text-[13px]! py-2.5! justify-center"
-                          hierarchy="secondary"
-                        >
-                          Descargar
-                        </Button>
+                        {policyTemplate.sourceType === "RAT_GENERATED" ? (
+                          <Button
+                            onClick={() => previewGenerated(policyTemplate.companyId)}
+                            loading={previewingCompanyId === policyTemplate.companyId}
+                            disabled={previewingCompanyId === policyTemplate.companyId}
+                            startContent={
+                              <Icon icon="tabler:file-search" className="text-base" />
+                            }
+                            className="w-full! rounded-xl! border-[#E3E9F4]! text-[13px]! py-2.5! justify-center"
+                            hierarchy="secondary"
+                          >
+                            Previsualizar (PDF)
+                          </Button>
+                        ) : (
+                          <>
+                            <Button
+                              onClick={() => viewInWeb(policyTemplate._id)}
+                              startContent={
+                                <Icon
+                                  icon="tabler:external-link"
+                                  className="text-base"
+                                />
+                              }
+                              className="w-full! rounded-xl! border-[#E3E9F4]! text-[13px]! py-2.5! justify-center"
+                              hierarchy="secondary"
+                            >
+                              Ver en la web
+                            </Button>
+                            <Button
+                              onClick={() =>
+                                viewInWeb(
+                                  policyTemplate._id,
+                                  `${policyTemplate.name}.${policyTemplate.file?.originalName.split(".").pop()}`
+                                )
+                              }
+                              startContent={
+                                <Icon icon="tabler:download" className="text-base" />
+                              }
+                              className="w-full! rounded-xl! border-[#E3E9F4]! text-[13px]! py-2.5! justify-center"
+                              hierarchy="secondary"
+                            >
+                              Descargar
+                            </Button>
+                          </>
+                        )}
                       </div>
                       <CheckPermission group="templates" permission="delete">
                         <button

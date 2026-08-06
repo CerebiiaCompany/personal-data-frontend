@@ -1,13 +1,18 @@
 import { showApiErrorToast } from "@/components/feedback/ApiErrorToast";
 import { fetchTreatments } from "@/lib/treatment.api";
 import { APIResponse } from "@/types/api.types";
-import { Treatment } from "@/types/treatment.types";
+import { LegalBasis, Treatment, TreatmentStatus } from "@/types/treatment.types";
 import { useCallback, useEffect, useState } from "react";
 
 interface Params {
   companyId: string | undefined;
   page?: number;
   pageSize?: number;
+  /** Filtros del listado (item B7). */
+  status?: TreatmentStatus;
+  legalBasis?: LegalBasis;
+  containsSensitiveData?: boolean;
+  search?: string;
   /** Si es false, no dispara el fetch (útil para gate por permisos). */
   enabled?: boolean;
 }
@@ -16,6 +21,10 @@ export function useTreatments({
   companyId,
   page = 1,
   pageSize = 10,
+  status,
+  legalBasis,
+  containsSensitiveData,
+  search,
   enabled = true,
 }: Params) {
   const [data, setData] = useState<Treatment[] | null>(null);
@@ -27,7 +36,14 @@ export function useTreatments({
     if (!companyId) return;
     setLoading(true);
     setError(null);
-    const res = await fetchTreatments(companyId, { page, pageSize });
+    const res = await fetchTreatments(companyId, {
+      page,
+      pageSize,
+      status,
+      legalBasis,
+      containsSensitiveData,
+      search,
+    });
     setLoading(false);
     if (res.error) {
       // 403 sin permisos no debe spamear toasts (mismo criterio que ARCO/Campañas).
@@ -39,7 +55,7 @@ export function useTreatments({
     }
     setData(res.data ?? []);
     setMeta(res.meta ?? null);
-  }, [companyId, page, pageSize]);
+  }, [companyId, page, pageSize, status, legalBasis, containsSensitiveData, search]);
 
   useEffect(() => {
     if (!enabled || !companyId) return;

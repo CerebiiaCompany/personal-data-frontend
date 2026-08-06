@@ -31,11 +31,16 @@ export const userRoleOptions: CustomSelectOption<UserRole>[] = [
 export const parseUserRoleToString = (role: UserRole): string =>
   userRoleOptions.find((e) => e.value === role)?.title || "Rol inválido";
 
-export type DocType = "CC" | "TI" | "NIT" | "OTHER";
+export type DocType = "CC" | "TI" | "NIT" | "OTHER" | "RUT" | "CI";
 
 /**
  * Opciones de documento para persona natural (formularios públicos de
  * consentimiento). No incluye NIT: ese caso se maneja como persona jurídica.
+ *
+ * Se mantiene sin cambios (CC/TI/Otro) por compatibilidad — lo usan varios
+ * formularios internos (CreateAdminForm, CreateCompanyForm, etc.) que no
+ * pasaron por este bug de cara al titular. Para formularios públicos nuevos
+ * o que sí necesiten variar por país, usar getDocTypeOptionsByCountry().
  */
 export const docTypesOptions: CustomSelectOption<DocType>[] = [
   {
@@ -51,6 +56,48 @@ export const docTypesOptions: CustomSelectOption<DocType>[] = [
     title: "Otro",
   },
 ];
+
+/**
+ * Opciones de documento de persona natural para CO en formularios públicos
+ * (a diferencia de docTypesOptions, que no incluye NIT y no debe tocarse por
+ * los formularios internos que ya la usan).
+ */
+const publicNaturalDocTypeOptionsCO: CustomSelectOption<DocType>[] = [
+  { value: "CC", title: "C.C." },
+  { value: "TI", title: "T.I." },
+  { value: "NIT", title: "NIT" },
+  { value: "OTHER", title: "Otro" },
+];
+
+/**
+ * Tipos de documento de PERSONA NATURAL para formularios públicos de cara al
+ * titular, según el país de la empresa (company.countryCode). CL: solo RUT
+ * (en Chile el identificador civil/tributario es el RUT). Cualquier país no
+ * reconocido (incluyendo undefined/null) cae a CO — mismo patrón que
+ * getDataProtectionLegalNotice y getInternationalTransferNotice.
+ */
+export function getDocTypeOptionsByCountry(countryCode?: string | null): {
+  options: CustomSelectOption<DocType>[];
+  defaultValue: DocType;
+} {
+  if (countryCode === "CL") {
+    return {
+      options: [{ value: "RUT", title: "RUT" }],
+      defaultValue: "RUT",
+    };
+  }
+  // CO y cualquier país no reconocido — default a CO.
+  return { options: publicNaturalDocTypeOptionsCO, defaultValue: "CC" };
+}
+
+/**
+ * Tipo de documento de PERSONA JURÍDICA (empresa) según el país de la
+ * empresa. CL: una empresa chilena se identifica con RUT, no NIT. Cualquier
+ * país no reconocido cae a NIT (comportamiento histórico).
+ */
+export function getJuridicaDocType(countryCode?: string | null): "RUT" | "NIT" {
+  return countryCode === "CL" ? "RUT" : "NIT";
+}
 
 /**
  * Opciones de documento para usuarios de empresa (módulo de administración).
@@ -75,9 +122,37 @@ export const companyUserDocTypeOptions: CustomSelectOption<DocType>[] = [
   },
 ];
 
+const chileAdminDocTypeOptions: CustomSelectOption<DocType>[] = [
+  { value: "RUT", title: "RUT" },
+  { value: "CI", title: "Cédula de identidad" },
+  { value: "OTHER", title: "Otro" },
+];
+
+/**
+ * Tipos de documento para formularios internos de administración
+ * (crear empresa, admin, usuarios) según el país de la empresa.
+ * CL: RUT por defecto. CO: opciones históricas (CC/TI[/NIT]/Otro).
+ */
+export function getAdminDocTypeOptionsByCountry(
+  countryCode?: string | null,
+  options: { includeNit?: boolean } = {}
+): {
+  options: CustomSelectOption<DocType>[];
+  defaultValue: DocType;
+} {
+  if (countryCode === "CL") {
+    return { options: chileAdminDocTypeOptions, defaultValue: "RUT" };
+  }
+  return {
+    options: options.includeNit ? companyUserDocTypeOptions : docTypesOptions,
+    defaultValue: "CC",
+  };
+}
+
 export const parseDocTypeToString = (type: DocType): string =>
-  companyUserDocTypeOptions.find((e) => e.value === type)?.title ||
-  "Tipo de documento inválido";
+  [...companyUserDocTypeOptions, ...chileAdminDocTypeOptions].find(
+    (e) => e.value === type
+  )?.title || "Tipo de documento inválido";
 
 export interface CreateUser {
   name: string;

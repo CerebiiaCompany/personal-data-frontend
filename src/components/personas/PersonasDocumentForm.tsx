@@ -13,21 +13,84 @@ import { usePersonasCountryContent } from "@/hooks/usePersonasCountryContent";
 import { usePersonasCountryStore } from "@/store/usePersonasCountryStore";
 import { ArcoOtpChannel } from "@/types/arco.types";
 import { PersonasDocTypeId } from "@/types/personas.types";
-import { mapPersonasDocTypeToArco } from "@/utils/arcoDocType.utils";
+import {
+  isPersonasRutLikeDocType,
+  mapPersonasDocTypeToArco,
+} from "@/utils/arcoDocType.utils";
 import {
   getMaskedDestinationFromLookup,
   isSmsChannelAvailableForCountry,
 } from "@/utils/arcoOtp.utils";
 import { showApiErrorToast, showPersonasMessageToast } from "@/components/feedback/ApiErrorToast";
 import { savePersonasVerification } from "@/utils/personasSession";
+import {
+  formatRutDisplay,
+  isValidRut,
+  normalizeRut,
+  RUT_INVALID_MESSAGE,
+} from "@/utils/rutValidator";
 import { zodResolver } from "@hookform/resolvers/zod";
 import clsx from "clsx";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useEffect, useRef, useState } from "react";
+import { Resolver, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import * as z from "zod";
+
+type FormValues = {
+  docType: string;
+  docNumber: string;
+};
+
+function buildDocumentSchema(country: string) {
+  return z
+    .object({
+      docType: z.string().min(1, "Selecciona el tipo de documento"),
+      docNumber: z.string().min(1, "Ingresa tu número de documento"),
+    })
+    .superRefine((data, ctx) => {
+      const value = data.docNumber.trim();
+      if (!value) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Ingresa tu número de documento",
+          path: ["docNumber"],
+        });
+        return;
+      }
+
+      if (isPersonasRutLikeDocType(data.docType)) {
+        if (!isValidRut(value)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: RUT_INVALID_MESSAGE,
+            path: ["docNumber"],
+          });
+        }
+        return;
+      }
+
+      if (country === "CL") {
+        if (!/^[A-Za-z0-9.\-\s]+$/.test(value)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Usa solo letras, números, puntos o guion",
+            path: ["docNumber"],
+          });
+        }
+        return;
+      }
+
+      if (!/^\d+$/.test(value)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Solo se permiten números",
+          path: ["docNumber"],
+        });
+      }
+    });
+}
 
 const PersonasDocumentForm = () => {
   const router = useRouter();
@@ -35,16 +98,13 @@ const PersonasDocumentForm = () => {
   const country = usePersonasCountryStore((s) => s.country);
   const smsAvailable = isSmsChannelAvailableForCountry(country);
   const [channel, setChannel] = useState<ArcoOtpChannel>("EMAIL");
+  const countryRef = useRef(country);
+  countryRef.current = country;
 
-  const schema = z.object({
-    docType: z.string(),
-    docNumber: z
-      .string()
-      .min(1, "Ingresa tu número de documento")
-      .regex(/^\d+$/, "Solo se permiten números"),
-  });
-
-  type FormValues = z.infer<typeof schema>;
+  // Resolver dinámico: lee el país actual en cada validación (cambiar CL/CO
+  // no remonta el form, así que no podemos fijar el schema en el mount).
+  const resolver: Resolver<FormValues> = async (values, context, options) =>
+    zodResolver(buildDocumentSchema(countryRef.current))(values, context, options);
 
   const {
     register,
@@ -54,12 +114,16 @@ const PersonasDocumentForm = () => {
     watch,
     reset,
   } = useForm<FormValues>({
-    resolver: zodResolver(schema),
+    resolver,
     defaultValues: {
       docType: content.defaultDocType,
       docNumber: "",
     },
   });
+
+  const docType = watch("docType");
+  const usesRut = isPersonasRutLikeDocType(docType);
+  const { onChange: onDocNumberChange, ...docNumberField } = register("docNumber");
 
   useEffect(() => {
     reset({
@@ -70,9 +134,14 @@ const PersonasDocumentForm = () => {
   }, [country, content.defaultDocType, reset]);
 
   async function onSubmit(data: FormValues) {
+    const arcoDocType = mapPersonasDocTypeToArco(data.docType as PersonasDocTypeId);
+    const docNumberForApi = isPersonasRutLikeDocType(data.docType)
+      ? normalizeRut(data.docNumber)
+      : data.docNumber.trim();
+
     const res = await arcoLookup({
-      docType: mapPersonasDocTypeToArco(data.docType as PersonasDocTypeId),
-      docNumber: data.docNumber,
+      docType: arcoDocType,
+      docNumber: docNumberForApi,
       channel,
     });
 
@@ -94,7 +163,7 @@ const PersonasDocumentForm = () => {
     savePersonasVerification({
       country,
       docType: data.docType as PersonasDocTypeId,
-      docNumber: data.docNumber,
+      docNumber: docNumberForApi,
       sessionId: res.data.sessionId,
       channel: resolvedChannel,
       maskedEmail: res.data.maskedEmail,
@@ -156,23 +225,41 @@ const PersonasDocumentForm = () => {
                   label="Tipo de documento"
                   options={content.docTypeOptions}
                   value={watch("docType") as PersonasDocTypeId}
-                  onChange={(value) =>
-                    setValue("docType", value as PersonasDocTypeId)
-                  }
+                  onChange={(value) => {
+                    setValue("docType", value as PersonasDocTypeId, {
+                      shouldValidate: true,
+                    });
+                    setValue("docNumber", "", { shouldValidate: false });
+                  }}
                 />
 
                 <CustomInput
                   type="text"
-                  inputMode="numeric"
+                  inputMode="text"
+                  autoComplete="off"
                   label="Número de documento"
                   placeholder={
-                    country === "CL"
-                      ? "Ej. 12345678 (sin guión)"
-                      : "Ej. 1020304050"
+                    usesRut
+                      ? "Ej. 12.345.678-5"
+                      : country === "CL"
+                        ? "Ej. documento registrado"
+                        : "Ej. 1020304050"
                   }
-                  {...register("docNumber")}
+                  {...docNumberField}
+                  onChange={(e) => {
+                    if (usesRut) {
+                      e.target.value = formatRutDisplay(e.target.value);
+                    }
+                    void onDocNumberChange(e);
+                  }}
                   error={errors.docNumber}
                 />
+                {usesRut && !errors.docNumber && (
+                  <p className={clsx("-mt-3 text-xs", personasTheme.muted)}>
+                    Puedes escribirlo con puntos y guion. También aceptamos la
+                    letra K como dígito verificador.
+                  </p>
+                )}
 
                 <PersonasOtpChannelPicker
                   value={channel}

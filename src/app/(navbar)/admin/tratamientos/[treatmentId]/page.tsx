@@ -4,16 +4,21 @@ import Button from "@/components/base/Button";
 import { showApiErrorToast } from "@/components/feedback/ApiErrorToast";
 import ArchiveTreatmentDialog from "@/components/treatments/ArchiveTreatmentDialog";
 import TreatmentStatusBadge from "@/components/treatments/TreatmentStatusBadge";
+import TreatmentSystemsSection from "@/components/treatments/TreatmentSystemsSection";
 import TreatmentVersionHistory from "@/components/treatments/TreatmentVersionHistory";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
+import { useCompanyDataOfficer } from "@/hooks/useCompanyDataOfficer";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useTreatment } from "@/hooks/useTreatment";
 import { useTreatmentPurposes } from "@/hooks/useTreatmentPurposes";
 import { activateTreatment } from "@/lib/treatment.api";
+import { useSessionStore } from "@/store/useSessionStore";
 import {
   DATA_CATEGORY_LABELS,
   DATA_SUBJECT_CATEGORY_LABELS,
   LEGAL_BASIS_LABELS,
+  RETENTION_START_EVENT_LABELS,
+  RETENTION_UNIT_LABELS,
   SECURITY_MEASURE_LABELS,
   Treatment,
   TREATMENT_ACTIVATION_FIELD_LABELS,
@@ -25,6 +30,19 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 const NAVY = "#1A2B5B";
+
+// Prefiere los campos estructurados (retentionValue/retentionUnit/
+// retentionStartEvent); si el tratamiento es de antes de estructurar la
+// retención y solo tiene el texto libre legado (retentionPeriod), lo usa
+// como fallback — no se migró automáticamente (checkpoint decidido con el
+// usuario), así que ambas fuentes pueden coexistir indefinidamente.
+function formatRetention(t: Treatment): string {
+  if (t.retentionValue != null && t.retentionUnit && t.retentionStartEvent) {
+    const unitLabel = RETENTION_UNIT_LABELS[t.retentionUnit];
+    return `${t.retentionValue} ${unitLabel.toLowerCase()} ${RETENTION_START_EVENT_LABELS[t.retentionStartEvent].toLowerCase()}`;
+  }
+  return t.retentionPeriod || "—";
+}
 
 function formatDateTime(iso: string | null): string {
   if (!iso) return "—";
@@ -86,6 +104,8 @@ export default function TreatmentDetailPage() {
     treatmentId,
   });
   const { data: purposes } = useTreatmentPurposes({ companyId });
+  const user = useSessionStore((store) => store.user);
+  const dataOfficer = useCompanyDataOfficer({ companyId, enabled: Boolean(companyId) });
 
   const [activating, setActivating] = useState(false);
   const [archiveOpen, setArchiveOpen] = useState(false);
@@ -99,6 +119,17 @@ export default function TreatmentDetailPage() {
   const canActivate = hasPermission("treatments", "activate");
   const canArchive = hasPermission("treatments", "archive");
 
+  // Item B (Fase 1 PRD v2.2, RF-03) — el botón "Activar" original ahora
+  // significa "solicitar activación" desde DRAFT, o "aprobar" desde
+  // PENDING_APPROVAL. Solo el DPO designado por la empresa (o un
+  // SUPERADMIN) puede aprobar — se decide en el cliente para no mostrar un
+  // botón que el backend va a rechazar con 403, pero el backend re-verifica
+  // igual (nunca confiar solo en el frontend).
+  const isDesignatedDataOfficer = Boolean(
+    dataOfficer.data?._id && user?._id && dataOfficer.data._id === user._id
+  );
+  const canApprove = isDesignatedDataOfficer || user?.role === "SUPERADMIN";
+
   async function handleActivate() {
     if (!companyId || !data) return;
     setActivating(true);
@@ -106,6 +137,12 @@ export default function TreatmentDetailPage() {
     setActivating(false);
 
     if (res.error) {
+      if ((res.error as { missingDataOfficer?: boolean }).missingDataOfficer) {
+        toast.error(
+          "No hay un Encargado de Prevención (DPO) designado para esta empresa. Asígnalo en Administración antes de solicitar la activación."
+        );
+        return;
+      }
       const missing = (res.error as { missingFields?: string[] }).missingFields;
       if (Array.isArray(missing) && missing.length) {
         const labels = missing
@@ -118,7 +155,9 @@ export default function TreatmentDetailPage() {
       return;
     }
 
-    toast.success("Tratamiento activado");
+    toast.success(
+      data.status === "PENDING_APPROVAL" ? "Tratamiento activado" : "Activación solicitada, pendiente de aprobación del DPO"
+    );
     refresh();
   }
 
@@ -151,6 +190,7 @@ export default function TreatmentDetailPage() {
   }
 
   const isDraft = data.status === "DRAFT";
+  const isPendingApproval = data.status === "PENDING_APPROVAL";
   const isArchived = data.status === "ARCHIVED";
 
   return (
@@ -215,8 +255,26 @@ export default function TreatmentDetailPage() {
                   startContent={<Icon icon="tabler:circle-check" />}
                   className="border-emerald-600! bg-emerald-600!"
                 >
-                  Activar
+                  Solicitar activación
                 </Button>
+              )}
+              {/* Item B (RF-03): en PENDING_APPROVAL, "Activar" se bloquea
+                  hasta que lo apruebe explícitamente el DPO designado. */}
+              {isPendingApproval && canApprove && (
+                <Button
+                  onClick={handleActivate}
+                  loading={activating}
+                  startContent={<Icon icon="tabler:shield-check" />}
+                  className="border-emerald-600! bg-emerald-600!"
+                >
+                  Aprobar activación
+                </Button>
+              )}
+              {isPendingApproval && !canApprove && (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700">
+                  <Icon icon="tabler:clock-hour-4" className="text-sm" />
+                  Pendiente de aprobación del DPO
+                </span>
               )}
               {canArchive && !isArchived && (
                 <Button
@@ -238,7 +296,20 @@ export default function TreatmentDetailPage() {
                 className="mt-0.5 shrink-0 text-base"
               />
               Para activar este tratamiento se requieren: finalidad, base legal,
-              al menos una categoría de datos y una de titulares.
+              al menos una categoría de datos y una de titulares, y un
+              Encargado de Prevención (DPO) designado para la empresa —
+              luego debe ser aprobado explícitamente por el DPO.
+            </p>
+          )}
+          {isPendingApproval && (
+            <p className="mt-4 flex items-start gap-2 rounded-xl border border-blue-200/80 bg-blue-50/90 px-3 py-2.5 text-xs leading-relaxed text-blue-950">
+              <Icon
+                icon="tabler:info-circle"
+                className="mt-0.5 shrink-0 text-base"
+              />
+              {canApprove
+                ? "Como Encargado de Prevención (DPO) de esta empresa, puedes aprobar la activación de este tratamiento."
+                : "La activación de este tratamiento está pendiente de que el Encargado de Prevención (DPO) designado la apruebe explícitamente."}
             </p>
           )}
         </header>
@@ -303,7 +374,7 @@ export default function TreatmentDetailPage() {
             </h2>
             <div className="flex flex-col gap-4">
               <Field label="Periodo de conservación">
-                {data.retentionPeriod || "—"}
+                {formatRetention(data)}
               </Field>
               <Field label="Medidas de seguridad">
                 <Chips
@@ -335,6 +406,38 @@ export default function TreatmentDetailPage() {
               )}
             </div>
           </section>
+
+          {/* Item D (RF-72, Art. 16 sexies). */}
+          {data.dataCategories.includes("GEOLOCATION") && (
+            <section className={cardClass}>
+              <h2 className="mb-4 text-sm font-semibold text-[#1A2B5B]">
+                Geolocalización — controles adicionales
+              </h2>
+              <div className="flex flex-col gap-4">
+                <Field label="Duración del tratamiento">
+                  {data.geolocationDuration || "—"}
+                </Field>
+                <Field label="¿Se comunica a terceros?">
+                  {data.geolocationSharedWithThirdParties === null
+                    ? "—"
+                    : data.geolocationSharedWithThirdParties
+                      ? "Sí"
+                      : "No"}
+                </Field>
+                {data.geolocationSharedWithThirdParties && (
+                  <Field label="Identidad de los terceros">
+                    {data.geolocationThirdPartiesIdentity || "—"}
+                  </Field>
+                )}
+              </div>
+            </section>
+          )}
+
+          {companyId && (
+            <div className="lg:col-span-2">
+              <TreatmentSystemsSection companyId={companyId} treatmentId={data.id} />
+            </div>
+          )}
 
           <section className={`${cardClass} lg:col-span-2`}>
             <h2 className="mb-4 text-sm font-semibold text-[#1A2B5B]">

@@ -68,16 +68,26 @@ export default function DataOfficerCard({
         "rounded-2xl border p-4 sm:p-5",
         compact
           ? hasOfficer
-            ? "border-[#D7E3FA] bg-[#F5F8FF]"
+            ? "border-emerald-200 bg-emerald-50/70"
             : "border-[#F2D88A] bg-[#FFF9E8]"
           : "border-[#E8EDF7] bg-white shadow-[0_2px_12px_rgba(15,35,70,0.04)]",
       ].join(" ")}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
-          <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-[#EEF3FF] px-2.5 py-1 text-xs font-semibold text-[#1A2B5B]">
-            <Icon icon="tabler:shield-check" className="text-sm" />
-            Oficial de datos
+          <div
+            className={[
+              "mb-2 inline-flex items-center gap-2 rounded-full px-2.5 py-1 text-xs font-semibold",
+              hasOfficer
+                ? "bg-emerald-100 text-emerald-800"
+                : "bg-[#EEF3FF] text-[#1A2B5B]",
+            ].join(" ")}
+          >
+            <Icon
+              icon={hasOfficer ? "tabler:circle-check-filled" : "tabler:shield-check"}
+              className="text-sm"
+            />
+            {hasOfficer ? "Oficial asignado" : "Oficial de datos"}
           </div>
           {hasOfficer ? (
             <>
@@ -102,13 +112,16 @@ export default function DataOfficerCard({
           )}
         </div>
 
-        {compact && !hasOfficer ? (
+        {compact ? (
           <Link
-            href="/admin/administracion"
+            href="/admin/administracion/perfil-empresa#oficial-proteccion-datos"
             className="inline-flex items-center gap-2 rounded-xl border border-[#D8E2F6] bg-white px-4 py-2.5 text-sm font-semibold text-[#1A2B5B] hover:bg-[#F8FAFF]"
           >
-            <Icon icon="tabler:settings" className="text-base" />
-            Asignar ahora
+            <Icon
+              icon={hasOfficer ? "tabler:user-check" : "tabler:settings"}
+              className="text-base"
+            />
+            {hasOfficer ? "Ver detalle" : "Asignar ahora"}
           </Link>
         ) : null}
       </div>

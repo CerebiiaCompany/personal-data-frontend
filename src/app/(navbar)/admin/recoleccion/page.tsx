@@ -8,6 +8,7 @@ import CollectFormsFilters, {
   CollectFilter,
 } from "@/components/collectForms/CollectFormsFilters";
 import CheckPermission from "@/components/checkers/CheckPermission";
+import ModuleHelpButton from "@/components/tour/ModuleHelpButton";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useCollectForms } from "@/hooks/useCollectForms";
 import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
@@ -61,16 +62,24 @@ export default function CollectPage() {
   return (
     <div className="flex h-full flex-col bg-[#F8FAFC]">
       <div className="px-5 pt-5 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
-        <section className="rounded-2xl border border-[#E8EDF7] bg-white px-5 py-4 shadow-[0_2px_10px_rgba(15,35,70,0.03)] md:px-6 md:py-5">
-          <SectionSearchBar search={search} onSearchChange={setSearch} />
+        <section
+          data-tour="recoleccion-header"
+          className="rounded-2xl border border-[#E8EDF7] bg-white px-5 py-4 shadow-[0_2px_10px_rgba(15,35,70,0.03)] md:px-6 md:py-5"
+        >
+          <div data-tour="recoleccion-search">
+            <SectionSearchBar search={search} onSearchChange={setSearch} />
+          </div>
 
           <header className="mt-4 flex w-full flex-col gap-3">
-            <div className="flex items-center gap-2 text-sm text-[#7384A6]">
-              <Link href="/admin" className="hover:underline">
-                Inicio
-              </Link>
-              <Icon icon="tabler:chevron-right" className="text-base" />
-              <span className="font-semibold text-[#1D2E56]">Recolección</span>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-sm text-[#7384A6]">
+                <Link href="/admin" className="hover:underline">
+                  Inicio
+                </Link>
+                <Icon icon="tabler:chevron-right" className="text-base" />
+                <span className="font-semibold text-[#1D2E56]">Recolección</span>
+              </div>
+              <ModuleHelpButton tourId="recoleccion" />
             </div>
 
             <div className="flex w-full flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
@@ -84,15 +93,17 @@ export default function CollectPage() {
                 </p>
               </div>
 
-              <CheckPermission group="collect" permission="create">
-                <Button
-                  href="/admin/recoleccion/crear-formulario"
-                  className="w-full rounded-xl! border-[#0D2B74]! bg-[#0D2B74]! px-5! py-2.5! text-[13px] sm:w-auto"
-                  startContent={<Icon icon="tabler:plus" className="text-base" />}
-                >
-                  Crear formulario
-                </Button>
-              </CheckPermission>
+              <div data-tour="recoleccion-create">
+                <CheckPermission group="collect" permission="create">
+                  <Button
+                    href="/admin/recoleccion/crear-formulario"
+                    className="w-full rounded-xl! border-[#0D2B74]! bg-[#0D2B74]! px-5! py-2.5! text-[13px] sm:w-auto"
+                    startContent={<Icon icon="tabler:plus" className="text-base" />}
+                  >
+                    Crear formulario
+                  </Button>
+                </CheckPermission>
+              </div>
             </div>
           </header>
         </section>
@@ -103,14 +114,19 @@ export default function CollectPage() {
       </div>
 
       <div className="flex flex-1 flex-col px-5 pb-5 sm:px-6 sm:pb-6 lg:px-8 xl:px-10 2xl:px-12">
-        <div className="overflow-hidden rounded-2xl border border-[#E8EDF7] bg-white shadow-[0_2px_12px_rgba(15,35,70,0.04)]">
-          <CollectFormsFilters
-            activeFilter={activeFilter}
-            onChange={setActiveFilter}
-            resultCount={filteredForms?.length ?? 0}
-            totalCount={collectForms?.length ?? 0}
-            loading={loading && !collectForms}
-          />
+        <div
+          data-tour="recoleccion-list"
+          className="overflow-hidden rounded-2xl border border-[#E8EDF7] bg-white shadow-[0_2px_12px_rgba(15,35,70,0.04)]"
+        >
+          <div data-tour="recoleccion-filters">
+            <CollectFormsFilters
+              activeFilter={activeFilter}
+              onChange={setActiveFilter}
+              resultCount={filteredForms?.length ?? 0}
+              totalCount={collectForms?.length ?? 0}
+              loading={loading && !collectForms}
+            />
+          </div>
           <CollectFormsList
             refresh={refresh}
             items={filteredForms}

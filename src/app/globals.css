@@ -43,6 +43,310 @@ input:focus {
   }
 }
 
+@keyframes authOrbFloat {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(12px, -18px, 0) scale(1.05);
+  }
+}
+
+@keyframes authCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes authBrandIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.auth-shell-orb--a {
+  animation: authOrbFloat 14s ease-in-out infinite;
+}
+
+.auth-shell-orb--b {
+  animation: authOrbFloat 18s ease-in-out infinite reverse;
+}
+
+.auth-shell-card {
+  animation: authCardIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.auth-shell-brand {
+  animation: authBrandIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-shell-orb--a,
+  .auth-shell-orb--b,
+  .auth-shell-card,
+  .auth-shell-brand {
+    animation: none;
+  }
+}
+
+@keyframes onboardingSpotlightPulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0 rgba(45, 96, 224, 0.35),
+      0 18px 40px rgba(15, 35, 70, 0.12);
+  }
+  50% {
+    box-shadow:
+      0 0 0 10px rgba(45, 96, 224, 0),
+      0 18px 40px rgba(15, 35, 70, 0.12);
+  }
+}
+
+@keyframes onboardingTipIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes onboardingStepBlink {
+  0%,
+  100% {
+    opacity: 1;
+    border-color: rgba(45, 96, 224, 0.45);
+    background-color: rgba(237, 239, 255, 0.55);
+    box-shadow: 0 0 0 0 rgba(45, 96, 224, 0.2);
+  }
+  50% {
+    opacity: 0.88;
+    border-color: rgba(45, 96, 224, 0.9);
+    background-color: rgba(237, 239, 255, 0.95);
+    box-shadow: 0 0 0 3px rgba(45, 96, 224, 0.12);
+  }
+}
+
+@keyframes onboardingStepIconBlink {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    color: #2d60e0;
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(1.04);
+    color: #150668;
+  }
+}
+
+@keyframes onboardingPanelBlink {
+  0%,
+  100% {
+    border-color: rgba(45, 96, 224, 0.35);
+    box-shadow:
+      0 0 0 0 rgba(45, 96, 224, 0.12),
+      0 14px 32px rgba(15, 35, 70, 0.1);
+  }
+  50% {
+    border-color: rgba(45, 96, 224, 0.7);
+    box-shadow:
+      0 0 0 5px rgba(45, 96, 224, 0.1),
+      0 16px 36px rgba(15, 35, 70, 0.12);
+  }
+}
+
+@keyframes onboardingChipBlink {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow:
+      0 0 0 0 rgba(45, 96, 224, 0.22),
+      0 10px 22px rgba(0, 11, 80, 0.18);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow:
+      0 0 0 6px rgba(45, 96, 224, 0),
+      0 12px 26px rgba(0, 11, 80, 0.22);
+  }
+}
+
+.onboarding-spotlight {
+  animation: onboardingSpotlightPulse 1.6s ease-in-out 3;
+}
+
+.onboarding-tip {
+  animation: onboardingTipIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.onboarding-panel-pending {
+  animation: onboardingPanelBlink 1.8s ease-in-out infinite;
+}
+
+.onboarding-chip-pending {
+  animation: onboardingChipBlink 1.6s ease-in-out infinite;
+}
+
+@keyframes moduleHelpPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(45, 96, 224, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(45, 96, 224, 0);
+  }
+}
+
+.module-help-button {
+  animation: moduleHelpPulse 2.4s ease-in-out infinite;
+}
+
+@keyframes hashSectionFocusPulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0 rgba(45, 96, 224, 0.2),
+      0 2px 12px rgba(15, 35, 70, 0.04);
+  }
+  50% {
+    box-shadow:
+      0 0 0 6px rgba(45, 96, 224, 0.12),
+      0 8px 24px rgba(15, 35, 70, 0.08);
+  }
+}
+
+.hash-section-focus {
+  border-radius: 1rem;
+  outline: 2px solid rgba(45, 96, 224, 0.45);
+  outline-offset: 4px;
+  animation: hashSectionFocusPulse 1.4s ease-in-out 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .module-help-button {
+    animation: none;
+  }
+
+  .hash-section-focus {
+    animation: none;
+  }
+}
+
+.onboarding-step-pending {
+  animation: onboardingStepBlink 1.8s ease-in-out infinite;
+}
+
+.onboarding-step-icon-pending {
+  animation: onboardingStepIconBlink 1.8s ease-in-out infinite;
+}
+
+@keyframes onboardingStepCelebrate {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes onboardingStepExit {
+  0% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    max-height: 220px;
+    margin-bottom: 0;
+  }
+  70% {
+    opacity: 0;
+    transform: translateX(28px) scale(0.96);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(40px) scale(0.94);
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-bottom: 0;
+    border-width: 0;
+  }
+}
+
+@keyframes onboardingStepEnter {
+  0% {
+    opacity: 0;
+    transform: translateX(-18px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.onboarding-step-celebrate {
+  animation: onboardingStepCelebrate 0.55s ease-out;
+}
+
+.onboarding-step-exit {
+  animation: onboardingStepExit 0.45s ease-in forwards;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.onboarding-step-enter {
+  animation: onboardingStepEnter 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onboarding-spotlight,
+  .onboarding-tip,
+  .onboarding-panel-pending,
+  .onboarding-chip-pending,
+  .onboarding-step-pending,
+  .onboarding-step-icon-pending,
+  .onboarding-step-celebrate,
+  .onboarding-step-exit,
+  .onboarding-step-enter {
+    animation: none;
+  }
+
+  .onboarding-step-pending {
+    border-color: rgba(45, 96, 224, 0.55);
+    background-color: rgba(237, 239, 255, 0.7);
+  }
+
+  .onboarding-step-icon-pending {
+    color: #2d60e0;
+  }
+
+  .onboarding-panel-pending {
+    border-color: rgba(45, 96, 224, 0.55);
+    box-shadow: 0 0 0 3px rgba(45, 96, 224, 0.12);
+  }
+
+  .onboarding-chip-pending {
+    box-shadow: 0 10px 22px rgba(0, 11, 80, 0.18);
+  }
+}
+
 @keyframes pageTransitionEnter {
   0% {
     opacity: 0;

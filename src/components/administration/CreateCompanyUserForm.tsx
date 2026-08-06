@@ -26,12 +26,18 @@ import {
   createUserValidationSchema,
   updateUserValidationSchema,
 } from "@/validations/main.validations";
-import { companyUserDocTypeOptions, CreateUser, UpdateUser, userRoleOptions } from "@/types/user.types";
+import {
+  CreateUser,
+  UpdateUser,
+  getAdminDocTypeOptionsByCountry,
+  userRoleOptions,
+} from "@/types/user.types";
 import { createCompanyUser, updateCompanyUser } from "@/lib/user.api";
 import { useCompanyAreas } from "@/hooks/useCompanyAreas";
 import { useCompanyRoles } from "@/hooks/useCompanyRoles";
 import { usePermissionCheck } from "@/hooks/usePermissionCheck";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
+import { useOwnCompanyStore } from "@/store/useOwnCompanyStore";
 
 interface Props {
   initialValues?: CreateUser | UpdateUser;
@@ -47,6 +53,11 @@ const CreateCompanyUserForm = ({
   const { user, setUser } = useSessionStore();
   const { isCompanyAdmin, isSuperAdmin } = usePermissionCheck();
   const companyId = useActiveCompanyId();
+  const companyCountryCode = useOwnCompanyStore(
+    (store) => store.company?.countryCode
+  );
+  const { options: docTypeOptions, defaultValue: docTypeDefault } =
+    getAdminDocTypeOptionsByCountry(companyCountryCode, { includeNit: true });
   const areas = useCompanyAreas({
     companyId: companyId,
   });
@@ -69,7 +80,7 @@ const CreateCompanyUserForm = ({
     defaultValues: initialValues || {
       role: "USER", // Por defecto crear usuarios regulares
       companyUserData: {
-        docType: "CC",
+        docType: docTypeDefault,
       },
     },
   });
@@ -82,7 +93,7 @@ const CreateCompanyUserForm = ({
 
   const isCreating = !initialValues;
   const systemRole = watch("role");
-  const hasNoAreas =
+  const currentDocType = watch("companyUserData.docType");  const hasNoAreas =
     isCreating &&
     !areas.loading &&
     Array.isArray(areas.data) &&
@@ -138,6 +149,15 @@ const CreateCompanyUserForm = ({
       scrollContainer.removeEventListener("scroll", handleScroll);
     };
   }, []);
+
+  useEffect(() => {
+    const isValid = docTypeOptions.some(
+      (option) => option.value === currentDocType
+    );
+    if (!isValid) {
+      setValue("companyUserData.docType", docTypeDefault);
+    }
+  }, [currentDocType, docTypeDefault, docTypeOptions, setValue]);
 
   async function onSubmit(data: CreateUser | UpdateUser) {
     if (!companyId) return;
@@ -290,8 +310,8 @@ const CreateCompanyUserForm = ({
           <div>
             <CustomSelect
               label="Tipo de documento"
-              options={companyUserDocTypeOptions}
-              value={watch("companyUserData.docType")}
+              options={docTypeOptions}
+              value={currentDocType}
               onChange={(value) => setValue("companyUserData.docType", value)}
             />
           </div>

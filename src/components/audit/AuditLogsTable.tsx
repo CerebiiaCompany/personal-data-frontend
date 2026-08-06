@@ -60,6 +60,14 @@ function parseUserActionLogTypeToIcon(type: UserActionLogType): string {
       return "bx:trash";
     case "RESTORE":
       return "tabler:arrow-back-up";
+    case "EXPORT":
+      return "tabler:download";
+    case "APPROVE":
+      return "tabler:circle-check";
+    case "REJECT":
+      return "tabler:circle-x";
+    case "ARCHIVE":
+      return "tabler:archive";
     default:
       return "tabler:question-mark";
   }
@@ -238,7 +246,7 @@ const AuditLogsTable = ({ items, loading, error, refresh }: Props) => {
                     <td className="max-w-[160px] truncate bg-[#F4F7FF] px-2 py-2 font-medium text-xs text-primary-900 sm:px-4 sm:py-3 sm:text-sm">
                       {item.user
                         ? `${item.user.name} ${item.user.lastName}`.trim()
-                        : "—"}
+                        : "Sistema (automático)"}
                     </td>
                     <td className="bg-[#F4F7FF] px-2 py-2 font-medium text-xs sm:px-4 sm:py-3 sm:text-sm">
                       <div className="flex items-center justify-center gap-1">

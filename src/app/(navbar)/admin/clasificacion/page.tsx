@@ -7,6 +7,7 @@ import ClasificationTable from "@/components/clasification/ClasificationTable";
 import UploadExcelTemplateDialog from "@/components/dialogs/UploadExcelTemplateFile";
 import ConsentCampaignDialog from "@/components/dialogs/ConsentCampaignDialog";
 import CheckPermission from "@/components/checkers/CheckPermission";
+import ModuleHelpButton from "@/components/tour/ModuleHelpButton";
 import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useCollectFormClasifications } from "@/hooks/useCollectFormClasifications";
@@ -150,10 +151,16 @@ export default function ClassificationPage() {
           <section className={clsx(topCardClass, "px-5 md:px-6 py-4 md:py-5")}>
             <div className="flex flex-col gap-5">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
-                <div className="flex-1 min-w-0 w-full [&_label]:max-w-full">
+                <div
+                  data-tour="clasificacion-search"
+                  className="flex-1 min-w-0 w-full [&_label]:max-w-full"
+                >
                   <SectionSearchBar search={search} onSearchChange={setSearch} />
                 </div>
-                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <div
+                  data-tour="clasificacion-actions"
+                  className="flex flex-wrap items-center gap-2 shrink-0"
+                >
                   <CheckPermission group="classification" permission="create">
                     <Button
                       onClick={() => downloadExcelTemplate()}
@@ -192,19 +199,25 @@ export default function ClassificationPage() {
                 </div>
               </div>
 
-              <header className="border-t border-[#EEF2F8] pt-4 space-y-2">
-                <nav className="flex flex-wrap items-center gap-2 text-sm text-[#7384A6]">
-                  <Link href="/admin" className="hover:underline">
-                    Inicio
-                  </Link>
-                  <Icon
-                    icon="tabler:chevron-right"
-                    className="text-base shrink-0"
-                  />
-                  <span className="text-[#1D2E56] font-semibold">
-                    Clasificación
-                  </span>
-                </nav>
+              <header
+                data-tour="clasificacion-header"
+                className="border-t border-[#EEF2F8] pt-4 space-y-2"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <nav className="flex flex-wrap items-center gap-2 text-sm text-[#7384A6]">
+                    <Link href="/admin" className="hover:underline">
+                      Inicio
+                    </Link>
+                    <Icon
+                      icon="tabler:chevron-right"
+                      className="text-base shrink-0"
+                    />
+                    <span className="text-[#1D2E56] font-semibold">
+                      Clasificación
+                    </span>
+                  </nav>
+                  <ModuleHelpButton tourId="clasificacion" />
+                </div>
                 <h1 className="text-[24px] sm:text-[26px] leading-tight font-bold text-[#0B1737]">
                   Clasificación de datos
                 </h1>
@@ -223,14 +236,16 @@ export default function ClassificationPage() {
           <div className="mb-4">
             <DataOfficerCard compact hideWhenAssigned={false} />
           </div>
-          <ClasificationTable
-            items={filteredItems}
-            aggregateSource={data}
-            listSummary={summary}
-            loading={loading}
-            error={error}
-            onCreateConsentCampaign={openConsentCampaign}
-          />
+          <div data-tour="clasificacion-table">
+            <ClasificationTable
+              items={filteredItems}
+              aggregateSource={data}
+              listSummary={summary}
+              loading={loading}
+              error={error}
+              onCreateConsentCampaign={openConsentCampaign}
+            />
+          </div>
         </div>
       </div>
     </div>

@@ -9,16 +9,14 @@ import CampaignsFilters, {
 import CampaignsSummaryCards from "@/components/campaigns/CampaignsSummaryCards";
 import CampaignsTable from "@/components/campaigns/CampaignsTable";
 import CheckPermission from "@/components/checkers/CheckPermission";
+import ModuleHelpButton from "@/components/tour/ModuleHelpButton";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useCampaigns } from "@/hooks/useCampaigns";
 import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import { usePermissionCheck } from "@/hooks/usePermissionCheck";
 import { Campaign } from "@/types/campaign.types";
-import {
-  asFiniteNumber,
-  getCampaignInstanceCredits,
-} from "@/utils/campaignCredits.utils";
-import { useAppSetting } from "@/hooks/useAppSetting";
+import { getCampaignInstanceCredits } from "@/utils/campaignCredits.utils";
+import { useCompanyCreditsPricing } from "@/hooks/useCompanyCreditsPricing";
 import { Icon } from "@iconify/react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -53,17 +51,9 @@ export default function CampaignsPage() {
     enabled: shouldFetch("campaigns.view"),
   });
 
-  const trmCopSetting = useAppSetting("TRM_COP");
-  const smsCampaignPriceSetting = useAppSetting(
-    "SMS_CAMPAIGN_PRICE_PER_MESSAGE_MASIVAPP"
-  );
-  const emailCampaignPriceSetting = useAppSetting(
-    "EMAIL_CAMPAIGN_PRICE_PER_MESSAGE"
-  );
-
-  const trmCop = asFiniteNumber(trmCopSetting.data?.value);
-  const smsPrice = asFiniteNumber(smsCampaignPriceSetting.data?.value);
-  const emailPrice = asFiniteNumber(emailCampaignPriceSetting.data?.value);
+  const creditsPricing = useCompanyCreditsPricing();
+  const smsPrice = creditsPricing.data?.smsCampaignPricePerMessage;
+  const emailPrice = creditsPricing.data?.emailCampaignPricePerMessage;
 
   const summaryMetrics = useMemo(() => {
     if (!data?.length) {
@@ -90,7 +80,6 @@ export default function CampaignsPage() {
 
       const cr = getCampaignInstanceCredits({
         item: c,
-        trmCop,
         smsCampaignPricePerMessage: smsPrice,
         emailCampaignPricePerMessage: emailPrice,
       });
@@ -113,7 +102,7 @@ export default function CampaignsPage() {
       creditsConsumed,
       deliveryRatePct,
     };
-  }, [data, trmCop, smsPrice, emailPrice]);
+  }, [data, smsPrice, emailPrice]);
 
   const filteredItems = useMemo(() => {
     if (!data) return null;
@@ -140,20 +129,26 @@ export default function CampaignsPage() {
               placeholder="Buscar campañas..."
             />
 
-            <header className="flex flex-col gap-4 border-t border-[#EEF2F8] pt-5 sm:flex-row sm:items-start sm:justify-between sm:gap-8">
+            <header
+              data-tour="campanas-header"
+              className="flex flex-col gap-4 border-t border-[#EEF2F8] pt-5 sm:flex-row sm:items-start sm:justify-between sm:gap-8"
+            >
               <div className="min-w-0 flex-1 space-y-2">
-                <nav className="flex flex-wrap items-center gap-2 text-sm text-[#64748B]">
-                  <Link href="/admin" className="hover:underline">
-                    Inicio
-                  </Link>
-                  <Icon
-                    icon="tabler:chevron-right"
-                    className="text-base shrink-0 text-[#94A3B8]"
-                  />
-                  <span className="font-semibold" style={{ color: NAVY }}>
-                    Campañas
-                  </span>
-                </nav>
+                <div className="flex items-start justify-between gap-3">
+                  <nav className="flex flex-wrap items-center gap-2 text-sm text-[#64748B]">
+                    <Link href="/admin" className="hover:underline">
+                      Inicio
+                    </Link>
+                    <Icon
+                      icon="tabler:chevron-right"
+                      className="text-base shrink-0 text-[#94A3B8]"
+                    />
+                    <span className="font-semibold" style={{ color: NAVY }}>
+                      Campañas
+                    </span>
+                  </nav>
+                  <ModuleHelpButton tourId="campanas" />
+                </div>
                 <h1
                   className="text-[26px] font-bold leading-tight tracking-tight sm:text-[28px]"
                   style={{ color: NAVY }}
@@ -164,7 +159,10 @@ export default function CampaignsPage() {
                   Envíos masivos segmentados por SMS, Email y WhatsApp.
                 </p>
               </div>
-              <div className="flex shrink-0 flex-wrap items-center gap-2 sm:pt-1">
+              <div
+                data-tour="campanas-create"
+                className="flex shrink-0 flex-wrap items-center gap-2 sm:pt-1"
+              >
                 <CheckPermission group="campaigns" permission="create">
                   <Button
                     href="/admin/campanas/crear-programada"
@@ -183,26 +181,33 @@ export default function CampaignsPage() {
       <div className="w-full px-5 py-6 sm:px-6 sm:py-7 lg:px-8 lg:py-8 xl:px-10 2xl:px-12">
         <div className="flex w-full flex-col gap-6 md:gap-8">
           {showSummaryRow && (
-            <CampaignsSummaryCards
-              activeCount={summaryMetrics.activeCount}
-              totalCampaigns={summaryMetrics.totalCampaigns}
-              accumulatedReach={summaryMetrics.accumulatedReach}
-              creditsConsumed={summaryMetrics.creditsConsumed}
-              deliveryRatePct={summaryMetrics.deliveryRatePct}
-              loading={loading && !data}
-            />
+            <div data-tour="campanas-summary">
+              <CampaignsSummaryCards
+                activeCount={summaryMetrics.activeCount}
+                totalCampaigns={summaryMetrics.totalCampaigns}
+                accumulatedReach={summaryMetrics.accumulatedReach}
+                creditsConsumed={summaryMetrics.creditsConsumed}
+                deliveryRatePct={summaryMetrics.deliveryRatePct}
+                loading={loading && !data}
+              />
+            </div>
           )}
 
-          <div className="overflow-hidden rounded-2xl border border-[#E8EDF7] bg-white shadow-[0_2px_12px_rgba(15,35,70,0.04)]">
-            <CampaignsFilters
-              statusTab={statusTab}
-              typeTab={typeTab}
-              onStatusChange={setStatusTab}
-              onTypeChange={setTypeTab}
-              resultCount={filteredItems?.length ?? 0}
-              totalCount={data?.length ?? 0}
-              loading={loading && !data}
-            />
+          <div
+            data-tour="campanas-table"
+            className="overflow-hidden rounded-2xl border border-[#E8EDF7] bg-white shadow-[0_2px_12px_rgba(15,35,70,0.04)]"
+          >
+            <div data-tour="campanas-filters">
+              <CampaignsFilters
+                statusTab={statusTab}
+                typeTab={typeTab}
+                onStatusChange={setStatusTab}
+                onTypeChange={setTypeTab}
+                resultCount={filteredItems?.length ?? 0}
+                totalCount={data?.length ?? 0}
+                loading={loading && !data}
+              />
+            </div>
             <CampaignsTable
               items={filteredItems}
               loading={loading}

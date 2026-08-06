@@ -1,8 +1,16 @@
 import type { ArcoAccessReportFull } from "@/types/arco.admin.types";
+import type { PlanTier } from "@/utils/planFeatures.utils";
 
 export type { ArcoAccessReportFull };
 
-export type ArcoDocType = "CC" | "TI" | "NIT" | "OTHER";
+export type ArcoDocType =
+  | "CC"
+  | "TI"
+  | "NIT"
+  | "OTHER"
+  | "RUT"
+  | "CI"
+  | "PASSPORT";
 
 export type ArcoOtpChannel = "EMAIL" | "SMS";
 
@@ -26,7 +34,8 @@ export type ArcoRequestType =
   | "RECTIFICATION"
   | "CANCELLATION"
   | "OPPOSITION"
-  | "PORTABILITY";
+  | "PORTABILITY"
+  | "BLOCKING";
 
 export type ArcoRequestStatus =
   | "PENDING"
@@ -80,6 +89,12 @@ export interface ArcoCompanyInfo {
    * dependientes del país; por ejemplo, PORTABILITY solo aplica a Chile ("CL").
    */
   countryCode?: string;
+  /**
+   * Tier del plan comercial de la empresa (Item 6). Gating de features de
+   * Fase 2 (p. ej. PORTABILITY solo desde PROFESIONAL) vía hasFeature() en
+   * @/utils/planFeatures.utils. null si el plan no tiene tier asignado.
+   */
+  planTier?: PlanTier | null;
   dataOfficer?: ArcoDataOfficer;
 }
 
@@ -172,6 +187,9 @@ export interface ArcoCreateRequestPayload {
   oppositionReason?: string;
   /** Requerido cuando requestType es OPPOSITION */
   oppositionScopes?: ArcoOppositionScope[];
+  /** Requeridos cuando requestType es BLOCKING (Art. 8 ter) */
+  relatedRequestId?: string;
+  blockingReason?: string;
 }
 
 export interface ArcoRegulationInfo {
@@ -226,6 +244,7 @@ export interface ArcoRequestListItem {
     companyId: string;
     name: string;
     nit?: string;
+    countryCode?: string;
   };
   requestType: ArcoRequestType;
   status: ArcoRequestStatus;
@@ -258,6 +277,7 @@ export const ARCO_REQUEST_TYPE_LABELS: Record<ArcoRequestType, string> = {
   CANCELLATION: "Cancelación",
   OPPOSITION: "Oposición",
   PORTABILITY: "Portabilidad",
+  BLOCKING: "Bloqueo preventivo",
 };
 
 export const ARCO_REQUEST_STATUS_LABELS: Record<ArcoRequestStatus, string> = {

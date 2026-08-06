@@ -272,3 +272,87 @@ export async function arcoDownloadPortabilityExport(
     };
   }
 }
+
+/**
+ * Descarga el PDF del informe de acceso YA RESUELTO (item ARCO-007/ARCO-008
+ * — Art. 5). Mismo patrón que arcoDownloadPortabilityExport: el titular
+ * recibe sus datos reales, no solo un resumen en pantalla.
+ */
+export async function arcoDownloadAccessReportPdf(
+  requestId: string
+): Promise<APIResponse<void>> {
+  const token = getArcoSessionToken();
+  if (!token) {
+    return {
+      error: {
+        code: "auth/unauthenticated",
+        message: "Tu sesión expiró. Ingresa de nuevo con tu documento.",
+      },
+    };
+  }
+
+  try {
+    const response = await fetch(
+      resolveArcoUrl(`/arco/requests/${requestId}/access-report/pdf`),
+      {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          "x-arco-token": token,
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      let body: APIResponse<void> | null = null;
+      try {
+        body = (await response.json()) as APIResponse<void>;
+      } catch {}
+      if (
+        response.status === 401 ||
+        body?.error?.code === "auth/unauthenticated"
+      ) {
+        clearPersonasVerification();
+        if (
+          typeof window !== "undefined" &&
+          window.location.pathname.startsWith("/personas")
+        ) {
+          window.location.href = "/personas/ingresar";
+        }
+      }
+      return {
+        error: body?.error
+          ? { ...body.error, status: response.status }
+          : {
+              code: "http/unknown-error",
+              message: "No se pudo descargar el informe de acceso.",
+              status: response.status,
+            },
+      };
+    }
+
+    const blob = await response.blob();
+    const filename =
+      filenameFromContentDisposition(response.headers.get("content-disposition")) ??
+      `informe-acceso-${requestId}.pdf`;
+    triggerBrowserDownload(blob, filename);
+    return {};
+  } catch (error) {
+    const message = (error as Error).message;
+    if (message.includes("Failed to fetch")) {
+      return {
+        error: {
+          code: "http/network-error",
+          message: "Error de conexión. Verifica tu red e intenta de nuevo.",
+        },
+      };
+    }
+    return {
+      error: {
+        code: "http/unknown-error",
+        message: "Error inesperado al descargar el informe de acceso.",
+      },
+    };
+  }
+}

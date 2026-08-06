@@ -12,7 +12,7 @@ import CustomSelect from "@/components/forms/CustomSelect";
 import CustomCheckbox from "@/components/forms/CustomCheckbox";
 import RenderQuestionInput from "@/components/forms/RenderQuestionInput";
 import { AnswerType, CollectForm } from "@/types/collectForm.types";
-import { DocType, docTypesOptions } from "@/types/user.types";
+import { docTypesOptions } from "@/types/user.types";
 import {
   CollectFormPrefill,
   getPersonKindFromDocType,
@@ -32,6 +32,8 @@ import {
 } from "@/lib/collectForm.api";
 import LoadingCover from "@/components/layout/LoadingCover";
 import { isCctIdentityCheck } from "@/types/cctStatus.types";
+import { getDataProtectionLegalNotice } from "@/utils/legalNotices.utils";
+import InternationalTransferNotice from "./InternationalTransferNotice";
 
 type PhoneCountryCode =
   | "57" | "58" | "1" | "52" | "51"
@@ -98,6 +100,10 @@ function companyDisplayName(form: CollectForm): string | null {
   return raw && raw.length > 0 ? raw : null;
 }
 
+function companyDisplayCountryCode(form: CollectForm): string | undefined {
+  return form.company?.countryCode;
+}
+
 type CctFlowStep =
   | "validating_token"
   | "loading_prefill"
@@ -109,10 +115,14 @@ type CctFlowStep =
   | "submit_error"
   | "full_form";
 
-type IdentityDocType = DocType | "NIT";
+// Este formulario (campañas de consentimiento) no participa del fix de
+// RUT/CI de PublicCollectForm.tsx — mantiene su propio tipo, más angosto que
+// el DocType compartido, para no heredar valores que su schema local no
+// admite.
+type IdentityDocType = "CC" | "TI" | "NIT" | "OTHER";
 
 const identityDocTypeOptions: CustomSelectOption<IdentityDocType>[] = [
-  ...docTypesOptions,
+  ...(docTypesOptions as CustomSelectOption<IdentityDocType>[]),
   { value: "NIT", title: "NIT" },
 ];
 
@@ -338,6 +348,7 @@ export default function PublicConsentCampaignForm({ data, cct, qct }: Props) {
   const [flowErrorMessage, setFlowErrorMessage] = useState<string | null>(null);
 
   const companyName = companyDisplayName(data);
+  const { lawReference } = getDataProtectionLegalNotice(companyDisplayCountryCode(data));
   const isPrefillMode = Boolean(qct);
 
   React.useEffect(() => {
@@ -511,7 +522,7 @@ export default function PublicConsentCampaignForm({ data, cct, qct }: Props) {
     reValidateMode: "onChange",
     defaultValues: {
       user: {
-        docType: "CC" as DocType,
+        docType: "CC" as IdentityDocType,
         phoneCountryCode: "57" as PhoneCountryCode,
         docNumber: undefined as any,
         name: "",
@@ -539,7 +550,7 @@ export default function PublicConsentCampaignForm({ data, cct, qct }: Props) {
     setPersonKind(getPersonKindFromDocType(k.docType));
 
     if (k.docType) {
-      setValue("user.docType", k.docType as DocType, { shouldValidate: true });
+      setValue("user.docType", k.docType as IdentityDocType, { shouldValidate: true });
     }
     if (k.docNumber !== undefined && k.docNumber !== null) {
       setValue("user.docNumber", k.docNumber as unknown as number, {
@@ -586,7 +597,7 @@ export default function PublicConsentCampaignForm({ data, cct, qct }: Props) {
   const handlePersonKindChange = (kind: PersonKind) => {
     setPersonKind(kind);
     if (kind === "JURIDICA") {
-      setValue("user.docType", "NIT" as unknown as DocType, { shouldValidate: true });
+      setValue("user.docType", "NIT" as unknown as IdentityDocType, { shouldValidate: true });
       setValue("user.age", undefined as unknown as number, { shouldValidate: true });
       setValue("user.gender", undefined as UserGender | undefined, {
         shouldValidate: true,
@@ -647,7 +658,7 @@ export default function PublicConsentCampaignForm({ data, cct, qct }: Props) {
 
     if (identityDocType === "NIT") {
       setPersonKind("JURIDICA");
-      setValue("user.docType", "NIT" as unknown as DocType);
+      setValue("user.docType", "NIT" as unknown as IdentityDocType);
     } else {
       setPersonKind("NATURAL");
       setValue("user.docType", identityDocType);
@@ -900,7 +911,7 @@ export default function PublicConsentCampaignForm({ data, cct, qct }: Props) {
               {companyName}
             </p>
             <p className="text-xs text-primary-900/85 mt-2 leading-relaxed">
-              La información que registres será tratada por esta empresa conforme a la Ley 1581 de 2012 y la política que aceptes a continuación.
+              La información que registres será tratada por esta empresa conforme a la {lawReference} y la política que aceptes a continuación.
             </p>
           </div>
         </div>
@@ -1037,10 +1048,10 @@ export default function PublicConsentCampaignForm({ data, cct, qct }: Props) {
             {showField("docNumber") && (
               <div className="flex gap-5">
                 <div>
-                  <CustomSelect
+                  <CustomSelect<IdentityDocType>
                     label="Tipo de documento"
-                    options={docTypesOptions}
-                    value={watch("user.docType")}
+                    options={docTypesOptions as CustomSelectOption<IdentityDocType>[]}
+                    value={watch("user.docType") as IdentityDocType}
                     onChange={(v) => setValue("user.docType", v)}
                   />
                 </div>
@@ -1213,12 +1224,12 @@ export default function PublicConsentCampaignForm({ data, cct, qct }: Props) {
         <p className="text-sm text-[#64748B] leading-relaxed">
           {companyName ? (
             <>
-              Al aceptar, autorizo a <span className="font-semibold text-[#334155]">{companyName}</span> el tratamiento de mis datos personales conforme a la Ley 1581 de 2012 y sus decretos reglamentarios, de acuerdo con la política vinculada abajo.
+              Al aceptar, autorizo a <span className="font-semibold text-[#334155]">{companyName}</span> el tratamiento de mis datos personales conforme a la {lawReference} y su normativa reglamentaria, de acuerdo con la política vinculada abajo.
             </>
           ) : (
             <>
               Al aceptar, autorizo el tratamiento de mis datos personales conforme a
-              lo establecido en la Ley 1581 de 2012 y sus decretos reglamentarios.
+              lo establecido en la {lawReference} y su normativa reglamentaria.
             </>
           )}
         </p>
@@ -1283,6 +1294,8 @@ export default function PublicConsentCampaignForm({ data, cct, qct }: Props) {
           </>
         )}
       </div>
+
+      <InternationalTransferNotice countryCode={companyDisplayCountryCode(data)} />
 
       {!isFullFormValid && !submitting && !policyLoading && (
         <p className="text-xs text-center text-stone-500">

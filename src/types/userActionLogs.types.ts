@@ -4,13 +4,26 @@ import { SessionUser } from "./user.types";
 const userActionLogKeys = [] as const;
 export type UserActionLogKey = (typeof userActionLogKeys)[number];
 
-export type UserActionLogType = "CREATE" | "UPDATE" | "DELETE" | "RESTORE";
+export type UserActionLogType =
+  | "CREATE"
+  | "UPDATE"
+  | "DELETE"
+  | "RESTORE"
+  // Item AUD-F1-002/B28
+  | "EXPORT"
+  | "APPROVE"
+  | "REJECT"
+  | "ARCHIVE";
 
 export const userActionLogTypeOptions: CustomSelectOption<UserActionLogType>[] = [
   { title: "Crear", value: "CREATE" },
   { title: "Editar", value: "UPDATE" },
   { title: "Eliminar", value: "DELETE" },
   { title: "Restaurar", value: "RESTORE" },
+  { title: "Exportar", value: "EXPORT" },
+  { title: "Aprobar", value: "APPROVE" },
+  { title: "Rechazar", value: "REJECT" },
+  { title: "Archivar", value: "ARCHIVE" },
 ];
 
 export type UserActionLogTargetModel =
@@ -23,7 +36,11 @@ export type UserActionLogTargetModel =
   | "COLLECT_FORM_RESPONSE"
   | "POLICY_TEMPLATE"
   | "FILE"
-  | "EVALUATION";
+  | "EVALUATION"
+  | "TREATMENT"
+  // Item AUD-F1-002/B28
+  | "ARCO_REQUEST"
+  | "CONSENT";
 
 export const userActionLogTargetModelOptions: CustomSelectOption<UserActionLogTargetModel>[] =
   [
@@ -66,6 +83,18 @@ export const userActionLogTargetModelOptions: CustomSelectOption<UserActionLogTa
     {
       title: "Evaluación",
       value: "EVALUATION",
+    },
+    {
+      title: "Tratamiento (RAT)",
+      value: "TREATMENT",
+    },
+    {
+      title: "Solicitud ARCO",
+      value: "ARCO_REQUEST",
+    },
+    {
+      title: "Consentimiento",
+      value: "CONSENT",
     },
   ];
 export const parseActionLogTargetModelToString = (

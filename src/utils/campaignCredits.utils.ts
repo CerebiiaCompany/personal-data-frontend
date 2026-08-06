@@ -11,17 +11,25 @@ export function asFiniteNumber(value: unknown): number | undefined {
   return Number.isFinite(n) ? (n as number) : undefined;
 }
 
+/**
+ * Costo unitario por mensaje en la moneda de la empresa.
+ * Los precios deben venir ya convertidos (API /credits/pricing):
+ * COP para Colombia, USD para internacional — no se multiplica TRM aquí.
+ */
 export function getCreditsPerMessage(params: {
   deliveryChannel?: CampaignDeliveryChannel;
-  trmCop?: number;
   smsCampaignPricePerMessage?: number;
   emailCampaignPricePerMessage?: number;
+  /** @deprecated Usar precios ya en moneda de display; se ignora. */
+  trmCop?: number;
 }): number | undefined {
-  const { deliveryChannel, trmCop, smsCampaignPricePerMessage, emailCampaignPricePerMessage } =
-    params;
+  const {
+    deliveryChannel,
+    smsCampaignPricePerMessage,
+    emailCampaignPricePerMessage,
+  } = params;
 
   if (!deliveryChannel) return undefined;
-  if (!Number.isFinite(trmCop)) return undefined;
 
   const price =
     deliveryChannel === "EMAIL"
@@ -30,7 +38,7 @@ export function getCreditsPerMessage(params: {
 
   if (!Number.isFinite(price)) return undefined;
 
-  return (trmCop as number) * (price as number);
+  return price as number;
 }
 
 export function getTotalCampaignCredits(params: {
@@ -44,21 +52,25 @@ export function getTotalCampaignCredits(params: {
   if (!Number.isFinite(deliveriesCount)) return undefined;
   if (!Number.isFinite(creditsPerMessage)) return undefined;
 
-  return (audienceCount as number) * (deliveriesCount as number) * (creditsPerMessage as number);
+  return (
+    (audienceCount as number) *
+    (deliveriesCount as number) *
+    (creditsPerMessage as number)
+  );
 }
 
 /** Créditos estimados de una campaña (misma lógica que el listado). */
 export function getCampaignInstanceCredits(params: {
   item: Campaign;
-  trmCop?: number;
   smsCampaignPricePerMessage?: number;
   emailCampaignPricePerMessage?: number;
+  /** @deprecated */
+  trmCop?: number;
 }): number | undefined {
-  const { item, trmCop, smsCampaignPricePerMessage, emailCampaignPricePerMessage } =
+  const { item, smsCampaignPricePerMessage, emailCampaignPricePerMessage } =
     params;
   const creditsPerMessage = getCreditsPerMessage({
     deliveryChannel: item.deliveryChannel,
-    trmCop,
     smsCampaignPricePerMessage,
     emailCampaignPricePerMessage,
   });
@@ -74,3 +86,9 @@ export function getCampaignInstanceCredits(params: {
   });
 }
 
+export function formatBillingCurrencyLabel(
+  currency?: "COP" | "USD" | null
+): string {
+  if (currency === "USD") return "USD";
+  return "COP";
+}

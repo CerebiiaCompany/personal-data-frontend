@@ -8,6 +8,7 @@ import ArcoRequestsTable from "@/components/arco/ArcoRequestsTable";
 import ArcoSummaryCards from "@/components/arco/ArcoSummaryCards";
 import Button from "@/components/base/Button";
 import Pagination from "@/components/base/Pagination";
+import ModuleHelpButton from "@/components/tour/ModuleHelpButton";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useArcoMyAccess } from "@/hooks/useArcoMyAccess";
 import { useCompanyArcoRequests } from "@/hooks/useCompanyArcoRequests";
@@ -135,18 +136,24 @@ export default function ArcoAdminPage() {
   return (
     <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col bg-[#F8FAFC]">
       <div className="w-full px-5 pt-4 pb-2 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
-        <header className="rounded-2xl border border-[#E8EDF7] bg-white px-5 py-5 shadow-[0_2px_12px_rgba(15,35,70,0.04)] sm:px-6 sm:py-6">
+        <header
+          data-tour="arco-header"
+          className="rounded-2xl border border-[#E8EDF7] bg-white px-5 py-5 shadow-[0_2px_12px_rgba(15,35,70,0.04)] sm:px-6 sm:py-6"
+        >
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-2">
-              <nav className="flex flex-wrap items-center gap-2 text-sm text-[#64748B]">
-                <Link href="/admin" className="hover:underline">
-                  Inicio
-                </Link>
-                <Icon icon="tabler:chevron-right" className="text-base" />
-                <span className="font-semibold text-[#1A2B5B]">
-                  Solicitudes ARCO
-                </span>
-              </nav>
+              <div className="flex items-start justify-between gap-3">
+                <nav className="flex flex-wrap items-center gap-2 text-sm text-[#64748B]">
+                  <Link href="/admin" className="hover:underline">
+                    Inicio
+                  </Link>
+                  <Icon icon="tabler:chevron-right" className="text-base" />
+                  <span className="font-semibold text-[#1A2B5B]">
+                    Solicitudes ARCO
+                  </span>
+                </nav>
+                <ModuleHelpButton tourId="arco" />
+              </div>
               <h1 className="text-[26px] font-bold tracking-tight text-[#1A2B5B] sm:text-[28px]">
                 Gestión ARCO
               </h1>
@@ -180,6 +187,7 @@ export default function ArcoAdminPage() {
 
         <details
           open
+          data-tour="arco-officers"
           className="group mt-4 rounded-2xl border border-[#D4DEEE] bg-white shadow-[0_2px_12px_rgba(15,35,70,0.04)]"
         >
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 sm:px-6 [&::-webkit-details-marker]:hidden">
@@ -217,7 +225,10 @@ export default function ArcoAdminPage() {
       </div>
 
       <div className="flex min-h-0 w-full flex-1 flex-col gap-4 px-5 py-6 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
-        <section className="rounded-2xl border border-[#E8EDF7] bg-white p-4 sm:p-5">
+        <section
+          data-tour="arco-summary"
+          className="rounded-2xl border border-[#E8EDF7] bg-white p-4 sm:p-5"
+        >
           <h2 className="mb-4 text-sm font-semibold text-[#1A2B5B]">Resumen</h2>
           <ArcoSummaryCards
             summary={summaryQuery.data}
@@ -227,7 +238,10 @@ export default function ArcoAdminPage() {
           />
         </section>
 
-        <section className="rounded-2xl border border-[#E8EDF7] bg-white p-4 sm:p-5">
+        <section
+          data-tour="arco-filters"
+          className="rounded-2xl border border-[#E8EDF7] bg-white p-4 sm:p-5"
+        >
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <span className="text-sm font-semibold text-[#1A2B5B]">Filtros</span>
             {hasActiveFilters && (
@@ -258,6 +272,7 @@ export default function ArcoAdminPage() {
 
         <section
           id="arco-table"
+          data-tour="arco-table"
           className="overflow-visible rounded-2xl border border-[#E8EDF7] bg-white shadow-[0_2px_12px_rgba(15,35,70,0.04)]"
         >
           <div className="p-4 sm:p-5">

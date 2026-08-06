@@ -1,6 +1,11 @@
 import { APIResponse, QueryParams } from "@/types/api.types";
 import { CreatePolicyTemplate } from "@/types/policyTemplate.types";
 import { customFetch } from "@/utils/customFetch";
+import { API_BASE_URL } from "@/utils/env.utils";
+import {
+  filenameFromContentDisposition,
+  triggerBrowserDownload,
+} from "@/utils/downloadFile";
 
 export async function fetchCompanyPolicyTemplates(
   params: QueryParams
@@ -22,6 +27,22 @@ export async function createCompanyPolicyTemplate(
     method: "POST",
     body: JSON.stringify(data),
   });
+
+  return res;
+}
+
+export async function updatePolicyTemplate(
+  companyId: string,
+  policyId: string,
+  data: { name?: string; versionLabel?: string }
+): Promise<APIResponse> {
+  const res = await customFetch(
+    `/companies/${companyId}/policyTemplates/${policyId}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }
+  );
 
   return res;
 }
@@ -48,6 +69,58 @@ export async function restorePolicyTemplate(
     `/companies/${companyId}/policyTemplates/${policyId}/restore`,
     { method: "PATCH" }
   );
+}
+
+// Item 7: preview de la política generada desde el RAT (sin necesidad de
+// tener aún creada una PolicyTemplate RAT_GENERATED).
+export async function getGeneratedPolicyPreview(
+  companyId: string
+): Promise<APIResponse> {
+  return customFetch(`/companies/${companyId}/policy/generated`);
+}
+
+/**
+ * Descarga (o abre) el PDF de preview de la política generada desde el RAT.
+ * Mismo patrón que downloadArcoPortabilityExport: fetch con credenciales +
+ * blob, porque es un endpoint autenticado por cookie de sesión, no una URL
+ * pública.
+ */
+export async function downloadGeneratedPolicyPreviewPdf(
+  companyId: string
+): Promise<APIResponse<void>> {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/companies/${companyId}/policy/generated/pdf`,
+      { method: "GET", credentials: "include", cache: "no-store" }
+    );
+
+    if (!response.ok) {
+      let body: APIResponse<void> | null = null;
+      try {
+        body = (await response.json()) as APIResponse<void>;
+      } catch {}
+      return {
+        error: body?.error ?? {
+          code: "http/unknown-error",
+          message: "No se pudo generar la previsualización en PDF.",
+        },
+      };
+    }
+
+    const blob = await response.blob();
+    const filename =
+      filenameFromContentDisposition(response.headers.get("content-disposition")) ??
+      "politica-privacidad-preview.pdf";
+    triggerBrowserDownload(blob, filename);
+    return {};
+  } catch (error) {
+    return {
+      error: {
+        code: "http/unknown-error",
+        message: (error as Error).message || "No se pudo generar la previsualización en PDF.",
+      },
+    };
+  }
 }
 
 export interface PolicyTemplateFileUrlResponse {

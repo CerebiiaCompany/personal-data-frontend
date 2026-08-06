@@ -31,16 +31,27 @@ const CustomInput = ({
       )}
       <input
         id={`${props.name}Field`}
+        aria-invalid={Boolean(error) || undefined}
         {...props}
         className={clsx([
-          "gap-2 w-full text-primary-900 flex-1 relative px-3 py-2",
-          { "border border-disabled rounded-lg": variant === "bordered" },
-          { "border-b border-disabled": variant === "underline" },
+          "gap-2 w-full text-primary-900 flex-1 relative px-3 py-2 outline-none transition-colors",
+          {
+            "border rounded-lg": variant === "bordered",
+            "border-disabled focus:border-primary-400":
+              variant === "bordered" && !error,
+            "border-red-400 bg-red-50/40 focus:border-red-500":
+              variant === "bordered" && error,
+          },
+          {
+            "border-b": variant === "underline",
+            "border-disabled": variant === "underline" && !error,
+            "border-red-400": variant === "underline" && error,
+          },
         ])}
       />
 
       {error && (
-        <span className="text-red-400 text-sm font-semibold">
+        <span className="text-sm font-semibold text-red-500">
           {error.message}
         </span>
       )}

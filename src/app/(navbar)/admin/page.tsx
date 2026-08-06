@@ -7,6 +7,7 @@ import UserActionLogsTable from "@/components/dashboard/UserActionLogsTable";
 import CompanyCreditsCard from "@/components/dashboard/CompanyCreditsCard";
 import { DashboardStatCardSkeleton } from "@/components/dashboard/DashboardSkeletons";
 import DataOfficerCard from "@/components/administration/DataOfficerCard";
+import ModuleHelpButton from "@/components/tour/ModuleHelpButton";
 import CustomSelect from "@/components/forms/CustomSelect";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useCampaigns } from "@/hooks/useCampaigns";
@@ -165,16 +166,22 @@ export default function Home() {
 
   return (
     <div className="flex h-full max-h-full flex-col gap-5 bg-[#F8FAFE] p-5 sm:p-6 md:p-7">
-      <section className="rounded-2xl border border-[#E8EDF7] bg-white px-5 py-4 shadow-[0_2px_10px_rgba(15,35,70,0.03)] md:px-6 md:py-5">
+      <section
+        data-tour="dashboard-header"
+        className="rounded-2xl border border-[#E8EDF7] bg-white px-5 py-4 shadow-[0_2px_10px_rgba(15,35,70,0.03)] md:px-6 md:py-5"
+      >
         <header className="flex h-fit flex-col gap-4">
-          <div className="text-left">
-            <h6 className="text-sm font-medium leading-tight text-[#62779E]">
-              Hola,{" "}
-              <span className="font-semibold text-[#2B59C3]">
-                {user?.name} {user?.lastName}
-              </span>
-            </h6>
-            <p className="mt-0.5 text-xs text-[#778AAF]">Bienvenido/a de vuelta</p>
+          <div className="flex items-start justify-between gap-3">
+            <div className="text-left">
+              <h6 className="text-sm font-medium leading-tight text-[#62779E]">
+                Hola,{" "}
+                <span className="font-semibold text-[#2B59C3]">
+                  {user?.name} {user?.lastName}
+                </span>
+              </h6>
+              <p className="mt-0.5 text-xs text-[#778AAF]">Bienvenido/a de vuelta</p>
+            </div>
+            <ModuleHelpButton tourId="dashboard" />
           </div>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-[#0A1633]">
@@ -194,7 +201,10 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 sm:flex-1 sm:justify-end">
+            <div
+              data-tour="dashboard-period"
+              className="flex flex-wrap items-center gap-2 sm:flex-1 sm:justify-end"
+            >
               {(month != currentMonth.value || year !== String(currentYear)) && (
                 <Button
                   onClick={() => {
@@ -232,7 +242,10 @@ export default function Home() {
         </header>
       </section>
 
-      <div className="grid w-full grid-cols-1 gap-3.5 lg:grid-cols-3">
+      <div
+        data-tour="dashboard-stats"
+        className="grid w-full grid-cols-1 gap-3.5 lg:grid-cols-3"
+      >
         <div className="min-h-[128px] lg:col-span-1">
           <CompanyCreditsCard
             data={companyCredits.data}
@@ -258,11 +271,14 @@ export default function Home() {
         />
       </div>
 
-      <div>
-        <DataOfficerCard compact />
+      <div data-tour="dashboard-officer">
+        <DataOfficerCard compact hideWhenAssigned={false} />
       </div>
 
-      <div className="grid min-h-[420px] w-full flex-1 auto-rows-[minmax(250px,auto)] grid-cols-1 gap-4 overflow-visible md:gap-5 xl:grid-cols-2">
+      <div
+        data-tour="dashboard-activity"
+        className="grid min-h-[420px] w-full flex-1 auto-rows-[minmax(250px,auto)] grid-cols-1 gap-4 overflow-visible md:gap-5 xl:grid-cols-2"
+      >
         <DashboardChartCard
           title="Campañas activas"
           href="/admin/campanas"

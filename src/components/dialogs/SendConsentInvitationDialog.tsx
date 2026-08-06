@@ -194,7 +194,8 @@ const SendConsentInvitationDialog = ({
                           : ""
                       }
                     >
-                      SMS: COP {formatPricing(otpPricing.data.smsPricePerMessage)}
+                      SMS: {otpPricing.data.currency ?? "COP"}{" "}
+                      {formatPricing(otpPricing.data.smsPricePerMessage)}
                     </span>
                     <span className="mx-1.5 text-stone-400">·</span>
                     <span
@@ -204,7 +205,8 @@ const SendConsentInvitationDialog = ({
                           : ""
                       }
                     >
-                      Email: COP {formatPricing(otpPricing.data.emailPricePerMessage)}
+                      Email: {otpPricing.data.currency ?? "COP"}{" "}
+                      {formatPricing(otpPricing.data.emailPricePerMessage)}
                     </span>
                   </div>
                 )}

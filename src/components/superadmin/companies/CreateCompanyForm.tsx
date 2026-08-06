@@ -9,12 +9,16 @@ import { parseApiError } from "@/utils/parseApiError";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
-import { docTypesOptions } from "@/types/user.types";
+import {
+  getAdminDocTypeOptionsByCountry,
+  getJuridicaDocType,
+} from "@/types/user.types";
+import { formatRutDisplay } from "@/utils/rutValidator";
 
 import Button from "@/components/base/Button";
 import CustomInput from "@/components/forms/CustomInput";
 import CustomSelect from "@/components/forms/CustomSelect";
-import { CreateCompany } from "@/types/company.types";
+import { COMPANY_COUNTRY_CODE_OPTIONS, CreateCompany } from "@/types/company.types";
 import { createCompanyValidationSchema } from "@/validations/superadmin.validations";
 import { usePlans } from "@/hooks/usePlans";
 import { createCompany } from "@/lib/company.api";
@@ -34,12 +38,16 @@ const CreateCompanyForm = ({ initialValues }: Props) => {
     formState: { errors },
     setValue,
     watch,
+    trigger,
   } = useForm({
     resolver: zodResolver(createCompanyValidationSchema),
+    mode: "onBlur",
+    reValidateMode: "onChange",
     defaultValues: initialValues || {
       manager: {
         docType: "CC",
       },
+      countryCode: "CO",
     },
   });
   const router = useRouter();
@@ -51,6 +59,16 @@ const CreateCompanyForm = ({ initialValues }: Props) => {
   const [plansOptions, setPlansOptions] = useState<
     CustomSelectOption<string>[] | null
   >(null);
+  const countryCode = watch("countryCode");
+  const managerDocType = watch("manager.docType");
+  const nitValue = watch("nit") ?? "";
+  const managerDocNumber = watch("manager.docNumber") ?? "";
+  const { options: managerDocTypeOptions, defaultValue: managerDocTypeDefault } =
+    getAdminDocTypeOptionsByCountry(countryCode);
+  const juridicaDocLabel = getJuridicaDocType(countryCode);
+  const isChile = countryCode === "CL";
+  const managerUsesRut =
+    managerDocType === "RUT" || managerDocType === "CI";
 
   useEffect(() => {
     const scrollContainer = document.getElementById("scrollContainer");
@@ -83,11 +101,39 @@ const CreateCompanyForm = ({ initialValues }: Props) => {
     }
   }, [plans.data]);
 
+  useEffect(() => {
+    const isValid = managerDocTypeOptions.some(
+      (option) => option.value === managerDocType
+    );
+    if (!isValid) {
+      setValue("manager.docType", managerDocTypeDefault);
+    }
+  }, [managerDocType, managerDocTypeDefault, managerDocTypeOptions, setValue]);
+
+  useEffect(() => {
+    if (isChile && nitValue) {
+      const formatted = formatRutDisplay(nitValue);
+      if (formatted !== nitValue) {
+        setValue("nit", formatted, { shouldValidate: true });
+      } else {
+        void trigger("nit");
+      }
+    }
+    if (managerUsesRut && managerDocNumber) {
+      const formatted = formatRutDisplay(managerDocNumber);
+      if (formatted !== managerDocNumber) {
+        setValue("manager.docNumber", formatted, { shouldValidate: true });
+      } else {
+        void trigger("manager.docNumber");
+      }
+    }
+    // Revalida al cambiar país o tipo de documento (no en cada tecleo).
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo país/tipo
+  }, [countryCode, managerDocType]);
+
   async function onSubmit(data: CreateCompany) {
     if (user?.role != "SUPERADMIN")
       return toast.error("No tienes permisos para realizar esta acción");
-
-    console.log(data);
 
     setLoading(true);
 
@@ -168,7 +214,44 @@ const CreateCompanyForm = ({ initialValues }: Props) => {
           {...register("name")}
           error={errors.name}
         />
-        <CustomInput label="NIT" {...register("nit")} error={errors.nit} />
+
+        <CustomSelect
+          label="País"
+          options={COMPANY_COUNTRY_CODE_OPTIONS}
+          value={countryCode}
+          onChange={(value) => setValue("countryCode", value)}
+        />
+        {errors.countryCode && (
+          <p className="text-xs text-red-600 -mt-3">{errors.countryCode.message}</p>
+        )}
+
+        <div className="flex flex-col gap-1">
+          <CustomInput
+            label={juridicaDocLabel}
+            name="nit"
+            value={nitValue}
+            placeholder={isChile ? "Ej. 76.123.456-7" : "Ej. 900123456-7"}
+            autoComplete="off"
+            spellCheck={false}
+            onChange={(e) => {
+              const next = isChile
+                ? formatRutDisplay(e.target.value)
+                : e.target.value;
+              setValue("nit", next, {
+                shouldValidate: true,
+                shouldDirty: true,
+              });
+            }}
+            onBlur={() => void trigger("nit")}
+            error={errors.nit}
+          />
+          {isChile && !errors.nit && (
+            <p className="pl-2 text-xs text-stone-400">
+              Formato chileno: números + guion + dígito verificador (0-9 o K).
+              Ejemplo válido: 12.345.678-5
+            </p>
+          )}
+        </div>
 
         {/*//? Manager Section */}
         <div className="flex flex-col border border-stone-200 p-4 rounded-lg gap-4">
@@ -179,18 +262,43 @@ const CreateCompanyForm = ({ initialValues }: Props) => {
             error={errors.manager?.name}
           />
 
-          <div className="flex gap-5">
-            <CustomSelect
-              className="w-fit flex-none"
-              options={docTypesOptions}
-              value={watch("manager.docType")}
-              onChange={(value) => setValue("manager.docType", value)}
-            />
-            <CustomInput
-              placeholder="Número de documento"
-              {...register("manager.docNumber")}
-              error={errors.manager?.docNumber}
-            />
+          <div className="flex flex-col gap-1">
+            <div className="flex gap-5">
+              <CustomSelect
+                className="w-fit flex-none"
+                options={managerDocTypeOptions}
+                value={managerDocType}
+                onChange={(value) =>
+                  setValue("manager.docType", value, { shouldValidate: true })
+                }
+              />
+              <CustomInput
+                name="manager.docNumber"
+                placeholder={
+                  managerUsesRut ? "Ej. 12.345.678-5" : "Número de documento"
+                }
+                value={managerDocNumber}
+                autoComplete="off"
+                spellCheck={false}
+                onChange={(e) => {
+                  const next = managerUsesRut
+                    ? formatRutDisplay(e.target.value)
+                    : e.target.value;
+                  setValue("manager.docNumber", next, {
+                    shouldValidate: true,
+                    shouldDirty: true,
+                  });
+                }}
+                onBlur={() => void trigger("manager.docNumber")}
+                error={errors.manager?.docNumber}
+              />
+            </div>
+            {managerUsesRut && !errors.manager?.docNumber && (
+              <p className="pl-2 text-xs text-stone-400">
+                RUT/CI: cuerpo numérico + guion + dígito verificador (módulo 11).
+                La letra K es válida cuando el cálculo da 10.
+              </p>
+            )}
           </div>
         </div>
 
@@ -205,6 +313,35 @@ const CreateCompanyForm = ({ initialValues }: Props) => {
           {...register("phone")}
           error={errors.phone}
         />
+
+        {/*//? Cuenta de administrador de la empresa */}
+        <div className="flex flex-col border border-stone-200 p-4 rounded-lg gap-4">
+          <div>
+            <p className="text-sm text-stone-500 font-medium">
+              Cuenta de administrador de la empresa
+            </p>
+            <p className="text-xs text-stone-400">
+              Se crea junto con la empresa, pendiente de activar. El
+              administrador activa su cuenta desde /login usando el correo
+              de arriba — ahí define su propia contraseña, tú no la
+              defines aquí.
+            </p>
+          </div>
+          <div className="flex gap-5">
+            <CustomInput
+              label="Nombre del administrador"
+              placeholder="Ej. Jhon"
+              {...register("adminName")}
+              error={errors.adminName}
+            />
+            <CustomInput
+              label="Apellido del administrador"
+              placeholder="Ej. Doe"
+              {...register("adminLastName")}
+              error={errors.adminLastName}
+            />
+          </div>
+        </div>
 
         {plansOptions ? (
           <CustomSelect<string>

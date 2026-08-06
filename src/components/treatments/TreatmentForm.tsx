@@ -6,7 +6,9 @@ import CustomInput from "@/components/forms/CustomInput";
 import CustomSelect from "@/components/forms/CustomSelect";
 import CustomTextarea from "@/components/forms/CustomTextarea";
 import EnumMultiSelect from "@/components/treatments/EnumMultiSelect";
+import TreatmentSystemsSection from "@/components/treatments/TreatmentSystemsSection";
 import { useTreatmentPurposes } from "@/hooks/useTreatmentPurposes";
+import { usePolicyTemplates } from "@/hooks/usePolicyTemplates";
 import {
   createTreatment,
   fetchTreatment,
@@ -24,6 +26,10 @@ import {
   DATA_SUBJECT_CATEGORY_OPTIONS,
   LegalBasis,
   LEGAL_BASIS_OPTIONS,
+  RetentionStartEvent,
+  RetentionUnit,
+  RETENTION_START_EVENT_OPTIONS,
+  RETENTION_UNIT_OPTIONS,
   SecurityMeasure,
   SECURITY_MEASURE_OPTIONS,
   Treatment,
@@ -48,17 +54,103 @@ interface FormState {
   purposeDetail: string;
   legalBasis: LegalBasis | "";
   legalBasisJustification: string;
+  // Item CON-001/B8 (Art. 12 + Art. 14) — solo se usa/gatea cuando
+  // legalBasis === "CONSENT".
+  consentTemplateId: string;
+  // Item B6: subcampos guiados, solo usados cuando legalBasis ===
+  // LEGITIMATE_INTEREST — ver LEGITIMATE_INTEREST_LABELS/build/parse más
+  // abajo para el formato en que se concatenan dentro de
+  // legalBasisJustification (no hay migración de schema para esta tarea).
+  legitimateInterestPurpose: string;
+  legitimateInterestNecessity: string;
+  legitimateInterestBalance: string;
   dataCategories: DataCategory[];
   dataSubjectCategories: DataSubjectCategory[];
   internalOwnerId: string;
-  retentionPeriod: string;
+  retentionValue: string;
+  retentionUnit: RetentionUnit | "";
+  retentionStartEvent: RetentionStartEvent | "";
   securityMeasures: SecurityMeasure[];
   internationalTransferOccurs: boolean;
   internationalTransferCountry: string;
   internationalTransferMechanism: string;
+  // Item D (RF-72, Art. 16 sexies) — solo se piden/gatean canActivate cuando
+  // dataCategories incluye GEOLOCATION. geolocationSharedWithThirdParties es
+  // "" mientras no se responde (distinto de false = "respondió que no").
+  geolocationDuration: string;
+  geolocationSharedWithThirdParties: boolean | "";
+  geolocationThirdPartiesIdentity: string;
+}
+
+// Item B6 — LEGITIMATE_INTEREST: 3 subcampos guiados (finalidad legítima,
+// necesidad/proporcionalidad, resultado del balance) que la ley pide
+// documentar por separado, pero el schema NO tiene 3 columnas para esto (no
+// se migra en esta tarea) — se concatenan dentro de legalBasisJustification
+// con este formato exacto, separadas por una línea "---" propia para que
+// cada subcampo pueda tener varias líneas sin romper el parseo al reabrir el
+// formulario:
+//
+//   Finalidad legítima:
+//   <texto>
+//   ---
+//   Necesidad y proporcionalidad:
+//   <texto>
+//   ---
+//   Resultado del balance:
+//   <texto>
+//
+// Si legalBasisJustification no matchea NINGUNA de las 3 etiquetas (texto
+// libre de antes de este cambio, o de otra base legal), todo el texto se
+// conserva en el subcampo "purpose" para no perder información existente.
+const LEGITIMATE_INTEREST_LABELS = {
+  purpose: "Finalidad legítima",
+  necessity: "Necesidad y proporcionalidad",
+  balance: "Resultado del balance",
+} as const;
+
+function buildLegitimateInterestJustification(fields: {
+  purpose: string;
+  necessity: string;
+  balance: string;
+}): string | null {
+  const sections = [
+    fields.purpose.trim() && `${LEGITIMATE_INTEREST_LABELS.purpose}:\n${fields.purpose.trim()}`,
+    fields.necessity.trim() && `${LEGITIMATE_INTEREST_LABELS.necessity}:\n${fields.necessity.trim()}`,
+    fields.balance.trim() && `${LEGITIMATE_INTEREST_LABELS.balance}:\n${fields.balance.trim()}`,
+  ].filter((s): s is string => Boolean(s));
+  return sections.length > 0 ? sections.join("\n---\n") : null;
+}
+
+function parseLegitimateInterestJustification(text: string | null): {
+  purpose: string;
+  necessity: string;
+  balance: string;
+} {
+  const empty = { purpose: "", necessity: "", balance: "" };
+  if (!text) return empty;
+
+  const extract = (label: string): string | null => {
+    const re = new RegExp(`${label}:\\n([\\s\\S]*?)(?:\\n---\\n|$)`);
+    const match = text.match(re);
+    return match ? match[1].trim() : null;
+  };
+
+  const purpose = extract(LEGITIMATE_INTEREST_LABELS.purpose);
+  const necessity = extract(LEGITIMATE_INTEREST_LABELS.necessity);
+  const balance = extract(LEGITIMATE_INTEREST_LABELS.balance);
+
+  if (purpose === null && necessity === null && balance === null) {
+    return { purpose: text, necessity: "", balance: "" };
+  }
+  return { purpose: purpose ?? "", necessity: necessity ?? "", balance: balance ?? "" };
 }
 
 function buildInitialState(t?: Treatment | null): FormState {
+  const legitimateInterest =
+    t?.legalBasis === "LEGITIMATE_INTEREST"
+      ? parseLegitimateInterestJustification(t.legalBasisJustification)
+      : { purpose: "", necessity: "", balance: "" };
+
   return {
     name: t?.name ?? "",
     description: t?.description ?? "",
@@ -66,14 +158,23 @@ function buildInitialState(t?: Treatment | null): FormState {
     purposeDetail: t?.purposeDetail ?? "",
     legalBasis: t?.legalBasis ?? "",
     legalBasisJustification: t?.legalBasisJustification ?? "",
+    consentTemplateId: t?.consentTemplateId ?? "",
+    legitimateInterestPurpose: legitimateInterest.purpose,
+    legitimateInterestNecessity: legitimateInterest.necessity,
+    legitimateInterestBalance: legitimateInterest.balance,
     dataCategories: t?.dataCategories ?? [],
     dataSubjectCategories: t?.dataSubjectCategories ?? [],
     internalOwnerId: t?.internalOwnerId ?? "",
-    retentionPeriod: t?.retentionPeriod ?? "",
+    retentionValue: t?.retentionValue != null ? String(t.retentionValue) : "",
+    retentionUnit: t?.retentionUnit ?? "",
+    retentionStartEvent: t?.retentionStartEvent ?? "",
     securityMeasures: t?.securityMeasures ?? [],
     internationalTransferOccurs: t?.internationalTransferOccurs ?? false,
     internationalTransferCountry: t?.internationalTransferCountry ?? "",
     internationalTransferMechanism: t?.internationalTransferMechanism ?? "",
+    geolocationDuration: t?.geolocationDuration ?? "",
+    geolocationSharedWithThirdParties: t?.geolocationSharedWithThirdParties ?? "",
+    geolocationThirdPartiesIdentity: t?.geolocationThirdPartiesIdentity ?? "",
   };
 }
 
@@ -105,6 +206,11 @@ const TreatmentForm = ({
   );
 
   const { data: purposes } = useTreatmentPurposes({ companyId });
+  // Item CON-001/B8 — solo se necesita cargar cuando la base legal elegida
+  // es CONSENT, pero el hook no soporta "enabled" condicional; se carga
+  // igual (mismo criterio que purposes/owners de arriba, listas chicas por
+  // empresa) y el selector solo se renderiza cuando aplica.
+  const { data: consentTemplates } = usePolicyTemplates({ companyId });
 
   useEffect(() => {
     setForm(buildInitialState(initial));
@@ -144,6 +250,16 @@ const TreatmentForm = ({
     []
   );
 
+  const consentTemplateOptions = useMemo<CustomSelectOption<string>[]>(() => {
+    const base: CustomSelectOption<string>[] = [
+      { value: "", title: "— Selecciona una plantilla de consentimiento —" },
+    ];
+    for (const t of consentTemplates ?? []) {
+      base.push({ value: t._id, title: t.name });
+    }
+    return base;
+  }, [consentTemplates]);
+
   const ownerOptions = useMemo<CustomSelectOption<string>[]>(() => {
     const base: CustomSelectOption<string>[] = [
       { value: "", title: "— Sin responsable —" },
@@ -162,21 +278,71 @@ const TreatmentForm = ({
     [form.dataCategories]
   );
 
+  // Item D (RF-72, Art. 16 sexies).
+  const hasGeolocation = form.dataCategories.includes("GEOLOCATION");
+
   function patch<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
+  /**
+   * Todo-o-nada, igual que la validación del backend (treatment.controller.ts):
+   * los 3 campos de retención se guardan juntos o no se guarda ninguno — un
+   * valor sin unidad o sin evento disparador no es información utilizable.
+   */
+  function validateRetentionFields(): string | null {
+    const anySet = Boolean(
+      form.retentionValue.trim() || form.retentionUnit || form.retentionStartEvent
+    );
+    if (!anySet) return null;
+
+    const value = Number(form.retentionValue);
+    if (!form.retentionValue.trim() || !Number.isInteger(value) || value <= 0) {
+      return "La duración de la retención debe ser un entero mayor a 0";
+    }
+    if (!form.retentionUnit) return "Selecciona la unidad de la retención";
+    if (!form.retentionStartEvent) return "Selecciona el evento que inicia el conteo de la retención";
+    return null;
+  }
+
+  /** Item B6: LEGAL_OBLIGATION exige "Norma específica" (frontend-only — no
+   * hay cambio en canActivate, ver treatment.controller.ts item B5). */
+  function validateLegalBasisFields(): string | null {
+    if (form.legalBasis === "LEGAL_OBLIGATION" && !form.legalBasisJustification.trim()) {
+      return "La norma específica es obligatoria para la base legal 'Obligación legal'";
+    }
+    return null;
+  }
+
   function buildPayload(): CreateTreatmentPayload {
+    const hasRetention = Boolean(
+      form.retentionValue.trim() && form.retentionUnit && form.retentionStartEvent
+    );
+    // Item B6: LEGITIMATE_INTEREST concatena sus 3 subcampos guiados dentro
+    // de legalBasisJustification (ver build/parseLegitimateInterestJustification);
+    // el resto de bases legales usa el campo de texto libre tal cual, como
+    // siempre — el backend no cambia, sigue siendo un solo string.
+    const legalBasisJustification =
+      form.legalBasis === "LEGITIMATE_INTEREST"
+        ? buildLegitimateInterestJustification({
+            purpose: form.legitimateInterestPurpose,
+            necessity: form.legitimateInterestNecessity,
+            balance: form.legitimateInterestBalance,
+          })
+        : nullableText(form.legalBasisJustification);
     const base: TreatmentInput = {
       description: nullableText(form.description),
       purposeId: form.purposeId || null,
       purposeDetail: nullableText(form.purposeDetail),
       legalBasis: form.legalBasis || null,
-      legalBasisJustification: nullableText(form.legalBasisJustification),
+      legalBasisJustification,
+      consentTemplateId: form.legalBasis === "CONSENT" ? form.consentTemplateId || null : null,
       dataCategories: form.dataCategories,
       dataSubjectCategories: form.dataSubjectCategories,
       internalOwnerId: form.internalOwnerId || null,
-      retentionPeriod: nullableText(form.retentionPeriod),
+      retentionValue: hasRetention ? Number(form.retentionValue) : null,
+      retentionUnit: hasRetention ? (form.retentionUnit as RetentionUnit) : null,
+      retentionStartEvent: hasRetention ? (form.retentionStartEvent as RetentionStartEvent) : null,
       securityMeasures: form.securityMeasures,
       internationalTransferOccurs: form.internationalTransferOccurs,
       internationalTransferCountry: form.internationalTransferOccurs
@@ -184,6 +350,12 @@ const TreatmentForm = ({
         : null,
       internationalTransferMechanism: form.internationalTransferOccurs
         ? nullableText(form.internationalTransferMechanism)
+        : null,
+      geolocationDuration: nullableText(form.geolocationDuration),
+      geolocationSharedWithThirdParties:
+        form.geolocationSharedWithThirdParties === "" ? null : form.geolocationSharedWithThirdParties,
+      geolocationThirdPartiesIdentity: form.geolocationSharedWithThirdParties
+        ? nullableText(form.geolocationThirdPartiesIdentity)
         : null,
     };
     return { ...base, name: form.name.trim() };
@@ -194,6 +366,18 @@ const TreatmentForm = ({
 
     if (!form.name.trim()) {
       toast.error("El nombre del tratamiento es obligatorio");
+      return;
+    }
+
+    const retentionError = validateRetentionFields();
+    if (retentionError) {
+      toast.error(retentionError);
+      return;
+    }
+
+    const legalBasisError = validateLegalBasisFields();
+    if (legalBasisError) {
+      toast.error(legalBasisError);
       return;
     }
 
@@ -310,15 +494,81 @@ const TreatmentForm = ({
             onChange={(e) => patch("purposeDetail", e.target.value)}
             placeholder="Complementa la finalidad seleccionada (no la reemplaza)."
           />
-          <CustomTextarea
-            label="Justificación de la base legal"
-            name="legalBasisJustification"
-            rows={2}
-            value={form.legalBasisJustification}
-            onChange={(e) =>
-              patch("legalBasisJustification", e.target.value)
-            }
-          />
+          {/* Item B6: ayuda contextual según la base legal elegida. Todas
+              las variantes siguen escribiendo en legalBasisJustification —
+              el backend no cambia, solo cambia qué se le pide al usuario. */}
+          {form.legalBasis === "CONSENT" && (
+            <div className="flex flex-col gap-1">
+              <CustomSelect
+                label="Plantilla de consentimiento *"
+                options={consentTemplateOptions}
+                value={form.consentTemplateId}
+                unselectedText="— Selecciona una plantilla de consentimiento —"
+                onChange={(v) => patch("consentTemplateId", v)}
+              />
+              <p className="pl-2 text-xs text-[#8B97AB]">
+                Obligatoria para poder activar el tratamiento (Art. 12: el
+                responsable debe poder probar el consentimiento válido del
+                titular).
+              </p>
+            </div>
+          )}
+          {form.legalBasis === "LEGAL_OBLIGATION" && (
+            <CustomInput
+              label="Norma específica *"
+              name="legalBasisJustification"
+              value={form.legalBasisJustification}
+              onChange={(e) => patch("legalBasisJustification", e.target.value)}
+              placeholder="Ej. Ley 21.719, Art. 12 / Código del Trabajo, Art. 59"
+            />
+          )}
+          {form.legalBasis === "LEGITIMATE_INTEREST" && (
+            <div className="flex flex-col gap-4 rounded-xl border border-[#EAF0FA] bg-[#FAFCFF] p-4">
+              <p className="text-xs text-[#64748B]">
+                El interés legítimo exige documentar estos 3 elementos por
+                separado (test de ponderación).
+              </p>
+              <CustomTextarea
+                label="1. Finalidad legítima"
+                name="legitimateInterestPurpose"
+                rows={2}
+                value={form.legitimateInterestPurpose}
+                onChange={(e) => patch("legitimateInterestPurpose", e.target.value)}
+                placeholder="¿Qué interés real y concreto persigue la empresa?"
+              />
+              <CustomTextarea
+                label="2. Necesidad y proporcionalidad"
+                name="legitimateInterestNecessity"
+                rows={2}
+                value={form.legitimateInterestNecessity}
+                onChange={(e) => patch("legitimateInterestNecessity", e.target.value)}
+                placeholder="¿Por qué este tratamiento es necesario y no hay una alternativa menos invasiva?"
+              />
+              <CustomTextarea
+                label="3. Resultado del balance"
+                name="legitimateInterestBalance"
+                rows={2}
+                value={form.legitimateInterestBalance}
+                onChange={(e) => patch("legitimateInterestBalance", e.target.value)}
+                placeholder="¿Por qué el interés de la empresa prevalece sobre los derechos del titular?"
+              />
+            </div>
+          )}
+          {(form.legalBasis === "" ||
+            form.legalBasis === "CONTRACT_PERFORMANCE" ||
+            form.legalBasis === "VITAL_INTEREST" ||
+            form.legalBasis === "PUBLIC_INTEREST_OR_AUTHORITY" ||
+            form.legalBasis === "PUBLIC_SOURCE") && (
+            <CustomTextarea
+              label="Justificación de la base legal"
+              name="legalBasisJustification"
+              rows={2}
+              value={form.legalBasisJustification}
+              onChange={(e) =>
+                patch("legalBasisJustification", e.target.value)
+              }
+            />
+          )}
         </div>
       </section>
 
@@ -367,6 +617,66 @@ const TreatmentForm = ({
         </div>
       </section>
 
+      {/* Item D (RF-72, Art. 16 sexies): controles adicionales cuando el
+          tratamiento incluye geolocalización entre sus categorías de datos. */}
+      {hasGeolocation && (
+        <section className={sectionClass}>
+          <h2 className="mb-1 text-sm font-semibold text-[#1A2B5B]">
+            Geolocalización — controles adicionales
+          </h2>
+          <div className="mb-4 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-xs leading-relaxed text-rose-900">
+            <Icon icon="tabler:alert-triangle" className="mt-0.5 shrink-0 text-base" />
+            Este tratamiento requiere controles adicionales (Art. 16 sexies).
+          </div>
+          <div className="flex flex-col gap-4">
+            <CustomInput
+              label="Duración del tratamiento de geolocalización *"
+              name="geolocationDuration"
+              value={form.geolocationDuration}
+              onChange={(e) => patch("geolocationDuration", e.target.value)}
+              placeholder="Ej. 6 meses desde la recolección"
+            />
+            <div className="flex flex-col gap-2">
+              <span className="pl-2 text-sm font-medium text-stone-500">
+                ¿Los datos de geolocalización se comunican a terceros? *
+              </span>
+              <div className="flex gap-4">
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-[#1A2B5B]">
+                  <input
+                    type="radio"
+                    name="geolocationSharedWithThirdParties"
+                    checked={form.geolocationSharedWithThirdParties === true}
+                    onChange={() => patch("geolocationSharedWithThirdParties", true)}
+                  />
+                  Sí
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-[#1A2B5B]">
+                  <input
+                    type="radio"
+                    name="geolocationSharedWithThirdParties"
+                    checked={form.geolocationSharedWithThirdParties === false}
+                    onChange={() => patch("geolocationSharedWithThirdParties", false)}
+                  />
+                  No
+                </label>
+              </div>
+            </div>
+            {form.geolocationSharedWithThirdParties === true && (
+              <CustomInput
+                label="Identidad de los terceros *"
+                name="geolocationThirdPartiesIdentity"
+                value={form.geolocationThirdPartiesIdentity}
+                onChange={(e) => patch("geolocationThirdPartiesIdentity", e.target.value)}
+                placeholder="Ej. Transportadora XYZ S.A."
+              />
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* Item A (RF-01 a RF-07) — Inventario de Sistemas, "Paso 3.5". */}
+      <TreatmentSystemsSection companyId={companyId} treatmentId={initial?.id ?? null} />
+
       {/* Responsable y conservación */}
       <section className={sectionClass}>
         <h2 className="mb-4 text-sm font-semibold text-[#1A2B5B]">
@@ -383,13 +693,35 @@ const TreatmentForm = ({
             />
           )}
           <CustomInput
-            label="Periodo de conservación"
-            name="retentionPeriod"
-            value={form.retentionPeriod}
-            onChange={(e) => patch("retentionPeriod", e.target.value)}
-            placeholder="Ej. 5 años desde la terminación del contrato"
+            label="Duración de la retención"
+            name="retentionValue"
+            type="number"
+            min={1}
+            value={form.retentionValue}
+            onChange={(e) => patch("retentionValue", e.target.value)}
+            placeholder="Ej. 5"
+          />
+          <CustomSelect
+            label="Unidad"
+            options={RETENTION_UNIT_OPTIONS}
+            value={form.retentionUnit}
+            unselectedText="— Selecciona una unidad —"
+            onChange={(v) => patch("retentionUnit", v as RetentionUnit | "")}
+          />
+          <CustomSelect
+            label="¿Qué evento inicia el conteo?"
+            options={RETENTION_START_EVENT_OPTIONS}
+            value={form.retentionStartEvent}
+            unselectedText="— Selecciona un evento —"
+            onChange={(v) => patch("retentionStartEvent", v as RetentionStartEvent | "")}
           />
         </div>
+        {initial?.retentionPeriod && (
+          <p className="mt-3 text-xs text-[#8B97AB]">
+            Periodo de conservación (histórico, solo lectura): &ldquo;{initial.retentionPeriod}&rdquo;.
+            Complétalo arriba con los campos estructurados para reemplazarlo.
+          </p>
+        )}
       </section>
 
       {/* Seguridad */}
@@ -421,32 +753,55 @@ const TreatmentForm = ({
           Hay transferencia internacional de datos
         </label>
         {form.internationalTransferOccurs && (
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-1">
-              <label className="pl-2 text-sm font-medium text-stone-500">
-                País de destino
-              </label>
-              <input
-                className={inputBase}
-                value={form.internationalTransferCountry}
-                onChange={(e) =>
-                  patch("internationalTransferCountry", e.target.value)
-                }
-                placeholder="Ej. Estados Unidos"
-              />
+          <div className="mt-4 flex flex-col gap-4">
+            {/* Item B9: contenido educativo, sin campos nuevos — ayuda a
+                reconocer transferencias internacionales "invisibles" (un SaaS
+                extranjero, aunque no se piense en él como "transferencia"). */}
+            <div className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+              <Icon icon="tabler:bulb" className="mt-0.5 shrink-0 text-lg text-amber-600" />
+              <div className="text-xs leading-relaxed text-amber-900">
+                <p className="font-semibold">
+                  ¿Sabías que usar un SaaS extranjero ya cuenta como transferencia internacional?
+                </p>
+                <p className="mt-1">
+                  No hace falta enviar un archivo manualmente a otro país: si
+                  los datos quedan almacenados o procesados en servidores fuera
+                  de tu país, ya es una transferencia. Ejemplos comunes:
+                  Mailchimp y HubSpot (email marketing/CRM), Google Analytics
+                  (analítica web), AWS y Google Cloud (hosting/almacenamiento),
+                  Zendesk (soporte al cliente), Slack (comunicación interna).
+                  Si tu empresa usa alguna herramienta así con los datos de
+                  este tratamiento, indícalo abajo.
+                </p>
+              </div>
             </div>
-            <div className="flex flex-col gap-1">
-              <label className="pl-2 text-sm font-medium text-stone-500">
-                Mecanismo de transferencia
-              </label>
-              <input
-                className={inputBase}
-                value={form.internationalTransferMechanism}
-                onChange={(e) =>
-                  patch("internationalTransferMechanism", e.target.value)
-                }
-                placeholder="Ej. Cláusulas contractuales tipo"
-              />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-1">
+                <label className="pl-2 text-sm font-medium text-stone-500">
+                  País de destino
+                </label>
+                <input
+                  className={inputBase}
+                  value={form.internationalTransferCountry}
+                  onChange={(e) =>
+                    patch("internationalTransferCountry", e.target.value)
+                  }
+                  placeholder="Ej. Estados Unidos"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="pl-2 text-sm font-medium text-stone-500">
+                  Mecanismo de transferencia
+                </label>
+                <input
+                  className={inputBase}
+                  value={form.internationalTransferMechanism}
+                  onChange={(e) =>
+                    patch("internationalTransferMechanism", e.target.value)
+                  }
+                  placeholder="Ej. Cláusulas contractuales tipo"
+                />
+              </div>
             </div>
           </div>
         )}

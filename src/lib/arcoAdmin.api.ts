@@ -252,6 +252,56 @@ export async function downloadArcoPortabilityExport(
   }
 }
 
+/**
+ * Descarga el PDF del informe de acceso YA RESUELTO (item ARCO-007/ARCO-008
+ * — Art. 5). Mismo patrón fetch+blob que downloadArcoPortabilityExport;
+ * solo disponible una vez la solicitud está RESOLVED.
+ */
+export async function downloadArcoAccessReportPdf(
+  companyId: string,
+  requestId: string
+): Promise<APIResponse<void>> {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}${arcoCompanyPath(companyId)}/requests/${requestId}/access-report/pdf`,
+      { method: "GET", credentials: "include", cache: "no-store" }
+    );
+
+    if (!response.ok) {
+      let body: APIResponse<void> | null = null;
+      try {
+        body = (await response.json()) as APIResponse<void>;
+      } catch {}
+      return {
+        error: body?.error
+          ? { ...body.error, status: response.status }
+          : {
+              code: "http/unknown-error",
+              message: "No se pudo descargar el informe de acceso en PDF.",
+              status: response.status,
+            },
+      };
+    }
+
+    const blob = await response.blob();
+    const filename =
+      filenameFromContentDisposition(response.headers.get("content-disposition")) ??
+      `informe-acceso-${requestId}.pdf`;
+    triggerBrowserDownload(blob, filename);
+    return {};
+  } catch (error) {
+    const message = (error as Error).message;
+    if (message.includes("Failed to fetch")) {
+      return {
+        error: { code: "http/network-error", message: "Error de conexión. Verifica tu red e intenta de nuevo." },
+      };
+    }
+    return {
+      error: { code: "http/unknown-error", message: "Error inesperado al descargar el informe de acceso." },
+    };
+  }
+}
+
 export function fetchArcoOfficers(companyId: string) {
   return customFetch<ArcoOfficersResult>(`${arcoCompanyPath(companyId)}/officers`);
 }

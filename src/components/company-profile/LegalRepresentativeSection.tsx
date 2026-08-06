@@ -11,6 +11,7 @@ import ProfileSectionCard from "./ProfileSectionCard";
 import { updateCompanyLegalRepresentative } from "@/lib/company.api";
 import { CompanyProfile } from "@/types/company.types";
 import { parseApiError } from "@/utils/parseApiError";
+import { getAdminDocTypeOptionsByCountry } from "@/types/user.types";
 
 const schema = z.object({
   full_name: z.string().optional(),
@@ -28,6 +29,8 @@ interface Props {
 
 const LegalRepresentativeSection = ({ companyId, profile }: Props) => {
   const [loading, setLoading] = React.useState(false);
+  const docTypeLabel =
+    getAdminDocTypeOptionsByCountry(profile?.countryCode).defaultValue;
 
   const {
     register,
@@ -77,8 +80,10 @@ const LegalRepresentativeSection = ({ companyId, profile }: Props) => {
           error={errors.position}
         />
         <CustomInput
-          label="Número de documento"
-          placeholder="Ej. 12345678"
+          label={`Número de documento (${docTypeLabel})`}
+          placeholder={
+            docTypeLabel === "RUT" ? "Ej. 12.345.678-9" : "Ej. 12345678"
+          }
           {...register("document_number")}
           error={errors.document_number}
         />

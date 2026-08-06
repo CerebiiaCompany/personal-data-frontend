@@ -19,10 +19,10 @@ import {
 import { createCampaign } from "@/lib/campaign.api";
 import { useCollectForms } from "@/hooks/useCollectForms";
 import { useCampaignAudience } from "@/hooks/useCampaignAudience";
-import { useAppSetting } from "@/hooks/useAppSetting";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
+import { useCompanyCreditsPricing } from "@/hooks/useCompanyCreditsPricing";
 import {
-  asFiniteNumber,
+  formatBillingCurrencyLabel,
   getCreditsPerMessage,
   getTotalCampaignCredits,
 } from "@/utils/campaignCredits.utils";
@@ -84,13 +84,7 @@ const CreateScheduledCampaignForm = () => {
   /** Evita doble POST: el índice único `name` en BD falla en el 2.º intento aunque el 1.º ya creó la campaña. */
   const submitLockRef = useRef(false);
 
-  const trmCopSetting = useAppSetting("TRM_COP");
-  const smsCampaignPriceSetting = useAppSetting(
-    "SMS_CAMPAIGN_PRICE_PER_MESSAGE_MASIVAPP"
-  );
-  const emailCampaignPriceSetting = useAppSetting(
-    "EMAIL_CAMPAIGN_PRICE_PER_MESSAGE"
-  );
+  const creditsPricing = useCompanyCreditsPricing();
 
   const {
     register,
@@ -163,31 +157,35 @@ const CreateScheduledCampaignForm = () => {
     companyId: companyId,
   });
 
-  const trmCop = asFiniteNumber(trmCopSetting.data?.value);
-  const smsCampaignPrice = asFiniteNumber(smsCampaignPriceSetting.data?.value);
-  const emailCampaignPrice = asFiniteNumber(
-    emailCampaignPriceSetting.data?.value
+  const smsCampaignPrice = creditsPricing.data?.smsCampaignPricePerMessage;
+  const emailCampaignPrice = creditsPricing.data?.emailCampaignPricePerMessage;
+  const billingCurrency = formatBillingCurrencyLabel(
+    creditsPricing.data?.currency
   );
 
   const smsCreditsPerMessage = getCreditsPerMessage({
     deliveryChannel: "SMS",
-    trmCop,
     smsCampaignPricePerMessage: smsCampaignPrice,
     emailCampaignPricePerMessage: emailCampaignPrice,
   });
 
   const emailCreditsPerMessage = getCreditsPerMessage({
     deliveryChannel: "EMAIL",
-    trmCop,
     smsCampaignPricePerMessage: smsCampaignPrice,
     emailCampaignPricePerMessage: emailCampaignPrice,
   });
 
   const channelOptions = useMemo(() => {
-    const fmt = (credits: number | undefined) =>
-      credits != null && Number.isFinite(credits)
-        ? `≈ COP ${priceFormatter.format(Math.round(credits))} + IVA`
-        : "COP — + IVA";
+    const fmt = (credits: number | undefined) => {
+      if (credits == null || !Number.isFinite(credits)) {
+        return `${billingCurrency} — + IVA`;
+      }
+      const amount =
+        billingCurrency === "USD"
+          ? priceFormatter.format(credits)
+          : priceFormatter.format(Math.round(credits));
+      return `≈ ${billingCurrency} ${amount} + IVA`;
+    };
     return [
       {
         value: "SMS" as const,
@@ -202,14 +200,13 @@ const CreateScheduledCampaignForm = () => {
         copLine: fmt(emailCreditsPerMessage),
       },
     ];
-  }, [smsCreditsPerMessage, emailCreditsPerMessage]);
+  }, [smsCreditsPerMessage, emailCreditsPerMessage, billingCurrency]);
 
   const selectedDeliveryChannel = (watch("deliveryChannel") ||
     "SMS") as CampaignDeliveryChannel;
 
   const selectedCreditsPerMessage = getCreditsPerMessage({
     deliveryChannel: selectedDeliveryChannel,
-    trmCop,
     smsCampaignPricePerMessage: smsCampaignPrice,
     emailCampaignPricePerMessage: emailCampaignPrice,
   });

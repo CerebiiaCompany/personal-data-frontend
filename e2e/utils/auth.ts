@@ -34,8 +34,11 @@ export function superadminCredentials(): Credentials {
 export async function login(page: Page, creds: Credentials): Promise<void> {
   await page.goto("/login");
 
-  await page.getByPlaceholder("Usuario").fill(creds.username);
-  await page.getByPlaceholder("Clave").fill(creds.password);
+  // Placeholders reales de /app/login/page.tsx ("Tu usuario"/"Tu contraseña")
+  // — actualizado tras encontrar el mismatch corriendo la suite de verdad
+  // (los placeholders "Usuario"/"Clave" ya no existen en el login actual).
+  await page.getByPlaceholder("Tu usuario").fill(creds.username);
+  await page.getByPlaceholder("Tu contraseña").fill(creds.password);
 
   // El checkbox de términos es un <input class="peer hidden"> dentro de un
   // <label>; se activa haciendo click en el texto visible del label.

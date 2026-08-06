@@ -2,12 +2,18 @@ import { APIResponse } from "@/types/api.types";
 import {
   ArchiveTreatmentPayload,
   CreateTreatmentPayload,
+  LegalBasis,
   Treatment,
   TreatmentInput,
   TreatmentPurpose,
+  TreatmentStatus,
+  TreatmentSystem,
+  TreatmentSystemInput,
   TreatmentVersionEntry,
 } from "@/types/treatment.types";
 import { customFetch } from "@/utils/customFetch";
+import { API_BASE_URL } from "@/utils/env.utils";
+import { filenameFromContentDisposition, triggerBrowserDownload } from "@/utils/downloadFile";
 
 /**
  * Capa de acceso al módulo RAT (Registro de Actividades de Tratamiento).
@@ -25,6 +31,30 @@ import { customFetch } from "@/utils/customFetch";
 interface FetchTreatmentsParams {
   page?: number;
   pageSize?: number;
+  /** Filtros del listado (item B7). */
+  status?: TreatmentStatus;
+  legalBasis?: LegalBasis;
+  containsSensitiveData?: boolean;
+  /** Substring case-insensitive sobre el nombre del tratamiento. */
+  search?: string;
+}
+
+// Query string armada a mano (no vía el 3er argumento QueryParams de
+// customFetch): QueryParams es un tipo compartido entre todo el API layer y
+// ya reserva `status` para otro significado (status HTTP), así que
+// legalBasis/status/containsSensitiveData de este endpoint se arman aparte —
+// mismo patrón que arcoAdmin.api.ts usa para sus propios filtros.
+function buildTreatmentsQuery(params: FetchTreatmentsParams): string {
+  const parts: string[] = [];
+  if (params.status) parts.push(`status=${encodeURIComponent(params.status)}`);
+  if (params.legalBasis) parts.push(`legalBasis=${encodeURIComponent(params.legalBasis)}`);
+  if (params.containsSensitiveData !== undefined) {
+    parts.push(`containsSensitiveData=${params.containsSensitiveData}`);
+  }
+  if (params.search) parts.push(`search=${encodeURIComponent(params.search)}`);
+  if (params.page !== undefined) parts.push(`page=${params.page}`);
+  if (params.pageSize !== undefined) parts.push(`pageSize=${params.pageSize}`);
+  return parts.length > 0 ? `?${parts.join("&")}` : "";
 }
 
 export async function fetchTreatments(
@@ -32,9 +62,7 @@ export async function fetchTreatments(
   params: FetchTreatmentsParams = {}
 ): Promise<APIResponse<Treatment[]>> {
   return customFetch<Treatment[]>(
-    `/companies/${companyId}/treatments`,
-    {},
-    { page: params.page, pageSize: params.pageSize }
+    `/companies/${companyId}/treatments${buildTreatmentsQuery(params)}`
   );
 }
 
@@ -71,7 +99,14 @@ export async function updateTreatment(
   );
 }
 
-/** DRAFT → ACTIVE. Sin body. Puede devolver 400 con `missingFields`. */
+/**
+ * DRAFT → PENDING_APPROVAL → ACTIVE (item B, RF-03). Sin body — el mismo
+ * endpoint hace doble función según el status actual del tratamiento: desde
+ * DRAFT solicita la activación (requiere DPO designado); desde
+ * PENDING_APPROVAL, aprueba (solo puede llamarlo el DPO designado). Puede
+ * devolver 400 con `missingFields` o `missingDataOfficer`, o 403 si quien
+ * llama no es el DPO.
+ */
 export async function activateTreatment(
   companyId: string,
   treatmentId: string
@@ -98,10 +133,45 @@ export async function archiveTreatment(
 }
 
 export async function fetchTreatmentPurposes(
-  companyId: string
+  companyId: string,
+  options: { includeInactive?: boolean } = {}
 ): Promise<APIResponse<TreatmentPurpose[]>> {
   return customFetch<TreatmentPurpose[]>(
-    `/companies/${companyId}/treatment-purposes`
+    `/companies/${companyId}/treatment-purposes${options.includeInactive ? "?includeInactive=true" : ""}`
+  );
+}
+
+// ABM de finalidades scoped a empresa (item B26). Las globales (companyId:
+// null) no se pueden crear/editar/desactivar desde acá — ver
+// treatmentPurpose.controller.ts, queda para otra tanda.
+export async function createTreatmentPurpose(
+  companyId: string,
+  data: { code: string; label: string }
+): Promise<APIResponse<TreatmentPurpose>> {
+  return customFetch<TreatmentPurpose>(
+    `/companies/${companyId}/treatment-purposes`,
+    { method: "POST", body: JSON.stringify(data) }
+  );
+}
+
+export async function updateTreatmentPurpose(
+  companyId: string,
+  purposeId: string,
+  data: { label?: string; isActive?: boolean }
+): Promise<APIResponse<TreatmentPurpose>> {
+  return customFetch<TreatmentPurpose>(
+    `/companies/${companyId}/treatment-purposes/${purposeId}`,
+    { method: "PATCH", body: JSON.stringify(data) }
+  );
+}
+
+export async function deleteTreatmentPurpose(
+  companyId: string,
+  purposeId: string
+): Promise<APIResponse<TreatmentPurpose>> {
+  return customFetch<TreatmentPurpose>(
+    `/companies/${companyId}/treatment-purposes/${purposeId}`,
+    { method: "DELETE" }
   );
 }
 
@@ -113,4 +183,87 @@ export async function fetchTreatmentVersions(
   return customFetch<TreatmentVersionEntry[]>(
     `/companies/${companyId}/treatments/${treatmentId}/versions`
   );
+}
+
+// --- Inventario de Sistemas (item A, "Paso 3.5" del formulario) ---
+
+export async function fetchTreatmentSystems(
+  companyId: string,
+  treatmentId: string
+): Promise<APIResponse<TreatmentSystem[]>> {
+  return customFetch<TreatmentSystem[]>(
+    `/companies/${companyId}/treatments/${treatmentId}/systems`
+  );
+}
+
+export async function createTreatmentSystem(
+  companyId: string,
+  treatmentId: string,
+  payload: TreatmentSystemInput
+): Promise<APIResponse<TreatmentSystem>> {
+  return customFetch<TreatmentSystem>(
+    `/companies/${companyId}/treatments/${treatmentId}/systems`,
+    { method: "POST", body: JSON.stringify(payload) }
+  );
+}
+
+export async function deleteTreatmentSystem(
+  companyId: string,
+  treatmentId: string,
+  systemId: string
+): Promise<APIResponse<TreatmentSystem>> {
+  return customFetch<TreatmentSystem>(
+    `/companies/${companyId}/treatments/${treatmentId}/systems/${systemId}`,
+    { method: "DELETE" }
+  );
+}
+
+/**
+ * Item RAT-009 (Art. 14) — exporta TODOS los tratamientos ACTIVE de la
+ * empresa a PDF o XLSX. Mismo patrón fetch+blob que
+ * downloadGeneratedPolicyPreviewPdf/downloadArcoPortabilityExport.
+ */
+export async function downloadTreatmentsExport(
+  companyId: string,
+  format: "pdf" | "xlsx"
+): Promise<APIResponse<void>> {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/companies/${companyId}/treatments/export?format=${format}`,
+      { method: "GET", credentials: "include", cache: "no-store" }
+    );
+
+    if (!response.ok) {
+      let body: APIResponse<void> | null = null;
+      try {
+        body = (await response.json()) as APIResponse<void>;
+      } catch {}
+      return {
+        error: body?.error
+          ? { ...body.error, status: response.status }
+          : {
+              code: "http/unknown-error",
+              message: "No se pudo exportar el RAT.",
+              status: response.status,
+            },
+      };
+    }
+
+    const blob = await response.blob();
+    const filename =
+      filenameFromContentDisposition(response.headers.get("content-disposition")) ??
+      `rat-export.${format}`;
+    triggerBrowserDownload(blob, filename);
+    return {};
+  } catch (error) {
+    const message = (error as Error).message;
+    if (message.includes("Failed to fetch")) {
+      return {
+        error: { code: "http/network-error", message: "Error de conexión. Verifica tu red e intenta de nuevo." },
+      };
+    }
+    return {
+      error: { code: "http/unknown-error", message: "Error inesperado al exportar el RAT." },
+    };
+  }
 }

@@ -13,7 +13,7 @@ const templates = [
   {
     title: "Política de tratamiento de datos",
     description:
-      "Genera una política de tratamiento de datos personales conforme a la ley 1581 de 2012.",
+      "Genera una política de tratamiento de datos personales conforme a la normativa vigente en tu país.",
     icon: "tabler:shield-lock",
     iconClass: "bg-[#1D4ED8]",
   },
@@ -86,7 +86,7 @@ export default function AsistenteIAPage() {
           </h1>
           <p className="mt-1 text-sm text-[#64748B]">
             Genera políticas, autorizaciones y consentimientos conformes a la
-            Ley 1581 de 2012.
+            normativa de protección de datos vigente en tu país.
           </p>
         </div>
 

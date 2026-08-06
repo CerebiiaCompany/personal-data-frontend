@@ -17,20 +17,26 @@ import CustomInput from "../forms/CustomInput";
 import { useState } from "react";
 import { uploadFile } from "@/lib/upload.api";
 import { parseApiError } from "@/utils/parseApiError";
-import { createCompanyPolicyTemplate } from "@/lib/policyTemplate.api";
+import {
+  createCompanyPolicyTemplate,
+  downloadGeneratedPolicyPreviewPdf,
+} from "@/lib/policyTemplate.api";
 import LoadingCover from "../layout/LoadingCover";
 import { useDialogBackdropClose } from "@/hooks/useDialogBackdropClose";
+import type { PolicySourceType } from "@/types/policyTemplate.types";
 
 const acceptedFiletypes = ["application/pdf"];
 
 const maxSizeMB = 5;
 const maxFiles = 1;
 
+// Item 7: RAT_GENERATED no exige archivo (attachments queda opcional en ese
+// modo — se valida a mano en onSubmit, distinto de STATIC_FILE que sigue
+// exigiéndolo vía zod como antes).
 const formSchema = z.object({
   name: z.string().min(1, "Este campo es obligatorio"),
   attachments: z
     .array(generateFileSchema(acceptedFiletypes, maxSizeMB))
-    .min(1, "Sube la plantilla en PDF")
     .max(maxFiles, `Máximo ${maxFiles} archivos`)
     .default([]),
 });
@@ -42,6 +48,8 @@ interface Props {
 const UploadTemplateDialog = ({ refresh }: Props) => {
   const companyId = useActiveCompanyId();
   const [loading, setLoading] = useState<boolean>(false);
+  const [previewLoading, setPreviewLoading] = useState<boolean>(false);
+  const [sourceType, setSourceType] = useState<PolicySourceType>("STATIC_FILE");
   const {
     formState: { errors },
     register,
@@ -63,10 +71,38 @@ const UploadTemplateDialog = ({ refresh }: Props) => {
   });
 
   async function onSubmit(data: any) {
-    console.log("📤 onSubmit called", { data, errors });
+    console.log("📤 onSubmit called", { data, errors, sourceType });
     if (!companyId) {
       console.error("❌ No companyId found");
       toast.error("No se pudo obtener la información de la compañía");
+      return;
+    }
+
+    // Item 7: modo "Generar desde el RAT" no sube archivo — crea la
+    // plantilla directamente con sourceType RAT_GENERATED.
+    if (sourceType === "RAT_GENERATED") {
+      try {
+        setLoading(true);
+        const policyTemplateRes = await createCompanyPolicyTemplate(companyId, {
+          name: data.name,
+          sourceType: "RAT_GENERATED",
+        });
+
+        if (policyTemplateRes.error) {
+          setLoading(false);
+          return toast.error(parseApiError(policyTemplateRes.error));
+        }
+
+        toast.success("Plantilla generada desde el RAT creada");
+        setLoading(false);
+        refresh();
+        reset();
+        setSourceType("STATIC_FILE");
+        hideDialog(id);
+      } catch (error: any) {
+        setLoading(false);
+        toast.error("Error inesperado: " + (error?.message || "Error desconocido"));
+      }
       return;
     }
 
@@ -113,6 +149,7 @@ const UploadTemplateDialog = ({ refresh }: Props) => {
       const policyTemplateRes = await createCompanyPolicyTemplate(companyId, {
         fileId: fileData.id,
         name: data.name,
+        sourceType: "STATIC_FILE",
       });
 
       console.log("📥 Respuesta de createCompanyPolicyTemplate:", policyTemplateRes);
@@ -127,11 +164,25 @@ const UploadTemplateDialog = ({ refresh }: Props) => {
       setLoading(false);
       refresh();
       reset();
+      setSourceType("STATIC_FILE");
       hideDialog(id);
     } catch (error: any) {
       console.error("❌ Error general en onSubmit:", error);
       setLoading(false);
       toast.error("Error inesperado: " + (error?.message || "Error desconocido"));
+    }
+  }
+
+  async function handlePreview() {
+    if (!companyId) {
+      toast.error("No se pudo obtener la información de la compañía");
+      return;
+    }
+    setPreviewLoading(true);
+    const res = await downloadGeneratedPolicyPreviewPdf(companyId);
+    setPreviewLoading(false);
+    if (res.error) {
+      toast.error(parseApiError(res.error));
     }
   }
 
@@ -188,21 +239,68 @@ const UploadTemplateDialog = ({ refresh }: Props) => {
             }}
             className="flex flex-col gap-6"
           >
+            {/* Item 7: fuente de la plantilla — archivo estático (default,
+                comportamiento histórico) o generada en vivo desde el RAT. */}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setSourceType("STATIC_FILE")}
+                className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                  sourceType === "STATIC_FILE"
+                    ? "border-primary-900 bg-primary-50 text-primary-900"
+                    : "border-disabled text-stone-500"
+                }`}
+              >
+                Subir archivo
+              </button>
+              <button
+                type="button"
+                onClick={() => setSourceType("RAT_GENERATED")}
+                className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                  sourceType === "RAT_GENERATED"
+                    ? "border-primary-900 bg-primary-50 text-primary-900"
+                    : "border-disabled text-stone-500"
+                }`}
+              >
+                Generar desde el RAT
+              </button>
+            </div>
+
             <CustomInput
               placeholder="Nombre de la plantilla"
               {...register("name")}
               error={errors.name as FieldError}
             />
 
-            <CustomFileDropZone
-              accept={acceptedFiletypes.join(",")}
-              control={control}
-              minFiles={1}
-              maxFiles={maxFiles}
-              maxSizeMB={maxSizeMB}
-              required
-              {...register("attachments")}
-            />
+            {sourceType === "STATIC_FILE" ? (
+              <CustomFileDropZone
+                accept={acceptedFiletypes.join(",")}
+                control={control}
+                minFiles={1}
+                maxFiles={maxFiles}
+                maxSizeMB={maxSizeMB}
+                required
+                {...register("attachments")}
+              />
+            ) : (
+              <div className="flex flex-col gap-3 rounded-lg border border-disabled bg-stone-50 p-4">
+                <p className="text-sm text-stone-600">
+                  Esta plantilla se generará automáticamente a partir de los
+                  tratamientos activos del RAT de tu empresa — se actualiza
+                  sola cuando el RAT cambia, no es un archivo fijo.
+                </p>
+                <Button
+                  type="button"
+                  hierarchy="secondary"
+                  loading={previewLoading}
+                  disabled={previewLoading}
+                  onClick={handlePreview}
+                  startContent={<Icon icon="tabler:file-search" className="text-lg" />}
+                >
+                  Previsualizar política (PDF)
+                </Button>
+              </div>
+            )}
 
             {/* End Actions */}
             <Button
@@ -212,7 +310,7 @@ const UploadTemplateDialog = ({ refresh }: Props) => {
               className="w-full"
               onClick={() => console.log("🔘 Button clicked")}
             >
-              Subir archivo
+              {sourceType === "RAT_GENERATED" ? "Crear plantilla" : "Subir archivo"}
             </Button>
           </form>
         </div>

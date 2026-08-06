@@ -12,7 +12,7 @@ import { CustomSelectOption } from "./forms.types";
 
 // --- Enums (idénticos al schema del backend) ---
 
-export type TreatmentStatus = "DRAFT" | "ACTIVE" | "ARCHIVED";
+export type TreatmentStatus = "DRAFT" | "PENDING_APPROVAL" | "ACTIVE" | "ARCHIVED";
 
 export type LegalBasis =
   | "CONSENT"
@@ -30,6 +30,7 @@ export type DataCategory =
   | "EMPLOYMENT"
   | "ACADEMIC"
   | "LOCATION"
+  | "GEOLOCATION"
   | "BEHAVIORAL_PROFILING"
   | "HEALTH"
   | "BIOMETRIC"
@@ -49,6 +50,25 @@ export type DataSubjectCategory =
   | "COMMERCIAL_PROSPECTS"
   | "MINORS"
   | "OTHER";
+
+export type SystemType =
+  | "CRM"
+  | "ERP"
+  | "DATABASE"
+  | "CLOUD_STORAGE"
+  | "ON_PREMISE"
+  | "HR_PLATFORM"
+  | "MARKETING_PLATFORM"
+  | "ANALYTICS_PLATFORM"
+  | "OTHER";
+
+export type RetentionUnit = "DAYS" | "MONTHS" | "YEARS";
+
+export type RetentionStartEvent =
+  | "DATA_COLLECTION"
+  | "RELATIONSHIP_END"
+  | "LEGAL_OBLIGATION_END"
+  | "CONSENT_WITHDRAWAL";
 
 export type SecurityMeasure =
   | "ENCRYPTION_AT_REST"
@@ -103,6 +123,8 @@ export interface Treatment {
   purposeDetail: string | null;
   legalBasis: LegalBasis | null;
   legalBasisJustification: string | null;
+  /** Item CON-001/B8 (Art. 12 + Art. 14) — obligatorio para activar cuando legalBasis === "CONSENT". */
+  consentTemplateId: string | null;
 
   dataCategories: DataCategory[];
   containsSensitiveData: boolean;
@@ -110,19 +132,57 @@ export interface Treatment {
 
   internalOwnerId: string | null;
 
+  /**
+   * DEPRECADO — texto libre, ya no se escribe desde este formulario.
+   * Se conserva solo como histórico de lectura para tratamientos creados
+   * antes de estructurar la retención (ver retentionValue/retentionUnit/
+   * retentionStartEvent). No mostrar como editable.
+   */
   retentionPeriod: string | null;
+  retentionValue: number | null;
+  retentionUnit: RetentionUnit | null;
+  retentionStartEvent: RetentionStartEvent | null;
   securityMeasures: SecurityMeasure[];
 
   internationalTransferOccurs: boolean;
   internationalTransferCountry: string | null;
   internationalTransferMechanism: string | null;
 
+  /** RF-72 (Art. 16 sexies) — solo gatean canActivate cuando dataCategories incluye GEOLOCATION. */
+  geolocationDuration: string | null;
+  geolocationSharedWithThirdParties: boolean | null;
+  geolocationThirdPartiesIdentity: string | null;
+
   activatedAt: string | null;
   archivedAt: string | null;
   archivedReason: string | null;
 
+  /** RF-03 — workflow de aprobación DPO (DRAFT -> PENDING_APPROVAL -> ACTIVE). */
+  approvalRequestedAt: string | null;
+  approvedAt: string | null;
+  approvedById: string | null;
+
   createdAt: string;
   updatedAt: string;
+}
+
+/** Item A (Inventario de Sistemas, RF-01 a RF-07) — "Paso 3.5" del formulario. */
+export interface TreatmentSystem {
+  id: string;
+  treatmentId: string;
+  name: string;
+  type: SystemType;
+  provider: string | null;
+  isOutsideChile: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TreatmentSystemInput {
+  name: string;
+  type: SystemType;
+  provider?: string | null;
+  isOutsideChile?: boolean;
 }
 
 /** Entrada del catálogo de finalidades (dropdown de purposeId). */
@@ -132,6 +192,7 @@ export interface TreatmentPurpose {
   label: string;
   /** null = entrada global compartida; "<id>" = propia de la empresa. */
   companyId: string | null;
+  isActive: boolean;
 }
 
 /**
@@ -146,14 +207,20 @@ export interface TreatmentInput {
   purposeDetail?: string | null;
   legalBasis?: LegalBasis | null;
   legalBasisJustification?: string | null;
+  consentTemplateId?: string | null;
   dataCategories?: DataCategory[];
   dataSubjectCategories?: DataSubjectCategory[];
   internalOwnerId?: string | null;
-  retentionPeriod?: string | null;
+  retentionValue?: number | null;
+  retentionUnit?: RetentionUnit | null;
+  retentionStartEvent?: RetentionStartEvent | null;
   securityMeasures?: SecurityMeasure[];
   internationalTransferOccurs?: boolean;
   internationalTransferCountry?: string | null;
   internationalTransferMechanism?: string | null;
+  geolocationDuration?: string | null;
+  geolocationSharedWithThirdParties?: boolean | null;
+  geolocationThirdPartiesIdentity?: string | null;
 }
 
 export interface CreateTreatmentPayload extends TreatmentInput {
@@ -168,15 +235,34 @@ export interface ArchiveTreatmentPayload {
 
 export const TREATMENT_STATUS_OPTIONS: CustomSelectOption<TreatmentStatus>[] = [
   { value: "DRAFT", title: "Borrador" },
+  { value: "PENDING_APPROVAL", title: "Pendiente de aprobación" },
   { value: "ACTIVE", title: "Activo" },
   { value: "ARCHIVED", title: "Archivado" },
 ];
 
 export const TREATMENT_STATUS_LABELS: Record<TreatmentStatus, string> = {
   DRAFT: "Borrador",
+  PENDING_APPROVAL: "Pendiente de aprobación",
   ACTIVE: "Activo",
   ARCHIVED: "Archivado",
 };
+
+export const SYSTEM_TYPE_OPTIONS: CustomSelectOption<SystemType>[] = [
+  { value: "CRM", title: "CRM" },
+  { value: "ERP", title: "ERP" },
+  { value: "DATABASE", title: "Base de datos" },
+  { value: "CLOUD_STORAGE", title: "Almacenamiento en la nube" },
+  { value: "ON_PREMISE", title: "Servidor propio (on-premise)" },
+  { value: "HR_PLATFORM", title: "Plataforma de RR.HH." },
+  { value: "MARKETING_PLATFORM", title: "Plataforma de marketing" },
+  { value: "ANALYTICS_PLATFORM", title: "Plataforma de analítica" },
+  { value: "OTHER", title: "Otro" },
+];
+
+export const SYSTEM_TYPE_LABELS: Record<SystemType, string> = SYSTEM_TYPE_OPTIONS.reduce(
+  (acc, opt) => ({ ...acc, [opt.value]: opt.title }),
+  {} as Record<SystemType, string>
+);
 
 export const LEGAL_BASIS_OPTIONS: CustomSelectOption<LegalBasis>[] = [
   { value: "CONSENT", title: "Consentimiento del titular" },
@@ -204,6 +290,7 @@ export const DATA_CATEGORY_OPTIONS: CustomSelectOption<DataCategory>[] = [
   { value: "EMPLOYMENT", title: "Laborales" },
   { value: "ACADEMIC", title: "Académicos" },
   { value: "LOCATION", title: "Ubicación" },
+  { value: "GEOLOCATION", title: "Geolocalización" },
   { value: "BEHAVIORAL_PROFILING", title: "Perfilamiento / comportamiento" },
   { value: "HEALTH", title: "Salud (sensible)" },
   { value: "BIOMETRIC", title: "Biométricos (sensible)" },
@@ -258,12 +345,47 @@ export const SECURITY_MEASURE_LABELS: Record<SecurityMeasure, string> =
     {} as Record<SecurityMeasure, string>
   );
 
+export const RETENTION_UNIT_OPTIONS: CustomSelectOption<RetentionUnit>[] = [
+  { value: "DAYS", title: "Días" },
+  { value: "MONTHS", title: "Meses" },
+  { value: "YEARS", title: "Años" },
+];
+
+export const RETENTION_UNIT_LABELS: Record<RetentionUnit, string> =
+  RETENTION_UNIT_OPTIONS.reduce(
+    (acc, opt) => ({ ...acc, [opt.value]: opt.title }),
+    {} as Record<RetentionUnit, string>
+  );
+
+export const RETENTION_START_EVENT_OPTIONS: CustomSelectOption<RetentionStartEvent>[] = [
+  { value: "DATA_COLLECTION", title: "Desde la recolección del dato" },
+  { value: "RELATIONSHIP_END", title: "Desde el fin de la relación con el titular" },
+  { value: "LEGAL_OBLIGATION_END", title: "Desde el fin de la obligación legal aplicable" },
+  { value: "CONSENT_WITHDRAWAL", title: "Desde el retiro del consentimiento" },
+];
+
+export const RETENTION_START_EVENT_LABELS: Record<RetentionStartEvent, string> =
+  RETENTION_START_EVENT_OPTIONS.reduce(
+    (acc, opt) => ({ ...acc, [opt.value]: opt.title }),
+    {} as Record<RetentionStartEvent, string>
+  );
+
 /** Campos requeridos por el backend para activar un tratamiento (DRAFT → ACTIVE). */
 export const TREATMENT_ACTIVATION_FIELD_LABELS: Record<string, string> = {
   purposeId: "Finalidad",
   legalBasis: "Base legal",
   dataSubjectCategories: "Categorías de titulares",
   dataCategories: "Categorías de datos",
+  internalOwnerId: "Responsable interno",
+  // "retention" es una entrada agrupada del backend (retentionValue +
+  // retentionUnit + retentionStartEvent) — ver treatment.controller.ts.
+  retention: "Período de conservación (duración, unidad y evento que lo inicia)",
+  securityMeasures: "Medidas de seguridad",
+  // Item D (RF-72, Art. 16 sexies) — entrada agrupada del backend cuando
+  // dataCategories incluye GEOLOCATION.
+  geolocation: "Datos de geolocalización (duración y comunicación a terceros)",
+  // Item CON-001/B8 (Art. 12 + Art. 14) — solo aplica cuando legalBasis === "CONSENT".
+  consentTemplateId: "Plantilla de consentimiento vinculada",
 };
 
 // --- Historial de versiones (trazabilidad legal) ---
@@ -271,8 +393,8 @@ export const TREATMENT_ACTIVATION_FIELD_LABELS: Record<string, string> = {
 /**
  * Cambio individual dentro de una versión. `field` es uno de los campos que
  * disparan versión en el backend (purposeId, purposeDetail, legalBasis,
- * legalBasisJustification, retentionPeriod). `before`/`after` vienen calculados
- * por el backend.
+ * legalBasisJustification, retentionValue, retentionUnit,
+ * retentionStartEvent). `before`/`after` vienen calculados por el backend.
  */
 export interface TreatmentVersionChange {
   field: string;
@@ -296,5 +418,8 @@ export const TREATMENT_VERSION_FIELD_LABELS: Record<string, string> = {
   purposeDetail: "Detalle de la finalidad",
   legalBasis: "Base legal",
   legalBasisJustification: "Justificación de la base legal",
-  retentionPeriod: "Periodo de conservación",
+  consentTemplateId: "Plantilla de consentimiento vinculada",
+  retentionValue: "Duración de la retención",
+  retentionUnit: "Unidad de la retención",
+  retentionStartEvent: "Evento que inicia el conteo de la retención",
 };
