@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import { Icon } from "@iconify/react";
 import LoadingCover from "@/components/layout/LoadingCover";
 import { useCollectFormResponses } from "@/hooks/useCollectFormResponses";
 import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
+import { fetchCollectFormResponses } from "@/lib/collectFormResponse.api";
 import { CollectForm } from "@/types/collectForm.types";
 import {
   ConsentStatus,
@@ -24,6 +25,18 @@ interface Props {
   selectedIds: string[];
   onChange: (ids: string[]) => void;
   error?: string;
+  /**
+   * Campañas de consentimiento: prioriza pendientes (sin política aceptada)
+   * y los preselecciona al cargar los formularios.
+   */
+  preferPendingConsent?: boolean;
+}
+
+function hasNotAcceptedPolicy(response: CollectFormResponse): boolean {
+  const status = (response.consent?.status || "").toUpperCase();
+  if (status === "ACTIVE" || status === "CLAIM_IN_PROGRESS") return false;
+  if (response.permissions?.canReceiveConsentCampaigns === false) return false;
+  return true;
 }
 
 function formatPersonLabel(response: CollectFormResponse): string {
@@ -58,6 +71,43 @@ function PersonRowCheckbox({
   );
 }
 
+async function fetchPendingConsentIdsForForms(
+  companyId: string,
+  formIds: string[]
+): Promise<string[]> {
+  const ids: string[] = [];
+  const pageSize = 100;
+
+  for (const formId of formIds) {
+    let page = 1;
+    let totalPages = 1;
+
+    while (page <= totalPages) {
+      const res = await fetchCollectFormResponses({
+        companyId,
+        id: formId,
+        page,
+        pageSize,
+      });
+      if (res.error || !res.data?.responses) break;
+
+      for (const item of res.data.responses as CollectFormResponse[]) {
+        if (!hasNotAcceptedPolicy(item)) continue;
+        const id = item._id || item.id;
+        if (id) ids.push(id);
+      }
+
+      totalPages = Math.max(1, res.meta?.totalPages ?? 1);
+      page += 1;
+
+      // Tope de seguridad para no colgar el asistente en bases muy grandes.
+      if (page > 50) break;
+    }
+  }
+
+  return [...new Set(ids)];
+}
+
 export default function CampaignAudiencePicker({
   companyId,
   sourceFormIds,
@@ -65,14 +115,27 @@ export default function CampaignAudiencePicker({
   selectedIds,
   onChange,
   error,
+  preferPendingConsent = false,
 }: Props) {
   const { debouncedValue, search, setSearch } = useDebouncedSearch();
   const [consentStatus, setConsentStatus] = useState<ConsentStatus | "ALL">(
-    "ACTIVE"
+    // "Todos" incluye pendientes y sin registro formal (no solo PENDING).
+    preferPendingConsent ? "ALL" : "ACTIVE"
   );
   const [activeFormId, setActiveFormId] = useState(sourceFormIds[0] || "");
   const [page, setPage] = useState(1);
+  const [preselectLoading, setPreselectLoading] = useState(false);
+  const [preselectCount, setPreselectCount] = useState<number | null>(null);
   const pageSize = 20;
+
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
+  // Clave estable: evita re-fetch por cambio de referencia del array.
+  const sourceFormsKey = useMemo(
+    () => [...sourceFormIds].sort().join(","),
+    [sourceFormIds]
+  );
 
   useEffect(() => {
     if (!sourceFormIds.length) {
@@ -87,6 +150,41 @@ export default function CampaignAudiencePicker({
   useEffect(() => {
     setPage(1);
   }, [debouncedValue, consentStatus, activeFormId]);
+
+  // Preselección en segundo plano: no bloquea la tabla (el spinner de LoadingCover
+  // solo refleja la carga paginada del listado).
+  useEffect(() => {
+    if (!preferPendingConsent) {
+      setPreselectCount(null);
+      setPreselectLoading(false);
+      return;
+    }
+
+    if (!companyId || !sourceFormsKey) return;
+
+    let cancelled = false;
+    setPreselectLoading(true);
+
+    (async () => {
+      try {
+        const pendingIds = await fetchPendingConsentIdsForForms(
+          companyId,
+          sourceFormsKey.split(",").filter(Boolean)
+        );
+        if (cancelled) return;
+        setPreselectCount(pendingIds.length);
+        onChangeRef.current(pendingIds);
+      } catch {
+        if (!cancelled) setPreselectCount(0);
+      } finally {
+        if (!cancelled) setPreselectLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [preferPendingConsent, companyId, sourceFormsKey]);
 
   const apiSearch = useMemo(() => {
     const value = debouncedValue.trim();
@@ -156,6 +254,27 @@ export default function CampaignAudiencePicker({
 
   return (
     <div className="flex flex-col gap-4">
+      {preferPendingConsent ? (
+        <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-xs text-amber-950">
+          <Icon
+            icon="tabler:shield-exclamation"
+            className="mt-0.5 shrink-0 text-base text-amber-700"
+          />
+          <div className="min-w-0 flex-1 leading-relaxed">
+            <p className="font-semibold text-amber-900">
+              Prioridad: sin política aceptada
+            </p>
+            <p className="mt-0.5 text-amber-800/90">
+              {preselectLoading
+                ? "Buscando personas que aún no han aceptado la política de tratamiento…"
+                : preselectCount != null
+                  ? `Se preseleccionaron ${preselectCount.toLocaleString("es-CO")} persona${preselectCount === 1 ? "" : "s"} sin consentimiento activo. Puedes ajustar la selección.`
+                  : "Se priorizan las personas que aún no han aceptado la política de tratamiento de datos."}
+            </p>
+          </div>
+        </div>
+      ) : null}
+
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_200px]">
         <div className="flex flex-col gap-1.5">
           <label className="text-sm font-medium text-[#475569]">
@@ -266,7 +385,9 @@ export default function CampaignAudiencePicker({
             </div>
             <p className="text-sm font-medium">No hay personas con estos filtros</p>
             <p className="text-xs text-center max-w-sm">
-              Prueba otro término de búsqueda o cambia el filtro de consentimiento.
+              {preferPendingConsent
+                ? "No hay pendientes visibles con este filtro. Prueba “Todos” o revisa otro formulario."
+                : "Prueba otro término de búsqueda o cambia el filtro de consentimiento."}
             </p>
           </div>
         ) : (

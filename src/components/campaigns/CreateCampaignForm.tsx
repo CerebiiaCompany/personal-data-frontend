@@ -135,12 +135,16 @@ const CreateCampaignForm = ({ initialValues }: Props) => {
     try {
       let res;
 
-      // Construir mensaje concatenado para SMS: Título + Mensaje + Link (si existe)
+      // SMS/Email: título + mensaje + link. WhatsApp: solo el texto libre ({{3}}).
       const contentName = data.content?.name?.trim() || "";
       const contentBody = data.content?.bodyText?.trim() || "";
       const contentLink = data.content?.link?.trim() || "";
-      const parts = [contentName, contentBody, contentLink].filter((p) => p && p.length > 0);
-      const compiledMessage = parts.join("\n\n");
+      const bodyTextForPayload =
+        data.deliveryChannel === "WHATSAPP"
+          ? contentBody.replace(/[\n\r\t]+/g, " ").replace(/ {2,}/g, " ").trim()
+          : [contentName, contentBody, contentLink]
+              .filter((p) => p && p.length > 0)
+              .join("\n\n");
 
       if (initialValues) {
         //? handle updating
@@ -151,7 +155,8 @@ const CreateCampaignForm = ({ initialValues }: Props) => {
             ...data,
             content: {
               ...data.content,
-              bodyText: compiledMessage,
+              name: contentName,
+              bodyText: bodyTextForPayload,
             },
             active: undefined,
             scheduling: {
@@ -167,7 +172,8 @@ const CreateCampaignForm = ({ initialValues }: Props) => {
           ...data,
           content: {
             ...data.content,
-            bodyText: compiledMessage,
+            name: contentName,
+            bodyText: bodyTextForPayload,
           },
           scheduling: {
             ...data.scheduling,
@@ -595,6 +601,24 @@ const CreateCampaignForm = ({ initialValues }: Props) => {
                 {watch("audience.count") ?? "--"}
               </p>
             </div>
+            {typeof campaignAudience.data?.willReceiveConsent === "number" &&
+              campaignAudience.data.willReceiveConsent > 0 && (
+                <div className="flex flex-col gap-1 rounded-lg border border-yellow-200 bg-yellow-50 px-3 py-2 text-xs text-yellow-800">
+                  <span>
+                    {(
+                      campaignAudience.data.willReceiveMarketing ?? 0
+                    ).toLocaleString("es-CO")}{" "}
+                    recibirán el mensaje de esta campaña.
+                  </span>
+                  <span>
+                    {campaignAudience.data.willReceiveConsent.toLocaleString(
+                      "es-CO"
+                    )}{" "}
+                    aún no han aceptado la política de tratamiento de datos:
+                    recibirán la solicitud de consentimiento en su lugar.
+                  </span>
+                </div>
+              )}
           </div>
 
           {errors.audience?.count && (

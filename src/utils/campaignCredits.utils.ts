@@ -20,6 +20,7 @@ export function getCreditsPerMessage(params: {
   deliveryChannel?: CampaignDeliveryChannel;
   smsCampaignPricePerMessage?: number;
   emailCampaignPricePerMessage?: number;
+  whatsappCampaignPricePerMessage?: number;
   /** @deprecated Usar precios ya en moneda de display; se ignora. */
   trmCop?: number;
 }): number | undefined {
@@ -27,6 +28,7 @@ export function getCreditsPerMessage(params: {
     deliveryChannel,
     smsCampaignPricePerMessage,
     emailCampaignPricePerMessage,
+    whatsappCampaignPricePerMessage,
   } = params;
 
   if (!deliveryChannel) return undefined;
@@ -34,7 +36,9 @@ export function getCreditsPerMessage(params: {
   const price =
     deliveryChannel === "EMAIL"
       ? emailCampaignPricePerMessage
-      : smsCampaignPricePerMessage;
+      : deliveryChannel === "WHATSAPP"
+        ? whatsappCampaignPricePerMessage
+        : smsCampaignPricePerMessage;
 
   if (!Number.isFinite(price)) return undefined;
 
@@ -64,15 +68,21 @@ export function getCampaignInstanceCredits(params: {
   item: Campaign;
   smsCampaignPricePerMessage?: number;
   emailCampaignPricePerMessage?: number;
+  whatsappCampaignPricePerMessage?: number;
   /** @deprecated */
   trmCop?: number;
 }): number | undefined {
-  const { item, smsCampaignPricePerMessage, emailCampaignPricePerMessage } =
-    params;
+  const {
+    item,
+    smsCampaignPricePerMessage,
+    emailCampaignPricePerMessage,
+    whatsappCampaignPricePerMessage,
+  } = params;
   const creditsPerMessage = getCreditsPerMessage({
     deliveryChannel: item.deliveryChannel,
     smsCampaignPricePerMessage,
     emailCampaignPricePerMessage,
+    whatsappCampaignPricePerMessage,
   });
   const audienceTotal = item.audience.total ?? item.audience.count ?? 0;
   const deliveriesCount =

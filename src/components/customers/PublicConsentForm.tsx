@@ -15,7 +15,7 @@ import { Icon } from "@iconify/react/dist/iconify.js";
 import { generateOtpCode, validateOtpCode } from "@/lib/oneTimeCode.api";
 import { getPublicCollectFormPolicyUrl } from "@/lib/collectForm.api";
 import LoadingCover from "../layout/LoadingCover";
-import { CampaignDeliveryChannel } from "@/types/campaign.types";
+import { OtpDeliveryChannel } from "@/types/oneTimeCode.types";
 import { fetchCollectFormResponses, registerCollectFormResponse } from "@/lib/collectFormResponse.api";
 import { fetchCompanies } from "@/lib/company.api";
 import { Company } from "@/types/company.types";
@@ -57,9 +57,9 @@ const PublicConsentForm = ({ data }: Props) => {
   const [policyUrl, setPolicyUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isSendingOtp, setIsSendingOtp] = useState<boolean>(false);
-  const [otpChannel, setOtpChannel] = useState<CampaignDeliveryChannel>("SMS");
+  const [otpChannel, setOtpChannel] = useState<OtpDeliveryChannel>("SMS");
   const [otpLastSentChannel, setOtpLastSentChannel] =
-    useState<CampaignDeliveryChannel | null>(null);
+    useState<OtpDeliveryChannel | null>(null);
   const [companyData, setCompanyData] = useState<Company | null>(null);
   const [companyCountryCode, setCompanyCountryCode] = useState<string | null>(null);
   const [showReauthModal, setShowReauthModal] = useState(false);

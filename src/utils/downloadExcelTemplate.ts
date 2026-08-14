@@ -39,18 +39,19 @@ export async function downloadExcelTemplate() {
   const dataValidations = (sheet as any).dataValidations;
 
   // Tipo de Documento → columna A
+  // Incluye RUT/CI para datos chilenos además de CC/TI (Colombia) y OTHER.
   dataValidations.add(`A2:A${MAX_DATA_ROWS}`, {
     type: "list",
     allowBlank: true,
-    formulae: ['"CC,TI,OTHER"'],
+    formulae: ['"CC,TI,RUT,CI,OTHER"'],
     showErrorMessage: true,
     errorStyle: "stop",
     errorTitle: "Tipo de Documento inválido",
     error:
-      "Selecciona un valor de la lista:\n• CC  (Cédula de Ciudadanía)\n• TI  (Tarjeta de Identidad)\n• OTHER  (Otro documento)",
+      "Selecciona un valor de la lista:\n• CC  (Cédula de Ciudadanía — Colombia)\n• TI  (Tarjeta de Identidad — Colombia)\n• RUT (Rol Único Tributario — Chile)\n• CI  (Cédula de Identidad — Chile)\n• OTHER  (Otro documento)",
     showInputMessage: true,
     promptTitle: "Tipo de Documento",
-    prompt: "Haz clic y selecciona: CC, TI u OTHER",
+    prompt: "Haz clic y selecciona: CC, TI, RUT, CI u OTHER",
   });
 
   // Género → columna F
@@ -96,7 +97,19 @@ export async function downloadExcelTemplate() {
     phone: "3109876543",
   });
 
-  [row2, row3].forEach((row) => {
+  // Ejemplo Chile (RUT): el número puede incluir guión y dígito K
+  const row4 = sheet.addRow({
+    docType: "RUT",
+    docNumber: "12345678-5",
+    name: "Camila",
+    lastName: "Soto",
+    age: 28,
+    gender: "FEMENINO",
+    email: "camila.soto@ejemplo.com",
+    phone: "912345678",
+  });
+
+  [row2, row3, row4].forEach((row) => {
     row.height = 22;
     row.eachCell((cell) => {
       Object.assign(cell, exampleStyle);
@@ -124,13 +137,13 @@ export async function downloadExcelTemplate() {
   const instrRows = [
     {
       field: "Tipo de Documento",
-      description: "Tipo de documento de identidad. Usa la lista desplegable de la columna A en la hoja Plantilla.",
-      values: "CC  |  TI  |  OTHER",
+      description: "Tipo de documento de identidad. Usa la lista desplegable de la columna A en la hoja Plantilla. Usa RUT o CI para datos chilenos.",
+      values: "CC  |  TI  |  RUT  |  CI  |  OTHER",
     },
     {
       field: "Numero de Documento",
-      description: "Número del documento sin puntos ni comas.",
-      values: "Ej: 1234567890",
+      description: "Número del documento. Para CC/TI sin puntos ni comas. Para RUT chileno puedes usar guión y dígito verificador (incl. K).",
+      values: "Ej: 1234567890  |  12345678-5",
     },
     {
       field: "Nombres",

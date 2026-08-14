@@ -8,6 +8,7 @@ import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import { getDataProtectionLegalNotice } from "@/utils/legalNotices.utils";
 
 import IdentificationSection from "@/components/company-profile/IdentificationSection";
+import EmailBrandingSection from "@/components/company-profile/EmailBrandingSection";
 import LegalRepresentativeSection from "@/components/company-profile/LegalRepresentativeSection";
 import DataProtectionOfficerSection from "@/components/company-profile/DataProtectionOfficerSection";
 import AuthorizedPersonnelSection from "@/components/company-profile/AuthorizedPersonnelSection";
@@ -97,6 +98,7 @@ export default function CompanyProfilePage() {
       <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col px-5 py-6 sm:px-6 sm:py-7 lg:px-8 lg:py-8 xl:px-10 2xl:px-12">
         <div className="flex flex-col gap-6">
           <IdentificationSection companyId={companyId} profile={profile} />
+          <EmailBrandingSection companyId={companyId} profile={profile} />
           <LegalRepresentativeSection companyId={companyId} profile={profile} />
           <DataProtectionOfficerSection />
           <AuthorizedPersonnelSection companyId={companyId} profile={profile} />

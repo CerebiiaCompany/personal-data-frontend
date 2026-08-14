@@ -3,8 +3,16 @@ import { QueryParams } from "@/types/api.types";
 import { parseApiError } from "@/utils/parseApiError";
 import { useEffect, useState } from "react";
 
+export interface CampaignAudienceData {
+  count: number;
+  /** Solo presente en campañas no-CONSENT_REQUEST: personas que ya aceptaron la política y recibirán el contenido de la campaña */
+  willReceiveMarketing?: number;
+  /** Solo presente en campañas no-CONSENT_REQUEST: personas que aún no han aceptado la política y recibirán la solicitud de consentimiento en su lugar */
+  willReceiveConsent?: number;
+}
+
 export function useCampaignAudience(params: QueryParams) {
-  const [data, setData] = useState<{ count: number } | null>(null);
+  const [data, setData] = useState<CampaignAudienceData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -88,6 +96,8 @@ export function useCampaignAudience(params: QueryParams) {
     params.minAge,
     params.maxAge,
     params.companyId,
+    params.deliveryChannel,
+    params.type,
     responseIds,
     isManualSelection,
   ]);

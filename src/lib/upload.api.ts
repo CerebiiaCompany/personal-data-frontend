@@ -82,6 +82,68 @@ export async function uploadFile(
   }
 }
 
+export interface CompanyEmailBrandingResponse {
+  brandPrimaryColor: string | null;
+  brandLogoUrl: string | null;
+}
+
+/**
+ * Sube el logo de la empresa para usarlo en los correos (verificación,
+ * campañas de marketing y de consentimiento). El backend sube directo a S3
+ * y guarda la URL en Company.brandLogoUrl.
+ */
+export async function uploadCompanyEmailBrandingLogo(
+  companyId: string,
+  file: File
+): Promise<APIResponse<CompanyEmailBrandingResponse>> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/companies/${companyId}/profile/email-branding/logo`,
+      {
+        method: "POST",
+        body: formData,
+        credentials: "include", // Importante: para incluir cookies de sesión
+        // NO incluir Content-Type header, el navegador lo hará automáticamente
+      }
+    );
+
+    if (!response.ok) {
+      let errorBody: any = null;
+      try {
+        errorBody = await response.json();
+      } catch {
+        const text = await response.text();
+        return {
+          error: {
+            code: "http/unknown-error",
+            message: `Error al subir el logo: ${response.statusText} - ${text}`,
+          },
+        };
+      }
+
+      return {
+        error: errorBody.error || {
+          code: "http/unknown-error",
+          message: `Error al subir el logo: ${response.statusText}`,
+        },
+      };
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error: any) {
+    return {
+      error: {
+        code: "http/unknown-error",
+        message: error?.message || "Error desconocido al subir el logo",
+      },
+    };
+  }
+}
+
 /**
  * Obtiene una presigned URL para leer un archivo (con validación de acceso)
  */

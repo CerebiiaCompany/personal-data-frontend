@@ -54,6 +54,7 @@ export default function CampaignsPage() {
   const creditsPricing = useCompanyCreditsPricing();
   const smsPrice = creditsPricing.data?.smsCampaignPricePerMessage;
   const emailPrice = creditsPricing.data?.emailCampaignPricePerMessage;
+  const whatsappPrice = creditsPricing.data?.whatsappCampaignPricePerMessage;
 
   const summaryMetrics = useMemo(() => {
     if (!data?.length) {
@@ -82,6 +83,7 @@ export default function CampaignsPage() {
         item: c,
         smsCampaignPricePerMessage: smsPrice,
         emailCampaignPricePerMessage: emailPrice,
+        whatsappCampaignPricePerMessage: whatsappPrice,
       });
       if (typeof cr === "number" && Number.isFinite(cr)) creditsConsumed += cr;
 
@@ -102,7 +104,7 @@ export default function CampaignsPage() {
       creditsConsumed,
       deliveryRatePct,
     };
-  }, [data, smsPrice, emailPrice]);
+  }, [data, smsPrice, emailPrice, whatsappPrice]);
 
   const filteredItems = useMemo(() => {
     if (!data) return null;

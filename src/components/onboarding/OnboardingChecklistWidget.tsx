@@ -48,6 +48,25 @@ const STEP_COPY: Record<
   },
 };
 
+const MINIMIZED_STORAGE_KEY = "cerebiia.onboardingChecklist.minimized";
+
+function readMinimizedPreference(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(MINIMIZED_STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeMinimizedPreference(value: boolean) {
+  try {
+    window.localStorage.setItem(MINIMIZED_STORAGE_KEY, value ? "1" : "0");
+  } catch {
+    // ignore quota / private mode
+  }
+}
+
 interface Props {
   status?: OnboardingStatus | null;
   focusFirstSteps?: boolean;
@@ -79,14 +98,24 @@ export default function OnboardingChecklistWidget({
   const hydratedRef = useRef(false);
 
   useEffect(() => {
-    setMinimized(false);
+    setMinimized(readMinimizedPreference());
   }, []);
+
+  function minimize() {
+    setMinimized(true);
+    writeMinimizedPreference(true);
+  }
+
+  function expand() {
+    setMinimized(false);
+    writeMinimizedPreference(false);
+  }
 
   useEffect(() => {
     if (!focusFirstSteps || !status) return;
     if (status.completedCount >= status.totalCount) return;
 
-    setMinimized(false);
+    expand();
     setShowTip(true);
     setHighlighted(true);
     onFocusHandled?.();
@@ -129,7 +158,7 @@ export default function OnboardingChecklistWidget({
       return;
     }
 
-    setMinimized(false);
+    expand();
     setDeferredCompletedIds((prev) => new Set([...prev, ...newlyCompleted]));
     setCelebratingIds((prev) => new Set([...prev, ...newlyCompleted]));
 
@@ -205,12 +234,14 @@ export default function OnboardingChecklistWidget({
     return null;
   }
 
+  const pendingCount = Math.max(totalCount - completedCount, 0);
+
   if (minimized) {
     return (
       <div className="fixed bottom-5 right-5 z-30 flex flex-col items-end gap-2">
         {showTip && (
-          <div className="onboarding-tip max-w-xs rounded-xl border border-primary-300/40 bg-primary-50 px-3 py-2 text-xs font-medium text-primary-900 shadow-md">
-            Es importante que completes estos primeros pasos de la aplicación.
+          <div className="onboarding-tip max-w-[220px] rounded-xl border border-primary-300/40 bg-primary-50 px-3 py-2 text-xs font-medium text-primary-900 shadow-md">
+            Completa tus primeros pasos ({completedCount}/{totalCount}).
             <button
               type="button"
               onClick={() => setShowTip(false)}
@@ -222,21 +253,23 @@ export default function OnboardingChecklistWidget({
           </div>
         )}
         <button
-          onClick={() => setMinimized(false)}
-          className={`onboarding-chip-pending flex items-center gap-2.5 rounded-full border border-primary-500/30 bg-primary-900 px-5 py-3.5 text-sm font-bold text-white shadow-[0_10px_22px_rgba(0,11,80,0.2)] transition-all hover:bg-primary-700 ${
-            highlighted ? "ring-4 ring-primary-300/40" : ""
+          type="button"
+          onClick={expand}
+          aria-label={`Abrir primeros pasos (${completedCount} de ${totalCount})`}
+          title={`Primeros pasos · ${completedCount}/${totalCount}`}
+          className={`onboarding-dot-pending group relative grid size-12 place-content-center rounded-full border border-primary-500/35 bg-primary-900 text-white shadow-[0_8px_18px_rgba(0,11,80,0.28)] transition-transform hover:scale-105 hover:bg-primary-700 ${
+            highlighted ? "ring-4 ring-primary-300/45" : ""
           }`}
         >
-          <span className="grid size-7 place-content-center rounded-full bg-white/15 text-white">
-            <Icon icon="tabler:list-check" className="text-lg" />
-          </span>
-          <span className="flex flex-col items-start leading-tight">
-            <span>Primeros pasos</span>
-            <span className="text-[11px] font-semibold text-white/75">
-              {completedCount}/{totalCount} · Pendiente
+          <Icon icon="tabler:list-check" className="text-xl" />
+          {pendingCount > 0 && (
+            <span className="absolute -right-0.5 -top-0.5 grid min-w-5 place-content-center rounded-full bg-amber-400 px-1 py-0.5 text-[10px] font-bold leading-none text-primary-950 shadow-sm">
+              {pendingCount}
             </span>
+          )}
+          <span className="pointer-events-none absolute bottom-full right-0 mb-2 hidden whitespace-nowrap rounded-md bg-primary-950/95 px-2 py-1 text-[11px] font-semibold text-white shadow-md group-hover:block">
+            Primeros pasos · {completedCount}/{totalCount}
           </span>
-          <Icon icon="tabler:chevron-up" className="text-xl text-white/85" />
         </button>
       </div>
     );
@@ -296,12 +329,13 @@ export default function OnboardingChecklistWidget({
             </p>
           </div>
           <button
-            onClick={() => setMinimized(true)}
-            aria-label="Minimizar"
-            title="Minimizar (sigue disponible abajo a la derecha)"
+            type="button"
+            onClick={minimize}
+            aria-label="Minimizar a un punto"
+            title="Minimizar a un punto (abajo a la derecha)"
             className="rounded-lg p-1 transition-colors hover:bg-stone-100"
           >
-            <Icon icon="tabler:minus" className="text-lg" />
+            <Icon icon="tabler:circle-minus" className="text-lg" />
           </button>
         </div>
 

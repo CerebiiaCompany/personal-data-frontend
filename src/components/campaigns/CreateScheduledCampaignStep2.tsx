@@ -77,6 +77,12 @@ interface Props {
   audienceLoading?: boolean;
   audienceError?: string | null;
   highlightErrors?: boolean;
+  /** Personas del rango que ya aceptaron la política y recibirán el mensaje de la campaña */
+  willReceiveMarketing?: number;
+  /** Personas del rango que aún no han aceptado la política y recibirán la solicitud de consentimiento en su lugar */
+  willReceiveConsent?: number;
+  /** Objetivo Consentimiento: prioriza y preselecciona sin política aceptada */
+  preferPendingConsent?: boolean;
 }
 
 type AudienceFieldErrors = {
@@ -102,6 +108,9 @@ export default function CreateScheduledCampaignStep2({
   audienceLoading = false,
   audienceError = null,
   highlightErrors = false,
+  willReceiveMarketing,
+  willReceiveConsent,
+  preferPendingConsent = false,
 }: Props) {
   const audienceErrors = errors.audience as unknown as
     | AudienceFieldErrors
@@ -162,6 +171,8 @@ export default function CreateScheduledCampaignStep2({
               >
                 {SELECTION_MODE_OPTIONS.map((opt) => {
                   const selected = field.value === opt.value;
+                  const consentHint =
+                    preferPendingConsent && opt.value === "MANUAL";
                   return (
                     <button
                       key={opt.value}
@@ -202,7 +213,9 @@ export default function CreateScheduledCampaignStep2({
                         </span>
                       </span>
                       <span className="text-xs text-[#64748B] pl-7">
-                        {opt.description}
+                        {consentHint
+                          ? "Recomendado: se preseleccionan quienes no aceptaron la política"
+                          : opt.description}
                       </span>
                     </button>
                   );
@@ -345,6 +358,23 @@ export default function CreateScheduledCampaignStep2({
                   Calculando personas en este rango…
                 </p>
               ) : null}
+              {!audienceLoading &&
+              typeof willReceiveConsent === "number" &&
+              willReceiveConsent > 0 ? (
+                <div className="flex flex-col gap-1 rounded-lg border border-[#FDE68A] bg-[#FFFBEB] px-3 py-2 text-xs text-[#92400E]">
+                  <span className="flex items-center gap-1.5">
+                    <Icon icon="tabler:mail-check" className="shrink-0" />
+                    {(willReceiveMarketing ?? 0).toLocaleString("es-CO")} recibirán el
+                    mensaje de esta campaña.
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <Icon icon="tabler:shield-exclamation" className="shrink-0" />
+                    {willReceiveConsent.toLocaleString("es-CO")} aún no han aceptado la
+                    política de tratamiento de datos: recibirán la solicitud de
+                    consentimiento en su lugar.
+                  </span>
+                </div>
+              ) : null}
               {audienceError ? (
                 <p className="text-sm font-medium text-red-600">{audienceError}</p>
               ) : null}
@@ -382,6 +412,7 @@ export default function CreateScheduledCampaignStep2({
               setValue("targetedResponseIds", ids, { shouldDirty: true })
             }
             error={targetedResponseIdsError?.message}
+            preferPendingConsent={preferPendingConsent}
           />
           </div>
         )}

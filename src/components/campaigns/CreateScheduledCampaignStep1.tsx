@@ -13,7 +13,6 @@ import {
   UseFormSetValue,
   UseFormWatch,
 } from "react-hook-form";
-import { toast } from "sonner";
 
 const GOAL_CARDS: {
   value: CampaignGoal;
@@ -76,8 +75,15 @@ export default function CreateScheduledCampaignStep1({
   const sourceFormIds = watch("sourceFormIds") as string[];
   const selectedGoal = watch("goal") as CampaignGoal | undefined;
   const selectedChannel = watch("deliveryChannel") as CampaignDeliveryChannel;
+  // Consentimiento crea una campaña CONSENT_REQUEST real, que solo admite un formulario origen.
+  const isConsentGoal = selectedGoal === "POTENTIAL_CUSTOMERS";
 
   function toggleForm(id: string) {
+    if (isConsentGoal) {
+      const next = sourceFormIds.includes(id) ? [] : [id];
+      setValue("sourceFormIds", next, { shouldValidate: true, shouldDirty: true });
+      return;
+    }
     const next = sourceFormIds.includes(id)
       ? sourceFormIds.filter((x) => x !== id)
       : [...sourceFormIds, id];
@@ -163,52 +169,52 @@ export default function CreateScheduledCampaignStep1({
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               {channelOptions.map((opt) => {
                 const selected = field.value === opt.value;
+                const disabled = isConsentGoal && opt.value === "WHATSAPP";
                 return (
                   <button
                     key={opt.value}
                     type="button"
-                    onClick={() => field.onChange(opt.value)}
+                    disabled={disabled}
+                    title={
+                      disabled
+                        ? "WhatsApp no está disponible por ahora para campañas de consentimiento (pendiente de validación legal)."
+                        : undefined
+                    }
+                    onClick={() => !disabled && field.onChange(opt.value)}
                     className={clsx(
                       "flex flex-1 flex-col items-center gap-1.5 rounded-xl border p-4 text-center transition-all min-w-0",
-                      selected
-                        ? "border-[#2563EB] bg-white ring-1 ring-[#2563EB]/20"
-                        : "border-[#E4EAF6] bg-white hover:border-[#2563EB]/40"
+                      disabled
+                        ? "cursor-not-allowed border-[#E4EAF6] bg-[#F8FAFC] opacity-50"
+                        : selected
+                          ? "border-[#2563EB] bg-white ring-1 ring-[#2563EB]/20"
+                          : "border-[#E4EAF6] bg-white hover:border-[#2563EB]/40"
                     )}
                   >
                     <Icon
                       icon={opt.icon}
-                      className="text-2xl text-[#2563EB]"
+                      className={clsx(
+                        "text-2xl",
+                        disabled ? "text-[#94A3B8]" : "text-[#2563EB]"
+                      )}
                     />
                     <span className="text-[15px] font-bold text-[#0B1737]">
                       {opt.title}
                     </span>
                     <span className="text-[13px] font-semibold text-[#64748B]">
-                      {opt.copLine}
+                      {disabled ? "No disponible" : opt.copLine}
                     </span>
                   </button>
                 );
               })}
-              <button
-                type="button"
-                onClick={() =>
-                  toast.info("WhatsApp estará disponible próximamente.")
-                }
-                className="flex flex-1 flex-col items-center gap-1.5 rounded-xl border border-dashed border-[#E4EAF6] bg-[#F8FAFC] p-4 text-center opacity-80 cursor-not-allowed min-w-0"
-              >
-                <Icon
-                  icon="tabler:brand-whatsapp"
-                  className="text-2xl text-[#94A3B8]"
-                />
-                <span className="text-[15px] font-bold text-[#64748B]">
-                  WhatsApp
-                </span>
-                <span className="text-[13px] font-semibold text-[#94A3B8]">
-                  COP 50 + IVA
-                </span>
-              </button>
             </div>
           )}
         />
+        {isConsentGoal && (
+          <p className="mt-2 text-xs text-[#64748B]">
+            WhatsApp no está disponible por ahora para campañas de consentimiento
+            (pendiente de validación legal).
+          </p>
+        )}
         {errors.deliveryChannel && (
           <p className="mt-2 text-sm font-medium text-red-600">
             {(errors.deliveryChannel as FieldError)?.message}
@@ -224,9 +230,19 @@ export default function CreateScheduledCampaignStep1({
             "border-red-300 ring-1 ring-red-200"
         )}
       >
-        <h2 className="text-[15px] font-bold text-[#0B1737] mb-4 tracking-tight">
+        <h2
+          className={clsx(
+            "text-[15px] font-bold text-[#0B1737] tracking-tight",
+            isConsentGoal ? "mb-1" : "mb-4"
+          )}
+        >
           Seleccionar formulario
         </h2>
+        {isConsentGoal && (
+          <p className="text-[13px] text-[#64748B] mb-3">
+            Las campañas de consentimiento solo pueden usar un formulario origen.
+          </p>
+        )}
         {!collectForms?.length ? (
           <p className="text-sm text-[#64748B]">
             No hay formularios disponibles. Crea un formulario de recolección

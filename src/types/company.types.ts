@@ -69,8 +69,10 @@ export interface CompanyCreditsCurrentMonth {
 export interface CompanyCreditsPricing {
   smsPricePerMessage: number;
   emailPricePerMessage: number;
+  whatsappPricePerMessage?: number;
   smsCampaignPricePerMessage?: number;
   emailCampaignPricePerMessage?: number;
+  whatsappCampaignPricePerMessage?: number;
   currency?: BillingCurrency;
   billingRegion?: BillingRegion;
   trm?: number;
@@ -171,4 +173,6 @@ export interface CompanyProfile {
   rightsAttentionPhoneLine?: string;
   internalRegulations?: InternalRegulations;
   specialObservations?: SpecialObservations;
+  brandPrimaryColor?: string | null;
+  brandLogoUrl?: string | null;
 }

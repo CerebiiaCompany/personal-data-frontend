@@ -64,10 +64,39 @@ function toOptionalNumber(val: unknown): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
-/** Entero opcional (edad, documento). */
+/** Entero opcional (edad). */
 function toOptionalInt(val: unknown): number | undefined {
   const n = toOptionalNumber(val);
   return n === undefined ? undefined : Math.trunc(n);
+}
+
+/**
+ * Número de documento: entero para CC/TI/NIT; string para RUT (puede terminar en K)
+ * u otros formatos con guión/puntos.
+ */
+function toDocNumber(val: unknown): string | number | undefined {
+  const s = toTrimmedString(val);
+  if (!s) return undefined;
+  if (/^\d+$/.test(s)) {
+    const n = Number(s);
+    return Number.isFinite(n) ? Math.trunc(n) : s;
+  }
+  return s;
+}
+
+const VALID_DOC_TYPES = new Set<DocType>([
+  "CC",
+  "TI",
+  "NIT",
+  "OTHER",
+  "RUT",
+  "CI",
+]);
+
+function normalizeDocType(val: unknown): DocType | undefined {
+  const s = toTrimmedString(val)?.toUpperCase();
+  if (!s) return undefined;
+  return VALID_DOC_TYPES.has(s as DocType) ? (s as DocType) : undefined;
 }
 
 /** Normaliza el género a la forma del backend; `undefined` si no se reconoce. */
@@ -179,8 +208,8 @@ export async function parseExcelTemplate(
 
     // Todos los campos son opcionales salvo el contacto. Si falta algún dato,
     // el cliente lo completa después en el formulario de consentimiento.
-    const docType = toTrimmedString(draft.docType) as DocType | undefined;
-    const docNumber = toOptionalInt(draft.docNumber);
+    const docType = normalizeDocType(draft.docType);
+    const docNumber = toDocNumber(draft.docNumber);
     const name = toTrimmedString(draft.name);
     const lastName = toTrimmedString(draft.lastName);
     const age = toOptionalInt(draft.age);

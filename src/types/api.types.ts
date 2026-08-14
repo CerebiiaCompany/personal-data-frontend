@@ -1,5 +1,5 @@
 import { ERROR_DICTIONARY } from "@/utils/parseApiError";
-import { CampaignAudienceGender } from "./campaign.types";
+import { CampaignAudienceGender, CampaignDeliveryChannel } from "./campaign.types";
 import { ConsentStatus } from "./collectFormResponse.types";
 import { UserRole } from "./user.types";
 
@@ -51,6 +51,7 @@ export interface QueryParams {
   minAge?: number;
   maxAge?: number;
   gender?: CampaignAudienceGender;
+  deliveryChannel?: CampaignDeliveryChannel;
 
   // for credits by month/year
   year?: number;

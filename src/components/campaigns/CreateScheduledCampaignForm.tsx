@@ -15,6 +15,9 @@ import {
   CampaignGoal,
   campaignGoalLabels,
   deliveryChannelLabels,
+  getMinScheduleMinutes,
+  WHATSAPP_NOTIFICATION_TEMPLATE_LANGUAGE,
+  WHATSAPP_NOTIFICATION_TEMPLATE_NAME,
 } from "@/types/campaign.types";
 import { createCampaign } from "@/lib/campaign.api";
 import { useCollectForms } from "@/hooks/useCollectForms";
@@ -65,8 +68,8 @@ function getCurrentDateTimeLocal() {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
-function minScheduledDateTimeLocalString() {
-  const minDateTime = new Date(Date.now() + 5 * 60 * 1000);
+function minScheduledDateTimeLocalString(minMinutes: number) {
+  const minDateTime = new Date(Date.now() + minMinutes * 60 * 1000);
   const year = minDateTime.getFullYear();
   const month = String(minDateTime.getMonth() + 1).padStart(2, "0");
   const day = String(minDateTime.getDate()).padStart(2, "0");
@@ -115,7 +118,14 @@ const CreateScheduledCampaignForm = () => {
         scheduledDateTime: getCurrentDateTimeLocal(),
       },
       deliveryChannel: "SMS" as CampaignDeliveryChannel,
-      content: { name: "", bodyText: "", link: "" },
+      content: {
+        name: "",
+        bodyText: "",
+        link: "",
+        whatsappTemplateName: WHATSAPP_NOTIFICATION_TEMPLATE_NAME,
+        whatsappTemplateLanguage: WHATSAPP_NOTIFICATION_TEMPLATE_LANGUAGE,
+        whatsappHeaderParam: true,
+      },
     },
   });
 
@@ -138,6 +148,18 @@ const CreateScheduledCampaignForm = () => {
       ? Math.max(apiAudienceCount, targetedResponseIds.length)
       : apiAudienceCount;
 
+  const deliveryChannelValue = (watch("deliveryChannel") ||
+    "SMS") as CampaignDeliveryChannel;
+
+  const goalValue = watch("goal");
+  /**
+   * El objetivo "Consentimiento" (POTENTIAL_CUSTOMERS) en este asistente crea una
+   * campaña CONSENT_REQUEST real (mismas reglas que ConsentCampaignDialog): un solo
+   * formulario origen, audiencia = personas pendientes de aceptar la política, y para
+   * WhatsApp usa la plantilla de consentimiento (cerebiia_data_v2) sin pedir contenido.
+   */
+  const isConsentGoal = goalValue === "POTENTIAL_CUSTOMERS";
+
   const campaignAudience = useCampaignAudience(
     audienceSelectionMode === "MANUAL"
       ? {
@@ -150,8 +172,47 @@ const CreateScheduledCampaignForm = () => {
           gender: genderValue,
           minAge,
           maxAge,
+          deliveryChannel: deliveryChannelValue,
+          type: isConsentGoal ? "CONSENT_REQUEST" : undefined,
         }
   );
+
+  // Consentimiento requiere exactamente un formulario origen — si el usuario tenía
+  // varios seleccionados de antes de cambiar el objetivo, se recorta al primero.
+  useEffect(() => {
+    if (!isConsentGoal) return;
+    const current = getValues("sourceFormIds") as string[];
+    if (current.length > 1) {
+      setValue("sourceFormIds", [current[0]], { shouldValidate: true, shouldDirty: true });
+    }
+  }, [isConsentGoal, getValues, setValue]);
+
+  // WhatsApp no está disponible por ahora para campañas de consentimiento (pendiente de
+  // validación legal) — si el usuario tenía WhatsApp seleccionado antes de cambiar el
+  // objetivo a Consentimiento, se cambia a SMS.
+  useEffect(() => {
+    if (!isConsentGoal) return;
+    if (getValues("deliveryChannel") === "WHATSAPP") {
+      setValue("deliveryChannel", "SMS", { shouldValidate: true, shouldDirty: true });
+    }
+  }, [isConsentGoal, getValues, setValue]);
+
+  // WhatsApp de consentimiento usa siempre la plantilla fija (sin contenido libre) — se
+  // rellenan estos campos con un valor no vacío para que la validación del asistente
+  // pase sin pedirle nada al usuario (los campos quedan ocultos en el Paso 3).
+  useEffect(() => {
+    if (!isConsentGoal || deliveryChannelValue !== "WHATSAPP") return;
+    if (!getValues("content.name")?.trim()) {
+      setValue("content.name", "Solicitud de consentimiento", { shouldValidate: true });
+    }
+    if (!getValues("content.bodyText")?.trim()) {
+      setValue(
+        "content.bodyText",
+        "Solicitud de aceptación de la política de tratamiento de datos personales.",
+        { shouldValidate: true }
+      );
+    }
+  }, [isConsentGoal, deliveryChannelValue, getValues, setValue]);
 
   const collectForms = useCollectForms({
     companyId: companyId,
@@ -159,6 +220,7 @@ const CreateScheduledCampaignForm = () => {
 
   const smsCampaignPrice = creditsPricing.data?.smsCampaignPricePerMessage;
   const emailCampaignPrice = creditsPricing.data?.emailCampaignPricePerMessage;
+  const whatsappCampaignPrice = creditsPricing.data?.whatsappCampaignPricePerMessage;
   const billingCurrency = formatBillingCurrencyLabel(
     creditsPricing.data?.currency
   );
@@ -167,12 +229,21 @@ const CreateScheduledCampaignForm = () => {
     deliveryChannel: "SMS",
     smsCampaignPricePerMessage: smsCampaignPrice,
     emailCampaignPricePerMessage: emailCampaignPrice,
+    whatsappCampaignPricePerMessage: whatsappCampaignPrice,
   });
 
   const emailCreditsPerMessage = getCreditsPerMessage({
     deliveryChannel: "EMAIL",
     smsCampaignPricePerMessage: smsCampaignPrice,
     emailCampaignPricePerMessage: emailCampaignPrice,
+    whatsappCampaignPricePerMessage: whatsappCampaignPrice,
+  });
+
+  const whatsappCreditsPerMessage = getCreditsPerMessage({
+    deliveryChannel: "WHATSAPP",
+    smsCampaignPricePerMessage: smsCampaignPrice,
+    emailCampaignPricePerMessage: emailCampaignPrice,
+    whatsappCampaignPricePerMessage: whatsappCampaignPrice,
   });
 
   const channelOptions = useMemo(() => {
@@ -199,16 +270,27 @@ const CreateScheduledCampaignForm = () => {
         icon: "tabler:mail",
         copLine: fmt(emailCreditsPerMessage),
       },
+      {
+        value: "WHATSAPP" as const,
+        title: "WhatsApp",
+        icon: "tabler:brand-whatsapp",
+        copLine: fmt(whatsappCreditsPerMessage),
+      },
     ];
-  }, [smsCreditsPerMessage, emailCreditsPerMessage, billingCurrency]);
+  }, [
+    smsCreditsPerMessage,
+    emailCreditsPerMessage,
+    whatsappCreditsPerMessage,
+    billingCurrency,
+  ]);
 
-  const selectedDeliveryChannel = (watch("deliveryChannel") ||
-    "SMS") as CampaignDeliveryChannel;
+  const selectedDeliveryChannel = deliveryChannelValue;
 
   const selectedCreditsPerMessage = getCreditsPerMessage({
     deliveryChannel: selectedDeliveryChannel,
     smsCampaignPricePerMessage: smsCampaignPrice,
     emailCampaignPricePerMessage: emailCampaignPrice,
+    whatsappCampaignPricePerMessage: whatsappCampaignPrice,
   });
 
   const totalCredits = getTotalCampaignCredits({
@@ -366,16 +448,23 @@ const CreateScheduledCampaignForm = () => {
       const contentName = data.content?.name?.trim() || "";
       const contentBody = data.content?.bodyText?.trim() || "";
       const contentLink = data.content?.link?.trim() || "";
-      const parts = [contentName, contentBody, contentLink].filter(
-        (p) => p && p.length > 0
-      );
-      const compiledMessage = parts.join("\n\n");
+      // WhatsApp usa bodyText solo como parámetro {{3}} (sin saltos). SMS/Email
+      // sí concatenan título + mensaje + link en un solo cuerpo.
+      const bodyTextForPayload =
+        data.deliveryChannel === "WHATSAPP"
+          ? contentBody.replace(/[\n\r\t]+/g, " ").replace(/ {2,}/g, " ").trim()
+          : [contentName, contentBody, contentLink]
+              .filter((p) => p && p.length > 0)
+              .join("\n\n");
 
       const payload = {
         ...data,
+        ...(isConsentGoal ? { type: "CONSENT_REQUEST" as const } : {}),
         content: {
           ...data.content,
-          bodyText: compiledMessage,
+          name: contentName,
+          bodyText: bodyTextForPayload,
+          ...(contentLink ? { link: contentLink } : {}),
         },
         scheduling: {
           scheduledDateTime,
@@ -410,6 +499,13 @@ const CreateScheduledCampaignForm = () => {
 
   const goalKey = watch("goal") as keyof typeof campaignGoalLabels | undefined;
   const formIds = watch("sourceFormIds") as string[];
+
+  // Campañas de consentimiento: selección manual con pendientes preseleccionados.
+  useEffect(() => {
+    if (!isConsentGoal) return;
+    setValue("audienceSelectionMode", "MANUAL", { shouldDirty: true });
+  }, [isConsentGoal, setValue]);
+
   const selectedFormNames =
     collectForms.data?.filter((f) => formIds.includes(f._id)).map((f) => f.name) ??
     [];
@@ -500,6 +596,9 @@ const CreateScheduledCampaignForm = () => {
                   audienceLoading={campaignAudience.loading}
                   audienceError={campaignAudience.error}
                   highlightErrors={showStepValidation}
+                  willReceiveMarketing={campaignAudience.data?.willReceiveMarketing}
+                  willReceiveConsent={campaignAudience.data?.willReceiveConsent}
+                  preferPendingConsent={isConsentGoal}
                 />
               )}
 
@@ -511,6 +610,7 @@ const CreateScheduledCampaignForm = () => {
                     errors={errors}
                     deliveryChannel={selectedDeliveryChannel}
                     highlightErrors={showStepValidation}
+                    isConsentGoal={isConsentGoal}
                   />
                   <section
                     className={clsx(
@@ -543,15 +643,18 @@ const CreateScheduledCampaignForm = () => {
                       error={
                         errors.scheduling?.scheduledDateTime as FieldError
                       }
-                      min={minScheduledDateTimeLocalString()}
+                      min={minScheduledDateTimeLocalString(
+                        getMinScheduleMinutes(selectedDeliveryChannel)
+                      )}
                     />
                     <p className="flex gap-2 text-xs text-[#64748B]">
                       <Icon
                         icon="tabler:info-circle"
                         className="text-base shrink-0"
                       />
-                      La campaña debe programarse al menos 5 minutos en el
-                      futuro.
+                      La campaña debe programarse al menos{" "}
+                      {getMinScheduleMinutes(selectedDeliveryChannel)} minutos
+                      en el futuro.
                     </p>
                   </section>
                 </div>

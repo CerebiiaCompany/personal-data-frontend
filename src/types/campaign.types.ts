@@ -34,6 +34,7 @@ export const campaignStatusColors: Record<CampaignStatus, string> = {
 export const deliveryChannelLabels: Record<CampaignDeliveryChannel, string> = {
   SMS: "SMS",
   EMAIL: "Correo",
+  WHATSAPP: "WhatsApp",
 };
 
 export type CampaignAudienceGender = "MALE" | "FEMALE" | "OTHER" | "ALL";
@@ -41,9 +42,51 @@ export type CampaignAudienceGender = "MALE" | "FEMALE" | "OTHER" | "ALL";
 /** Cómo definir destinatarios en el asistente de campaña. */
 export type CampaignAudienceSelectionMode = "FILTERS" | "MANUAL";
 
-export type CampaignDeliveryChannel = "SMS" | "EMAIL";
+export type CampaignDeliveryChannel = "SMS" | "EMAIL" | "WHATSAPP";
+
+/**
+ * Mínimo de minutos en el futuro para programar el envío de una campaña.
+ * SMS se mantiene en 5 minutos porque es un requisito real de la API de
+ * MasivApp (rechaza envíos programados con menos anticipación); el resto de
+ * canales usa 3 minutos.
+ */
+export const MIN_SCHEDULE_MINUTES_SMS = 5;
+export const MIN_SCHEDULE_MINUTES_DEFAULT = 3;
+
+export function getMinScheduleMinutes(
+  deliveryChannel?: CampaignDeliveryChannel
+): number {
+  return deliveryChannel === "SMS"
+    ? MIN_SCHEDULE_MINUTES_SMS
+    : MIN_SCHEDULE_MINUTES_DEFAULT;
+}
+
+/** Contenido específico de WhatsApp: solo admite plantillas pre-aprobadas por Meta (no texto libre). */
+export interface CampaignWhatsappContent {
+  whatsappTemplateName?: string;
+  whatsappTemplateLanguage?: string;
+  /** Si la plantilla lleva un parámetro de texto en el header, se usa el nombre del destinatario. Default true. */
+  whatsappHeaderParam?: boolean;
+}
+
+/**
+ * Plantillas de WhatsApp aprobadas en Meta Business — no configurables desde el
+ * formulario (usar cualquier otro nombre/idioma falla contra la API de Meta). Cada
+ * campaña usa la que corresponde a su propósito:
+ *   - cerebiia_data_v2: campañas CONSENT_REQUEST (consentimiento de tratamiento de datos).
+ *     Header: nombre del destinatario. Sin body.
+ *   - cerebiia_data_notificaciones: el resto (marketing, notificación, ventas, etc.).
+ *     Header: nombre de la empresa. Body: {{1}} nombre destinatario, {{2}} nombre
+ *     empresa, {{3}} texto libre (content.bodyText) — validado por
+ *     whatsappTemplateValidation.utils.ts contra las políticas de WhatsApp Business.
+ */
+export const WHATSAPP_TEMPLATE_NAME = "cerebiia_data_v2";
+export const WHATSAPP_TEMPLATE_LANGUAGE = "es_CO";
+export const WHATSAPP_NOTIFICATION_TEMPLATE_NAME = "cerebiia_data_notificaciones";
+export const WHATSAPP_NOTIFICATION_TEMPLATE_LANGUAGE = "es_CO";
 
 export interface CreateCampaign {
+  type?: "MARKETING" | "CONSENT_REQUEST";
   name: string;
   active: boolean;
   goal: CampaignGoal;
@@ -65,7 +108,7 @@ export interface CreateCampaign {
     bodyText: string;
     link?: string;
     imageUrl?: string;
-  };
+  } & CampaignWhatsappContent;
   targetedResponseIds?: string[];
 }
 
@@ -90,7 +133,7 @@ export interface CreateScheduledCampaign {
     bodyText: string;
     link?: string;
     imageUrl?: string;
-  };
+  } & CampaignWhatsappContent;
   targetedResponseIds?: string[];
 }
 
@@ -105,7 +148,7 @@ export interface CreateConsentCampaign {
   content: {
     name: string;
     bodyText: string;
-  };
+  } & CampaignWhatsappContent;
 }
 
 export interface Campaign {
@@ -138,7 +181,7 @@ export interface Campaign {
     bodyText: string;
     link?: string;
     imageUrl?: string;
-  };
+  } & CampaignWhatsappContent;
   targetedResponseIds?: string[];
   createdAt: Date | string;
   updatedAt: Date | string;

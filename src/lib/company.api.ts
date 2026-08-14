@@ -277,6 +277,16 @@ export async function updateCompanySpecialObservations(
   });
 }
 
+export async function updateCompanyEmailBranding(
+  companyId: string,
+  data: { primary_color: string | null }
+): Promise<APIResponse> {
+  return customFetch(`/companies/${companyId}/profile/email-branding`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
 // Nota: usamos fetch directo (no customFetch) para evitar redirecciones automáticas
 // en pantallas públicas (p.ej. /formularios/:id). Si falla, simplemente no mostramos tarifas.
 export async function fetchCompanyCreditsPricing(): Promise<

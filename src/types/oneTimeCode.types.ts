@@ -1,11 +1,12 @@
-import { CampaignDeliveryChannel } from "./campaign.types";
-
 export type OtpStatus = "PENDING" | "VERIFIED" | "EXPIRED";
+
+/** Los OTP de verificación solo se envían por SMS o correo — WhatsApp no está soportado. */
+export type OtpDeliveryChannel = "SMS" | "EMAIL";
 
 export interface CreateOneTimeCode {
   collectFormId: string;
   recipientData: {
-    channel: CampaignDeliveryChannel;
+    channel: OtpDeliveryChannel;
     address: string; //? email if channel is "EMAIL", phone númber if channel is "SMS"
   };
 }

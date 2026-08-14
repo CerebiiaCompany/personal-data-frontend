@@ -136,37 +136,65 @@ function extractUserAgent(consent?: CollectFormResponse["consent"]): string {
   return "—";
 }
 
-function channelChip(channel: string) {
-  const ch = (channel || "—").toUpperCase();
-  const isSms = ch === "SMS";
-  const isEmail = ch === "EMAIL";
-  const isWhatsapp = ch === "WHATSAPP";
+function normalizeOtpChannel(
+  channel?: string | null
+): "SMS" | "EMAIL" | "WHATSAPP" | null {
+  const ch = String(channel ?? "")
+    .trim()
+    .toUpperCase();
+  if (
+    !ch ||
+    ch === "—" ||
+    ch === "-" ||
+    ch === "N/A" ||
+    ch === "NONE" ||
+    ch === "NULL" ||
+    ch === "UNDEFINED" ||
+    ch === "OTHER"
+  ) {
+    return null;
+  }
+  if (ch === "SMS") return "SMS";
+  if (ch === "EMAIL" || ch === "MAIL" || ch === "CORREO") return "EMAIL";
+  if (ch === "WHATSAPP" || ch === "WA") return "WHATSAPP";
+  return null;
+}
+
+function channelChip(channel?: string | null) {
+  const ch = normalizeOtpChannel(channel);
+
+  // Sin OTP (registro manual, pendiente sin envío, etc.): guion neutro, sin chip.
+  if (!ch) {
+    return <span className="text-[#94A3B8]">—</span>;
+  }
+
+  const config = {
+    SMS: {
+      label: "SMS",
+      icon: "tabler:message",
+      className: "bg-[#EEF2FF] text-[#4338CA] border-[#E0E7FF]",
+    },
+    EMAIL: {
+      label: "Email",
+      icon: "tabler:mail",
+      className: "bg-[#EFF6FF] text-[#1D4ED8] border-[#DBEAFE]",
+    },
+    WHATSAPP: {
+      label: "WhatsApp",
+      icon: "ic:baseline-whatsapp",
+      className: "bg-[#ECFDF5] text-[#047857] border-[#D1FAE5]",
+    },
+  }[ch];
+
   return (
     <span
       className={clsx(
-        "inline-flex items-center gap-1 px-2 py-[2px] rounded-full text-[10px] font-semibold whitespace-nowrap border",
-        isSms
-          ? "bg-[#EEF2FF] text-[#4F46E5] border-[#E1E7FF]"
-          : isEmail
-            ? "bg-[#E7F2FF] text-[#2563EB] border-[#D8E8FF]"
-            : isWhatsapp
-              ? "bg-[#E8F8EE] text-[#0F9D58] border-[#D7F1E1]"
-              : "bg-[#ECFDF5] text-[#059669] border-[#DBF5EA]"
+        "inline-flex items-center gap-1 px-2 py-[3px] rounded-full text-[10px] font-semibold whitespace-nowrap border",
+        config.className
       )}
     >
-      <Icon
-        icon={
-          isSms
-            ? "mdi:message-text-outline"
-            : isEmail
-              ? "material-symbols:email-outline"
-              : isWhatsapp
-                ? "ic:baseline-whatsapp"
-                : "tabler:help"
-        }
-        className="text-sm"
-      />
-      {ch}
+      <Icon icon={config.icon} className="text-[13px] shrink-0" />
+      {config.label}
     </span>
   );
 }
@@ -426,7 +454,7 @@ const FormResponsesTable = ({
                           <span className="truncate">{createdByName}</span>
                         </span>
                       </td>
-                      <td className="py-3 px-3 text-[11px]">{channelChip(String(otpChannel))}</td>
+                      <td className="py-3 px-3 text-[11px]">{channelChip(otpChannel)}</td>
                       <td className="py-3 px-3 text-[11px] text-[#3A4B70] max-w-[200px] truncate">
                         <span title={String(otpDestination)}>{otpDestination}</span>
                       </td>
@@ -475,18 +503,21 @@ const FormResponsesTable = ({
                         <ResponsePermissionsCell
                           permissions={item.permissions}
                           column="marketing"
+                          hasConsented={isProcessingOk || consentStatus === "ACTIVE"}
                         />
                       </td>
                       <td className="py-3 px-3 text-[11px] align-top">
                         <ResponsePermissionsCell
                           permissions={item.permissions}
                           column="consentCampaigns"
+                          hasConsented={isProcessingOk || consentStatus === "ACTIVE"}
                         />
                       </td>
                       <td className="py-3 px-3 text-[11px] align-top">
                         <ResponsePermissionsCell
                           permissions={item.permissions}
                           column="thirdParty"
+                          hasConsented={isProcessingOk || consentStatus === "ACTIVE"}
                         />
                       </td>
                       <td className="py-3 px-3 text-[11px] text-[#3A4B70] whitespace-nowrap">
@@ -624,6 +655,7 @@ const FormResponsesTable = ({
                                   <ResponsePermissionsCell
                                     permissions={item.permissions}
                                     column="marketing"
+                                    hasConsented={isProcessingOk || consentStatus === "ACTIVE"}
                                   />
                                 </div>
                                 <div>
@@ -633,6 +665,7 @@ const FormResponsesTable = ({
                                   <ResponsePermissionsCell
                                     permissions={item.permissions}
                                     column="consentCampaigns"
+                                    hasConsented={isProcessingOk || consentStatus === "ACTIVE"}
                                   />
                                 </div>
                                 <div>
@@ -642,13 +675,19 @@ const FormResponsesTable = ({
                                   <ResponsePermissionsCell
                                     permissions={item.permissions}
                                     column="thirdParty"
+                                    hasConsented={isProcessingOk || consentStatus === "ACTIVE"}
                                   />
                                 </div>
-                                {!hasAnyPermissionBlock(item.permissions) && (
+                                {!isProcessingOk && consentStatus !== "ACTIVE" ? (
+                                  <p className="sm:col-span-3 text-[#A97711]">
+                                    Aún no ha dado consentimiento — no está bloqueado en
+                                    ningún canal, pero tampoco ha aceptado.
+                                  </p>
+                                ) : !hasAnyPermissionBlock(item.permissions) ? (
                                   <p className="sm:col-span-3 text-[#16A34A]">
                                     Sin bloqueos activos en ningún canal.
                                   </p>
-                                )}
+                                ) : null}
                               </div>
                             )}
                             <div>

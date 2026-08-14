@@ -41,7 +41,7 @@ import { Icon } from "@iconify/react/dist/iconify.js";
 import { generateOtpCode, validateOtpCode, resendOtpCodeByEmail } from "@/lib/oneTimeCode.api";
 import { getPublicCollectFormPolicyUrl } from "@/lib/collectForm.api";
 import LoadingCover from "../layout/LoadingCover";
-import { CampaignDeliveryChannel } from "@/types/campaign.types";
+import { OtpDeliveryChannel } from "@/types/oneTimeCode.types";
 import { checkActiveSession } from "@/lib/auth.api";
 import ReauthSessionModal from "../dialogs/ReauthSessionModal";
 import InternationalTransferNotice from "./InternationalTransferNotice";
@@ -100,9 +100,9 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
   const [formKey, setFormKey] = useState<number>(0); // Para forzar el reseteo del formulario
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false); // Estado de loading para el botón
   const [isSendingOtp, setIsSendingOtp] = useState<boolean>(false); // Estado de loading para envío de OTP
-  const [otpChannel, setOtpChannel] = useState<CampaignDeliveryChannel>("SMS");
+  const [otpChannel, setOtpChannel] = useState<OtpDeliveryChannel>("SMS");
   const [otpLastSentChannel, setOtpLastSentChannel] =
-    useState<CampaignDeliveryChannel | null>(null);
+    useState<OtpDeliveryChannel | null>(null);
   const [showReauthModal, setShowReauthModal] = useState(false);
   // Clave de idempotencia estable durante todo el ciclo de vida del registro
   // actual. Se mantiene igual entre reintentos (automáticos o manuales) para que
@@ -492,7 +492,7 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
     }
   }
 
-  async function createOtpCode(channel: CampaignDeliveryChannel) {
+  async function createOtpCode(channel: OtpDeliveryChannel) {
     // Evitar doble envío si ya hay uno en curso.
     if (isSendingOtp) return;
 
@@ -941,7 +941,7 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
                   { value: "EMAIL", title: "Correo", icon: "material-symbols:email-outline" },
                 ]}
                 value={otpChannel}
-                onChange={(value) => setOtpChannel(value as CampaignDeliveryChannel)}
+                onChange={(value) => setOtpChannel(value as OtpDeliveryChannel)}
               />
             </div>
             <div className="flex-1 text-xs sm:text-sm text-stone-600 flex flex-col gap-1">

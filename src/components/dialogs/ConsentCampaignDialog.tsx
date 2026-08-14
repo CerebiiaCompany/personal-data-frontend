@@ -37,7 +37,9 @@ export default function ConsentCampaignDialog({ companyId, formId, formName, onS
   const [campaignName, setCampaignName] = useState(
     `Campaña consentimiento${formName ? ` - ${formName}` : ""}`
   );
-  const [channel, setChannel] = useState<CampaignDeliveryChannel>("SMS");
+  // WhatsApp no está disponible para campañas de consentimiento por ahora: pendiente de
+  // validación legal del canal para ese propósito.
+  const [channel, setChannel] = useState<Exclude<CampaignDeliveryChannel, "WHATSAPP">>("SMS");
   const [scheduledDateTime, setScheduledDateTime] = useState("");
   const [contentName, setContentName] = useState("Aceptación Política de Datos");
   const [bodyText, setBodyText] = useState(DEFAULT_BODY);
@@ -85,7 +87,10 @@ export default function ConsentCampaignDialog({ companyId, formId, formName, onS
       deliveryChannel: channel,
       sourceFormIds: [formId],
       scheduling: { scheduledDateTime: new Date(scheduledDateTime).toISOString() },
-      content: { name: contentName.trim(), bodyText: bodyText.trim() },
+      content: {
+        name: contentName.trim(),
+        bodyText: bodyText.trim(),
+      },
     });
 
     if (createRes.error) {
@@ -307,11 +312,7 @@ export default function ConsentCampaignDialog({ companyId, formId, formName, onS
                     </span>
                   )}
                   <Icon
-                    icon={
-                      ch === "SMS"
-                        ? "mdi:message-text-outline"
-                        : "material-symbols:email-outline"
-                    }
+                    icon={ch === "SMS" ? "mdi:message-text-outline" : "material-symbols:email-outline"}
                     className={`text-xl ${channel === ch ? "text-[#1D2D5B]" : "text-stone-400"}`}
                   />
                   <span
@@ -324,6 +325,10 @@ export default function ConsentCampaignDialog({ companyId, formId, formName, onS
                 </button>
               ))}
             </div>
+            <p className="text-xs text-stone-500">
+              WhatsApp no está disponible por ahora para campañas de consentimiento
+              (pendiente de validación legal).
+            </p>
           </div>
 
           {/* Scheduled date/time */}
@@ -390,7 +395,8 @@ export default function ConsentCampaignDialog({ companyId, formId, formName, onS
               className="text-blue-600 text-lg shrink-0 mt-0.5"
             />
             <p className="text-xs text-blue-900 leading-relaxed">
-              El mensaje incluirá automáticamente un enlace único firmado (válido 30 días) para que cada destinatario acepte el consentimiento de tratamiento de datos.
+              El mensaje incluirá automáticamente un enlace único firmado (válido 30 días)
+              para que cada destinatario acepte el consentimiento de tratamiento de datos.
             </p>
           </div>
         </div>

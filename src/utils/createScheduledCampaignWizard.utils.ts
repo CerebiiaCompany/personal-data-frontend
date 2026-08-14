@@ -4,8 +4,10 @@ import {
   CampaignAudienceSelectionMode,
   CampaignDeliveryChannel,
   CampaignGoal,
+  getMinScheduleMinutes,
 } from "@/types/campaign.types";
 import { createScheduledCampaignValidationSchema } from "@/validations/main.validations";
+import { validateWhatsappFreeTextParam } from "@/utils/whatsappTemplateValidation.utils";
 
 export type ScheduledCampaignFormValues = z.infer<
   typeof createScheduledCampaignValidationSchema
@@ -30,7 +32,7 @@ const CAMPAIGN_GOALS: CampaignGoal[] = [
   "OTHER",
 ];
 
-const DELIVERY_CHANNELS: CampaignDeliveryChannel[] = ["SMS", "EMAIL"];
+const DELIVERY_CHANNELS: CampaignDeliveryChannel[] = ["SMS", "EMAIL", "WHATSAPP"];
 
 export function getScheduledCampaignStepFields(
   step: number,
@@ -68,7 +70,10 @@ function normalizeOptionalUrl(value?: string): boolean {
   return z.string().url().safeParse(candidate).success;
 }
 
-function isScheduledDateTimeValid(value?: string): string | null {
+function isScheduledDateTimeValid(
+  value?: string,
+  deliveryChannel?: CampaignDeliveryChannel
+): string | null {
   if (!value?.trim()) return "Fecha y hora de envío obligatorias";
   if (
     !/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}$/.test(value.trim())
@@ -77,9 +82,10 @@ function isScheduledDateTimeValid(value?: string): string | null {
   }
   const selected = new Date(value);
   if (Number.isNaN(selected.getTime())) return "Fecha y hora inválidas";
-  const minDateTime = new Date(Date.now() + 5 * 60 * 1000);
+  const minMinutes = getMinScheduleMinutes(deliveryChannel);
+  const minDateTime = new Date(Date.now() + minMinutes * 60 * 1000);
   if (selected < minDateTime) {
-    return "La campaña debe programarse al menos 5 minutos en el futuro";
+    return `La campaña debe programarse al menos ${minMinutes} minutos en el futuro`;
   }
   return null;
 }
@@ -101,7 +107,16 @@ export function evaluateScheduledCampaignStep(
     ) {
       messages.push("Selecciona un canal de envío");
     }
-    if (!values.sourceFormIds?.length) {
+    if (values.goal === "POTENTIAL_CUSTOMERS") {
+      if (values.sourceFormIds?.length !== 1) {
+        messages.push("Las campañas de consentimiento requieren exactamente un formulario");
+      }
+      if (values.deliveryChannel === "WHATSAPP") {
+        messages.push(
+          "WhatsApp no está disponible por ahora para campañas de consentimiento (pendiente de validación legal)"
+        );
+      }
+    } else if (!values.sourceFormIds?.length) {
       messages.push("Selecciona al menos un formulario");
     }
     return { canProceed: messages.length === 0, messages };
@@ -163,10 +178,18 @@ export function evaluateScheduledCampaignStep(
     const campaignName = values.name?.trim() ?? "";
     const link = values.content?.link;
 
+    const isNotificationWhatsapp =
+      values.deliveryChannel === "WHATSAPP" && values.goal !== "POTENTIAL_CUSTOMERS";
+
     if (!contentName) messages.push("Nombre del anuncio obligatorio");
     if (contentName.length > 100) messages.push("Máximo 100 caracteres en el nombre del anuncio");
     if (!bodyText) messages.push("Texto principal obligatorio");
-    if (bodyText.length > 1000) messages.push("Máximo 1000 caracteres en el texto");
+    if (isNotificationWhatsapp) {
+      const freeTextValidation = validateWhatsappFreeTextParam(bodyText);
+      if (!freeTextValidation.valid) messages.push(...freeTextValidation.errors);
+    } else if (bodyText.length > 1000) {
+      messages.push("Máximo 1000 caracteres en el texto");
+    }
     if (values.deliveryChannel === "SMS" && bodyText.length > 160) {
       messages.push("En SMS el texto admite máximo 160 caracteres");
     }
@@ -177,7 +200,8 @@ export function evaluateScheduledCampaignStep(
     }
 
     const schedulingError = isScheduledDateTimeValid(
-      values.scheduling?.scheduledDateTime
+      values.scheduling?.scheduledDateTime,
+      values.deliveryChannel
     );
     if (schedulingError) messages.push(schedulingError);
 

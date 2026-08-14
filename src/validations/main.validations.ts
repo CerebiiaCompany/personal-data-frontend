@@ -5,8 +5,10 @@ import {
   CampaignGoal,
   CampaignDeliveryChannel,
   CampaignAudienceGender,
+  getMinScheduleMinutes,
 } from "@/types/campaign.types";
 import { CountryIsoCode } from "@/types/companyArea.types";
+import { validateWhatsappFreeTextParam } from "@/utils/whatsappTemplateValidation.utils";
 
 export const createCollectFormValidationSchema = z.object({
   name: z.string().min(1, "Dale un nombre a tu formulario"),
@@ -306,17 +308,7 @@ export const createScheduledCampaignValidationSchema = z.object({
   goal: z.string<CampaignGoal>("Selecciona un objetivo"),
   active: z.boolean(),
   scheduling: z.object({
-    scheduledDateTime: dateTimeLocalValidation.refine(
-      (val) => {
-        const selectedDate = new Date(val);
-        const now = new Date();
-        const minDateTime = new Date(now.getTime() + 5 * 60 * 1000);
-        return selectedDate >= minDateTime;
-      },
-      {
-        message: "La campaña debe programarse al menos 5 minutos en el futuro",
-      }
-    ), // "YYYY-MM-DDTHH:mm" - fecha y hora específica
+    scheduledDateTime: dateTimeLocalValidation, // "YYYY-MM-DDTHH:mm" - fecha y hora específica
   }),
   sourceFormIds: z
     .array(z.string().min(1, "ID inválido"))
@@ -380,14 +372,37 @@ export const createScheduledCampaignValidationSchema = z.object({
         { message: "URL del enlace inválida" }
       ),
     imageUrl: z.url({ error: "URL de imagen inválida" }).optional(),
+    whatsappTemplateName: z.string().optional(),
+    whatsappTemplateLanguage: z.string().optional(),
+    whatsappHeaderParam: z.boolean().optional(),
   }),
 }).superRefine((data, ctx) => {
+  const minScheduleMinutes = getMinScheduleMinutes(data.deliveryChannel);
+  const selectedDate = new Date(data.scheduling.scheduledDateTime);
+  const minDateTime = new Date(Date.now() + minScheduleMinutes * 60 * 1000);
+  if (selectedDate < minDateTime) {
+    ctx.addIssue({
+      code: "custom",
+      message: `La campaña debe programarse al menos ${minScheduleMinutes} minutos en el futuro`,
+      path: ["scheduling", "scheduledDateTime"],
+    });
+  }
+
   if (data.deliveryChannel === "SMS" && data.content.bodyText.length > 160) {
     ctx.addIssue({
       code: "custom",
       message: "En SMS el texto admite máximo 160 caracteres",
       path: ["content", "bodyText"],
     });
+  }
+
+  if (data.deliveryChannel === "WHATSAPP" && data.goal !== "POTENTIAL_CUSTOMERS") {
+    const freeTextValidation = validateWhatsappFreeTextParam(data.content.bodyText);
+    if (!freeTextValidation.valid) {
+      for (const message of freeTextValidation.errors) {
+        ctx.addIssue({ code: "custom", message, path: ["content", "bodyText"] });
+      }
+    }
   }
 
   if (data.audienceSelectionMode === "MANUAL") {

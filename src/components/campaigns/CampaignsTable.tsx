@@ -134,6 +134,7 @@ const CampaignsTable = ({ items, loading, error, refresh, embedded }: Props) => 
   const creditsPricing = useCompanyCreditsPricing();
   const smsCampaignPrice = creditsPricing.data?.smsCampaignPricePerMessage;
   const emailCampaignPrice = creditsPricing.data?.emailCampaignPricePerMessage;
+  const whatsappCampaignPrice = creditsPricing.data?.whatsappCampaignPricePerMessage;
 
   async function setCampaignActive(id: string, value: boolean) {
     if (value === false) {
@@ -242,6 +243,7 @@ const CampaignsTable = ({ items, loading, error, refresh, embedded }: Props) => 
                   item,
                   smsCampaignPricePerMessage: smsCampaignPrice,
                   emailCampaignPricePerMessage: emailCampaignPrice,
+                  whatsappCampaignPricePerMessage: whatsappCampaignPrice,
                 });
 
                 const goal = item.goal ? goalPill(item.goal) : null;

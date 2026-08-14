@@ -149,12 +149,12 @@ export default function FormClassificationPage() {
           (typeof item.otpCodeId === "object"
             ? item.otpCodeId?.recipientData?.channel
             : undefined) || item.consent?.otp?.channel;
-        const key = (ch || "OTHER").toUpperCase();
-        if (key in acc) {
-          acc[key as keyof typeof acc] += 1;
-        } else {
-          acc.OTHER += 1;
-        }
+        const key = (ch || "").toUpperCase();
+        if (key === "SMS") acc.SMS += 1;
+        else if (key === "EMAIL") acc.EMAIL += 1;
+        else if (key === "WHATSAPP") acc.WHATSAPP += 1;
+        else if (key) acc.OTHER += 1;
+        // Sin canal (registro manual / pendiente): no cuenta como "OTHER"
         return acc;
       },
       { SMS: 0, EMAIL: 0, WHATSAPP: 0, OTHER: 0 }
@@ -169,11 +169,11 @@ export default function FormClassificationPage() {
 
     const channelEntries = [
       { key: "SMS", value: channels.SMS },
-      { key: "EMAIL", value: channels.EMAIL },
-      { key: "WHATSAPP", value: channels.WHATSAPP },
-      { key: "OTHER", value: channels.OTHER },
+      { key: "Email", value: channels.EMAIL },
+      { key: "WhatsApp", value: channels.WHATSAPP },
     ].sort((a, b) => b.value - a.value);
     const topChannel = channelEntries[0];
+    const hasKnownChannel = topChannel.value > 0;
 
     return {
       total,
@@ -184,8 +184,8 @@ export default function FormClassificationPage() {
       consentCoveragePct,
       legalEvidenceCount,
       evidenceCoveragePct,
-      topChannel: topChannel.key,
-      topChannelCount: topChannel.value,
+      topChannel: hasKnownChannel ? topChannel.key : "—",
+      topChannelCount: hasKnownChannel ? topChannel.value : 0,
       channels,
     };
   }, [
