@@ -148,6 +148,12 @@ export interface CompanyProfile {
   // usarlo en el frontend (item 2 de la corrección de bloqueantes).
   countryCode?: CompanyCountryCode;
   email?: string;
+  // Item OBS-03/04/06 — `email` es el correo institucional (también el
+  // username de login del admin). publicContactEmail/arcoPortalContact
+  // separan el correo público de contacto y el contacto del portal ARCO,
+  // que antes se confundían con `email`.
+  publicContactEmail?: string;
+  arcoPortalContact?: string;
   phone?: string;
   mainAddress?: string;
   city?: string;

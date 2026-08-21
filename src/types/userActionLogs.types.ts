@@ -114,6 +114,8 @@ export interface UserActionLog {
   /** Ruta del API que generó la acción */
   endpoint: string;
   summary?: string;
+  /** Item OBS-36 — SHA-256 de integridad, null en filas previas a este campo */
+  hash?: string | null;
 
   // virtual field
   user?: Pick<SessionUser, "name" | "lastName">;

@@ -519,6 +519,16 @@ const CreateCompanyUserForm = ({
           )}
         </div>
 
+        <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <Icon icon="tabler:info-circle" className="text-blue-600 text-xl flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-blue-800">
+            <strong>Administrador de empresa</strong> y <strong>Superadministrador</strong> tienen
+            acceso completo a todos los módulos — el Rol Personalizado no aplica en ese caso. El
+            Rol Personalizado solo determina los permisos cuando el Rol del Sistema es{" "}
+            <strong>Usuario</strong>.
+          </p>
+        </div>
+
         {areas.loading && (
           <p className="text-sm text-[#64748B]">Cargando áreas disponibles...</p>
         )}

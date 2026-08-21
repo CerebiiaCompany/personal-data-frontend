@@ -34,6 +34,8 @@ function buildIdentificationSchema(isChile: boolean) {
       phone_numbers: z.array(z.object({ value: z.string() })).optional(),
       website: z.string().optional(),
       institutional_email: z.string().optional(),
+      public_contact_email: z.string().optional(),
+      arco_portal_contact: z.string().optional(),
     })
     .superRefine((data, ctx) => {
       if (isChile && data.nit && data.nit.trim().length > 0) {
@@ -107,6 +109,8 @@ const IdentificationSection = ({ companyId, profile }: Props) => {
       phone_numbers: (profile.phoneNumbers ?? []).map((v) => ({ value: v })),
       website: profile.website ?? "",
       institutional_email: profile.email ?? "",
+      public_contact_email: profile.publicContactEmail ?? "",
+      arco_portal_contact: profile.arcoPortalContact ?? "",
     });
   }, [profile, reset]);
 
@@ -122,6 +126,8 @@ const IdentificationSection = ({ companyId, profile }: Props) => {
       phone_numbers: values.phone_numbers?.map((p) => p.value).filter(Boolean),
       website: values.website,
       institutional_email: values.institutional_email,
+      public_contact_email: values.public_contact_email,
+      arco_portal_contact: values.arco_portal_contact,
     });
     setLoading(false);
 
@@ -216,11 +222,28 @@ const IdentificationSection = ({ companyId, profile }: Props) => {
             />
           </>
         )}
+        <div className="flex flex-col gap-1">
+          <CustomInput
+            label="Correo institucional"
+            placeholder="Ej. contacto@empresa.com"
+            {...register("institutional_email")}
+            error={errors.institutional_email}
+          />
+          <p className="text-xs text-stone-400 pl-2">
+            Es el correo de acceso del administrador — no se muestra a los titulares.
+          </p>
+        </div>
         <CustomInput
-          label="Correo institucional"
-          placeholder="Ej. contacto@empresa.com"
-          {...register("institutional_email")}
-          error={errors.institutional_email}
+          label="Correo público de contacto"
+          placeholder="Ej. atencion@empresa.com"
+          {...register("public_contact_email")}
+          error={errors.public_contact_email}
+        />
+        <CustomInput
+          label="Correo/URL Portal ARCO"
+          placeholder="Ej. arco@empresa.com o https://empresa.com/arco"
+          {...register("arco_portal_contact")}
+          error={errors.arco_portal_contact}
         />
         <CustomInput
           label="Sitio web"

@@ -51,6 +51,7 @@ type PermissionName<K extends PermissionGroupName> =
 type PermissionGroup<K extends PermissionGroupName = PermissionGroupName> = {
   title: string;
   groupName: K;
+  description?: string;
   permissions: { title: string; name: PermissionName<K> }[];
 };
 
@@ -86,6 +87,8 @@ const permissionsGroup = [
   definePermissionGroup({
     title: "Clasificación",
     groupName: "classification",
+    description:
+      "Permite crear, ver y editar la clasificación de los datos personales tratados por la empresa (tipo de dato, sensibilidad) usada en el Registro de Actividades de Tratamiento (RAT).",
     permissions: [
       { title: "Cargar Datos", name: "create" },
       { title: "Ver Datos", name: "view" },
@@ -274,9 +277,9 @@ const CreateCompanyRoleForm = ({ initialValues }: Props) => {
         </h2>
         <div className="flex flex-col gap-4 sm:gap-5">
           <CustomInput
-            label="Cargo"
+            label="Nombre del rol"
             {...register("position")}
-            placeholder="Ej. Digitador"
+            placeholder="Ej. Administrador"
             error={errors.position}
           />
           <CustomTextarea
@@ -307,8 +310,13 @@ const CreateCompanyRoleForm = ({ initialValues }: Props) => {
               className="mb-4 flex flex-col gap-3 rounded-xl border border-[#E8EDF7] bg-[#FAFCFF] p-4 last:mb-0 sm:p-5"
             >
               <div className="flex items-center justify-between gap-3 border-b border-[#EEF2F8] pb-3">
-                <p className="text-sm font-semibold text-[#0B1737] sm:text-[15px]">
+                <p className="flex items-center gap-1.5 text-sm font-semibold text-[#0B1737] sm:text-[15px]">
                   {group.title}
+                  {group.description && (
+                    <span title={group.description}>
+                      <Icon icon="tabler:info-circle" className="text-base text-[#94A3B8]" />
+                    </span>
+                  )}
                 </p>
                 <CustomCheckbox
                   checked={permissionsState.every(Boolean)}

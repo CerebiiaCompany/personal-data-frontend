@@ -20,11 +20,16 @@ import { restoreCompanyRole } from "@/lib/companyRole.api";
 import { restorePolicyTemplate } from "@/lib/policyTemplate.api";
 import { restoreCompanyUser } from "@/lib/user.api";
 import { parseApiError } from "@/utils/parseApiError";
+import { copyToClipboard } from "@/utils/clipboard.utils";
 import { Icon } from "@iconify/react";
 import { useState } from "react";
 import { toast } from "sonner";
 import Button from "@/components/base/Button";
 import { useConfirm } from "@/components/dialogs/ConfirmProvider";
+
+function truncateHash(hash: string): string {
+  return hash.length > 10 ? `${hash.slice(0, 10)}…` : hash;
+}
 
 function formatDateTime(isoString: string): string {
   if (!isoString) return "";
@@ -218,6 +223,12 @@ const AuditLogsTable = ({ items, loading, error, refresh }: Props) => {
                 </th>
                 <th
                   scope="col"
+                  className="min-w-[130px] whitespace-nowrap px-2 py-2 text-center text-xs font-medium text-[#64748B] sm:px-3"
+                >
+                  Hash
+                </th>
+                <th
+                  scope="col"
                   className="min-w-[100px] whitespace-nowrap px-2 py-2 text-center text-xs font-medium text-[#64748B] sm:px-3"
                 >
                   Acciones
@@ -228,7 +239,7 @@ const AuditLogsTable = ({ items, loading, error, refresh }: Props) => {
               {items.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="rounded-xl bg-[#F8FAFF] py-8 text-center text-sm text-[#64748B]"
                   >
                     No hay registros de auditoría en el rango seleccionado.
@@ -270,6 +281,26 @@ const AuditLogsTable = ({ items, loading, error, refresh }: Props) => {
                       title={item.endpoint}
                     >
                       {item.endpoint || "—"}
+                    </td>
+                    <td className="bg-[#F4F7FF] px-2 py-2 font-medium text-xs text-stone-600 sm:px-4 sm:py-3 sm:text-sm">
+                      {item.hash ? (
+                        <div className="flex items-center justify-center gap-1">
+                          <span title={item.hash} className="font-mono">
+                            {truncateHash(item.hash)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(item.hash!, "Hash copiado")}
+                            className="p-1 rounded-md text-stone-500 hover:bg-stone-200 transition-colors"
+                            aria-label="Copiar hash"
+                            title="Copiar hash completo"
+                          >
+                            <Icon icon="tabler:copy" className="text-sm" />
+                          </button>
+                        </div>
+                      ) : (
+                        "—"
+                      )}
                     </td>
                     <td className="rounded-r-xl bg-[#F4F7FF] px-2 py-2 font-medium text-xs sm:px-4 sm:py-3 sm:text-sm">
                       {item.type === "DELETE" && isRestoreableTargetModel(item.targetModel) && (

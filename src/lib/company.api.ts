@@ -133,6 +133,8 @@ export async function updateCompanyIdentification(
     phone_numbers?: string[];
     website?: string;
     institutional_email?: string;
+    public_contact_email?: string;
+    arco_portal_contact?: string;
   }
 ): Promise<APIResponse> {
   return customFetch(`/companies/${companyId}/profile/identification`, {
