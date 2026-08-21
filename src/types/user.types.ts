@@ -31,7 +31,7 @@ export const userRoleOptions: CustomSelectOption<UserRole>[] = [
 export const parseUserRoleToString = (role: UserRole): string =>
   userRoleOptions.find((e) => e.value === role)?.title || "Rol inválido";
 
-export type DocType = "CC" | "TI" | "NIT" | "OTHER" | "RUT" | "CI";
+export type DocType = "CC" | "TI" | "NIT" | "OTHER" | "RUT" | "CI" | "PASSPORT" | "CIE";
 
 /**
  * Opciones de documento para persona natural (formularios públicos de
@@ -124,7 +124,8 @@ export const companyUserDocTypeOptions: CustomSelectOption<DocType>[] = [
 
 const chileAdminDocTypeOptions: CustomSelectOption<DocType>[] = [
   { value: "RUT", title: "RUT" },
-  { value: "CI", title: "Cédula de identidad" },
+  { value: "PASSPORT", title: "Pasaporte" },
+  { value: "CIE", title: "Cédula de Identidad Extranjera" },
   { value: "OTHER", title: "Otro" },
 ];
 
@@ -167,7 +168,7 @@ export interface CreateUser {
     companyAreaId?: string;
     companyRoleId?: string;
     note?: string;
-    docNumber: number;
+    docNumber: string | number;
     docType: DocType;
   };
 }
@@ -185,7 +186,7 @@ export interface UpdateUser {
     companyAreaId?: string;
     companyRoleId?: string;
     note?: string;
-    docNumber: number;
+    docNumber: string | number;
     docType: DocType;
   };
 }
@@ -240,7 +241,7 @@ export interface SessionUser {
     companyArea: Pick<CompanyArea, "_id" | "name">;
     companyRole: Pick<CompanyRole, "_id" | "position" | "permissions">;
     note?: string;
-    docNumber: number;
+    docNumber: string | number;
     docType: DocType;
   };
   createdAt: Date;

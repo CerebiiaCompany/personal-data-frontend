@@ -27,7 +27,7 @@ interface CompanyUserPayload {
   companyAreaId?: string;
   companyRoleId?: string;
   note?: string;
-  docNumber?: number | null;
+  docNumber?: string | number | null;
   docType?: DocType;
 }
 
@@ -64,12 +64,12 @@ function buildCompanyUserPayload(
   if (isFilledString(cud.companyRoleId)) payload.companyRoleId = cud.companyRoleId;
   if (isFilledString(cud.note)) payload.note = cud.note;
 
-  // docNumber: entero o null. Nunca "" ni NaN.
-  const docNumber = Number(cud.docNumber);
-  payload.docNumber =
-    cud.docNumber === undefined || cud.docNumber === null || Number.isNaN(docNumber)
-      ? null
-      : docNumber;
+  // docNumber: string, número o null. Preserva cadenas de RUT (ej. "76.543.210-K").
+  if (cud.docNumber !== undefined && cud.docNumber !== null && String(cud.docNumber).trim() !== "") {
+    payload.docNumber = String(cud.docNumber).trim();
+  } else {
+    payload.docNumber = null;
+  }
 
   return payload;
 }

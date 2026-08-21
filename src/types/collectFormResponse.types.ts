@@ -5,11 +5,16 @@ export type CollectFormDocType = DocType | "NIT";
 
 export const parseCollectFormDocTypeToString = (type: CollectFormDocType): string => {
   if (type === "NIT") return "NIT";
-  return (
-    { CC: "C.C.", TI: "T.I.", OTHER: "Otro", RUT: "RUT", CI: "Cédula de identidad" }[
-      type
-    ] ?? "Tipo de documento inválido"
-  );
+  const map: Partial<Record<DocType, string>> = {
+    CC: "C.C.",
+    TI: "T.I.",
+    OTHER: "Otro",
+    RUT: "RUT",
+    CI: "Cédula de identidad",
+    PASSPORT: "Pasaporte",
+    CIE: "Cédula de extranjería",
+  };
+  return map[type as DocType] ?? "Tipo de documento inválido";
 };
 
 /** Estados de consentimiento soportados por el backend (portal ARCO y clasificación). */

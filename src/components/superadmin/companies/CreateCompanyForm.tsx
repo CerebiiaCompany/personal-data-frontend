@@ -13,7 +13,7 @@ import {
   getAdminDocTypeOptionsByCountry,
   getJuridicaDocType,
 } from "@/types/user.types";
-import { formatRutDisplay } from "@/utils/rutValidator";
+import { formatRutDisplay, normalizeRut } from "@/utils/rutValidator";
 
 import Button from "@/components/base/Button";
 import CustomInput from "@/components/forms/CustomInput";
@@ -24,6 +24,28 @@ import { usePlans } from "@/hooks/usePlans";
 import { createCompany } from "@/lib/company.api";
 import { CustomSelectOption } from "@/types/forms.types";
 
+function formatPhoneDisplay(value: string, indicator: string): string {
+  if (!value) return "";
+  const digits = value.replace(/\D/g, "");
+  if (indicator === "56") {
+    const truncated = digits.slice(0, 9);
+    if (truncated.length > 5) {
+      return `${truncated.slice(0, 1)} ${truncated.slice(1, 5)} ${truncated.slice(5)}`;
+    }
+    if (truncated.length > 1) {
+      return `${truncated.slice(0, 1)} ${truncated.slice(1)}`;
+    }
+    return truncated;
+  }
+  const truncated = digits.slice(0, 10);
+  if (truncated.length > 6) {
+    return `${truncated.slice(0, 3)} ${truncated.slice(3, 6)} ${truncated.slice(6)}`;
+  }
+  if (truncated.length > 3) {
+    return `${truncated.slice(0, 3)} ${truncated.slice(3)}`;
+  }
+  return truncated;
+}
 interface Props {
   initialValues?: CreateCompany;
 }
@@ -41,8 +63,7 @@ const CreateCompanyForm = ({ initialValues }: Props) => {
     trigger,
   } = useForm({
     resolver: zodResolver(createCompanyValidationSchema),
-    mode: "onBlur",
-    reValidateMode: "onChange",
+    mode: "onChange",
     defaultValues: initialValues || {
       manager: {
         docType: "CC",
@@ -106,7 +127,7 @@ const CreateCompanyForm = ({ initialValues }: Props) => {
       (option) => option.value === managerDocType
     );
     if (!isValid) {
-      setValue("manager.docType", managerDocTypeDefault);
+      setValue("manager.docType", managerDocTypeDefault, { shouldValidate: true });
     }
   }, [managerDocType, managerDocTypeDefault, managerDocTypeOptions, setValue]);
 
@@ -119,7 +140,7 @@ const CreateCompanyForm = ({ initialValues }: Props) => {
         void trigger("nit");
       }
     }
-    if (managerUsesRut && managerDocNumber) {
+    if ((isChile || managerUsesRut) && managerDocNumber) {
       const formatted = formatRutDisplay(managerDocNumber);
       if (formatted !== managerDocNumber) {
         setValue("manager.docNumber", formatted, { shouldValidate: true });
@@ -140,19 +161,30 @@ const CreateCompanyForm = ({ initialValues }: Props) => {
     let res;
 
     if (initialValues) {
-      //? handle updating
-      /* res = await updateCompanyArea(
-        user?.companyUserData?.companyId,
-        params.areaId as string,
-        data
-      ); */
-
       return toast.error(
         "No puede actualizar los datos de una empresa ya creada"
       );
     } else {
-      //? handle creating
-      res = await createCompany(data);
+      const isChile = data.countryCode === "CL";
+      const managerUsesRut = data.manager.docType === "RUT" || data.manager.docType === "CI";
+      
+      const ind = isChile ? "56" : "57";
+      const phoneDigits = (data.phone || "").replace(/\D/g, "");
+      const formattedFullPhone = phoneDigits
+        ? `+${ind} ${formatPhoneDisplay(phoneDigits, ind)}`
+        : "";
+
+      const payload = {
+        ...data,
+        phone: formattedFullPhone,
+        nit: isChile ? normalizeRut(data.nit) : data.nit,
+        manager: {
+          ...data.manager,
+          docNumber: managerUsesRut ? normalizeRut(data.manager.docNumber) : data.manager.docNumber,
+        }
+      };
+
+      res = await createCompany(payload);
     }
     setLoading(false);
 
@@ -219,7 +251,12 @@ const CreateCompanyForm = ({ initialValues }: Props) => {
           label="País"
           options={COMPANY_COUNTRY_CODE_OPTIONS}
           value={countryCode}
-          onChange={(value) => setValue("countryCode", value)}
+          onChange={(value) => {
+            setValue("countryCode", value, { shouldValidate: true });
+            const defaultDoc = getAdminDocTypeOptionsByCountry(value).defaultValue;
+            setValue("manager.docType", defaultDoc, { shouldValidate: true });
+            void trigger(["nit", "manager.docNumber"]);
+          }}
         />
         {errors.countryCode && (
           <p className="text-xs text-red-600 -mt-3">{errors.countryCode.message}</p>
@@ -228,21 +265,23 @@ const CreateCompanyForm = ({ initialValues }: Props) => {
         <div className="flex flex-col gap-1">
           <CustomInput
             label={juridicaDocLabel}
-            name="nit"
+            {...register("nit", {
+              onChange: (e) => {
+                const next = isChile
+                  ? formatRutDisplay(e.target.value)
+                  : e.target.value;
+                setValue("nit", next, {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                  shouldTouch: true,
+                });
+                void trigger("nit");
+              }
+            })}
             value={nitValue}
             placeholder={isChile ? "Ej. 76.123.456-7" : "Ej. 900123456-7"}
             autoComplete="off"
             spellCheck={false}
-            onChange={(e) => {
-              const next = isChile
-                ? formatRutDisplay(e.target.value)
-                : e.target.value;
-              setValue("nit", next, {
-                shouldValidate: true,
-                shouldDirty: true,
-              });
-            }}
-            onBlur={() => void trigger("nit")}
             error={errors.nit}
           />
           {isChile && !errors.nit && (
@@ -268,32 +307,36 @@ const CreateCompanyForm = ({ initialValues }: Props) => {
                 className="w-fit flex-none"
                 options={managerDocTypeOptions}
                 value={managerDocType}
-                onChange={(value) =>
-                  setValue("manager.docType", value, { shouldValidate: true })
-                }
+                onChange={(value) => {
+                  setValue("manager.docType", value, { shouldValidate: true, shouldDirty: true });
+                  void trigger("manager.docNumber");
+                }}
               />
               <CustomInput
-                name="manager.docNumber"
+                {...register("manager.docNumber", {
+                  onChange: (e) => {
+                    const isRutMode = isChile || managerUsesRut;
+                    const next = isRutMode
+                      ? formatRutDisplay(e.target.value)
+                      : e.target.value;
+                    setValue("manager.docNumber", next, {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                      shouldTouch: true,
+                    });
+                    void trigger("manager.docNumber");
+                  }
+                })}
                 placeholder={
-                  managerUsesRut ? "Ej. 12.345.678-5" : "Número de documento"
+                  isChile || managerUsesRut ? "Ej. 12.345.678-5" : "Número de documento"
                 }
                 value={managerDocNumber}
                 autoComplete="off"
                 spellCheck={false}
-                onChange={(e) => {
-                  const next = managerUsesRut
-                    ? formatRutDisplay(e.target.value)
-                    : e.target.value;
-                  setValue("manager.docNumber", next, {
-                    shouldValidate: true,
-                    shouldDirty: true,
-                  });
-                }}
-                onBlur={() => void trigger("manager.docNumber")}
                 error={errors.manager?.docNumber}
               />
             </div>
-            {managerUsesRut && !errors.manager?.docNumber && (
+            {(isChile || managerUsesRut) && !errors.manager?.docNumber && (
               <p className="pl-2 text-xs text-stone-400">
                 RUT/CI: cuerpo numérico + guion + dígito verificador (módulo 11).
                 La letra K es válida cuando el cálculo da 10.
@@ -308,11 +351,35 @@ const CreateCompanyForm = ({ initialValues }: Props) => {
           error={errors.email}
         />
 
-        <CustomInput
-          label="Teléfono"
-          {...register("phone")}
-          error={errors.phone}
-        />
+
+        <div className="flex flex-col gap-1">
+          <label
+            htmlFor="phoneField"
+            className="font-medium w-full pl-2 text-stone-500 text-sm"
+          >
+            Teléfono
+          </label>
+          <div className="flex items-center gap-2 w-full">
+            <div className="flex-none px-3 py-2 border border-stone-200 rounded-lg bg-stone-50 text-stone-500 font-medium h-[42px] flex items-center justify-center">
+              +{isChile ? "56" : "57"}
+            </div>
+            <CustomInput
+              {...register("phone", {
+                onChange: (e) => {
+                  const ind = isChile ? "56" : "57";
+                  const formatted = formatPhoneDisplay(e.target.value, ind);
+                  setValue("phone", formatted, {
+                    shouldValidate: true,
+                    shouldDirty: true,
+                    shouldTouch: true,
+                  });
+                }
+              })}
+              placeholder={isChile ? "Ej. 9 1234 5678" : "Ej. 311 222 3333"}
+              error={errors.phone}
+            />
+          </div>
+        </div>
 
         {/*//? Cuenta de administrador de la empresa */}
         <div className="flex flex-col border border-stone-200 p-4 rounded-lg gap-4">

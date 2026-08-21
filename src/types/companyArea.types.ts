@@ -1,9 +1,13 @@
 import { CustomSelectOption } from "./forms.types";
 import { SessionUser } from "./user.types";
 
-export type CountryIsoCode = "co" | "ve" | "us"; // ISO 3166-1 alpha-2
+export type CountryIsoCode = "cl" | "co" | "ve" | "us"; // ISO 3166-1 alpha-2
 
 export const countriesOptions: CustomSelectOption<CountryIsoCode>[] = [
+  {
+    value: "cl",
+    title: "Chile",
+  },
   {
     value: "co",
     title: "Colombia",
@@ -17,6 +21,12 @@ export const countriesOptions: CustomSelectOption<CountryIsoCode>[] = [
     title: "Estados Unidos",
   },
 ];
+
+export function getDefaultAreaCountryByJurisdiction(
+  countryCode?: string | null
+): CountryIsoCode {
+  return countryCode === "CL" ? "cl" : "co";
+}
 
 export const parseCompanyAreaCountryToString = (
   country: CountryIsoCode

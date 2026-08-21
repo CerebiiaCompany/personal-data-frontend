@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Button from "../base/Button";
 import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import {
@@ -28,10 +28,13 @@ import {
 import { CreateUser, docTypesOptions, UpdateUser } from "@/types/user.types";
 import { createCompanyUser, updateCompanyUser } from "@/lib/user.api";
 import { useCompanyAreas } from "@/hooks/useCompanyAreas";
-import { countriesOptions, CreateCompanyArea } from "@/types/companyArea.types";
+import { countriesOptions, CreateCompanyArea, getDefaultAreaCountryByJurisdiction } from "@/types/companyArea.types";
 import { createCompanyArea, updateCompanyArea } from "@/lib/companyArea.api";
 import { useCompanyUsers } from "@/hooks/useCompanyUsers";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
+import { useOwnCompanyStore } from "@/store/useOwnCompanyStore";
+import { useSessionStore } from "@/store/useSessionStore";
+import { CHILEAN_REGIONS } from "@/constants/chileanRegions";
 
 interface Props {
   initialValues?: CreateCompanyArea;
@@ -39,6 +42,14 @@ interface Props {
 
 const CreateCompanyAreaForm = ({ initialValues }: Props) => {
   const companyId = useActiveCompanyId();
+  const { user } = useSessionStore();
+  const companyFromStore = useOwnCompanyStore((store) => store.company);
+  const companyCountryCode =
+    companyFromStore?.countryCode ??
+    (user as any)?.company?.countryCode ??
+    (user as any)?.companyUserData?.company?.countryCode;
+
+  const defaultCountry = getDefaultAreaCountryByJurisdiction(companyCountryCode);
   const [loading, setLoading] = useState<boolean>(false);
   const [tagInput, setTagInput] = useState<string>("");
   const params = useParams();
@@ -55,9 +66,35 @@ const CreateCompanyAreaForm = ({ initialValues }: Props) => {
   } = useForm({
     resolver: zodResolver(createCompanyAreaValidationSchema),
     defaultValues: initialValues || {
+      country: defaultCountry,
       tags: [],
     },
   });
+
+  useEffect(() => {
+    if (!initialValues && companyCountryCode) {
+      const derivedCountry = getDefaultAreaCountryByJurisdiction(companyCountryCode);
+      if (watch("country") !== derivedCountry) {
+        setValue("country", derivedCountry);
+      }
+    }
+  }, [companyCountryCode, initialValues, setValue, watch]);
+
+  const currentCountry = watch("country");
+  const isChile = currentCountry === "cl";
+
+  const regionOptions = useMemo(
+    () => CHILEAN_REGIONS.map((r) => ({ title: r.name, value: r.name })),
+    []
+  );
+
+  const selectedRegionName = watch("state");
+  const comunaOptions = useMemo(() => {
+    const foundRegion = CHILEAN_REGIONS.find((r) => r.name === selectedRegionName);
+    if (!foundRegion) return [];
+    return foundRegion.comunas.map((c) => ({ title: c, value: c }));
+  }, [selectedRegionName]);
+
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const floatingActionNavbarRef = useRef<HTMLElement>(null);
@@ -206,21 +243,63 @@ const CreateCompanyAreaForm = ({ initialValues }: Props) => {
           label="País"
           options={countriesOptions}
           value={watch("country")}
-          onChange={(value) => setValue("country", value)}
+          disabled={true}
+          onChange={(value) => {
+            setValue("country", value);
+            setValue("state", "");
+            setValue("city", "");
+          }}
         />
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-5">
-          <CustomInput
-            label="Departamento/Estado"
-            {...register("state")}
-            error={errors.state}
-            className="flex-1"
-          />
-          <CustomInput
-            label="Ciudad"
-            {...register("city")}
-            error={errors.city}
-            className="flex-1"
-          />
+          {isChile ? (
+            <>
+              <CustomSelect
+                label="Región"
+                options={regionOptions}
+                value={watch("state")}
+                unselectedText="Seleccionar Región"
+                onChange={(val) => {
+                  setValue("state", val);
+                  const foundRegion = CHILEAN_REGIONS.find((r) => r.name === val);
+                  const currentCity = watch("city");
+                  if (!foundRegion || !foundRegion.comunas.includes(currentCity)) {
+                    setValue("city", "");
+                  }
+                }}
+                error={errors.state}
+                className="flex-1"
+              />
+              <CustomSelect
+                label="Comuna"
+                options={comunaOptions}
+                value={watch("city")}
+                unselectedText={
+                  selectedRegionName
+                    ? "Seleccionar Comuna"
+                    : "Selecciona una Región primero"
+                }
+                onChange={(val) => setValue("city", val)}
+                disabled={!selectedRegionName || comunaOptions.length === 0}
+                error={errors.city}
+                className="flex-1"
+              />
+            </>
+          ) : (
+            <>
+              <CustomInput
+                label={currentCountry === "co" ? "Departamento" : "Departamento/Estado"}
+                {...register("state")}
+                error={errors.state}
+                className="flex-1"
+              />
+              <CustomInput
+                label={currentCountry === "co" ? "Municipio/Ciudad" : "Ciudad"}
+                {...register("city")}
+                error={errors.city}
+                className="flex-1"
+              />
+            </>
+          )}
         </div>
         <CustomInput
           label="Dirección"

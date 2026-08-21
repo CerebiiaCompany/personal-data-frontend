@@ -33,6 +33,7 @@ import {
 import { createCompanyUser } from "@/lib/user.api";
 import { createUserValidationSchema } from "@/validations/main.validations";
 import CustomTextarea from "@/components/forms/CustomTextarea";
+import { formatRutDisplay } from "@/utils/rutValidator";
 
 interface Props {
   initialValues?: CreateUser;
@@ -45,6 +46,13 @@ const CreateAdminForm = ({ initialValues }: Props) => {
   // backend (que por defecto devuelve 10). Pedimos el máximo permitido.
   const companies = useCompanies({ pageSize: 100 });
 
+  const [companyId, setCompanyId] = useState<string>("");
+  const selectedCompanyCountryCode = companies.data?.find(
+    (company) => company._id === companyId
+  )?.countryCode;
+  const { options: docTypeOptions, defaultValue: docTypeDefault } =
+    getAdminDocTypeOptionsByCountry(selectedCompanyCountryCode);
+
   const {
     register,
     handleSubmit,
@@ -52,11 +60,12 @@ const CreateAdminForm = ({ initialValues }: Props) => {
     setValue,
     watch,
   } = useForm({
+    mode: "onChange",
     resolver: zodResolver(createUserValidationSchema),
     defaultValues: initialValues || {
       role: "COMPANY_ADMIN",
       companyUserData: {
-        docType: "CC",
+        docType: docTypeDefault,
       },
     },
   });
@@ -65,7 +74,6 @@ const CreateAdminForm = ({ initialValues }: Props) => {
   const floatingActionNavbarRef = useRef<HTMLElement>(null);
   const [floatingNavbarToggle, setFloatingNavbarToggle] =
     useState<boolean>(false);
-  const [companyId, setCompanyId] = useState<string>("");
   const plans = usePlans({});
   const [plansOptions, setPlansOptions] = useState<
     CustomSelectOption<string>[] | null
@@ -74,11 +82,6 @@ const CreateAdminForm = ({ initialValues }: Props) => {
   const [companiesOptions, setCompaniesOptions] = useState<
     CustomSelectOption<string>[] | null
   >(null);
-  const selectedCompanyCountryCode = companies.data?.find(
-    (company) => company._id === companyId
-  )?.countryCode;
-  const { options: docTypeOptions, defaultValue: docTypeDefault } =
-    getAdminDocTypeOptionsByCountry(selectedCompanyCountryCode);
   const currentDocType = watch("companyUserData.docType");
 
   useEffect(() => {
@@ -270,20 +273,37 @@ const CreateAdminForm = ({ initialValues }: Props) => {
             error={errors.companyUserData?.phone}
           />
         </div>
-        <div className="flex gap-5">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
           <div>
             <CustomSelect
               label="Tipo de documento"
               options={docTypeOptions}
               value={currentDocType}
-              onChange={(value) => setValue("companyUserData.docType", value)}
+              onChange={(value) => setValue("companyUserData.docType", value, { shouldValidate: true })}
             />
           </div>
-          <CustomInput
-            label="Número de documento"
-            {...register("companyUserData.docNumber")}
-            error={errors.companyUserData?.docNumber as FieldError}
-          />
+          <div className="flex flex-col gap-1">
+            <CustomInput
+              label={currentDocType === "RUT" ? "Número de RUT" : "Número de documento"}
+              {...register("companyUserData.docNumber" as any)}
+              value={String(watch("companyUserData.docNumber") ?? "")}
+              onChange={(e) => {
+                const val = e.target.value;
+                const formatted = currentDocType === "RUT" ? formatRutDisplay(val) : val;
+                setValue("companyUserData.docNumber", formatted as any, {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                });
+              }}
+              placeholder={currentDocType === "RUT" ? "Ej. 12.345.678-K" : "Ej. 1020304050"}
+              error={errors.companyUserData?.docNumber as FieldError}
+            />
+            {currentDocType === "RUT" && !errors.companyUserData?.docNumber && (
+              <p className="text-xs text-stone-400 mt-0.5">
+                Formato: números + guion + dígito verificador. Ej. 12.345.678-K
+              </p>
+            )}
+          </div>
         </div>
 
         {/* {areas.data && (
@@ -319,11 +339,13 @@ const CreateAdminForm = ({ initialValues }: Props) => {
               {...register("username")}
               placeholder="j_doe1"
               error={errors.username}
+              autoComplete="new-username"
             />
             <CustomInput
               label="Clave"
               {...register("password" as any)}
               error={(errors as any).password}
+              autoComplete="new-password"
             />
           </div>
         </div>

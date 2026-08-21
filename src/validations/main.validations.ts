@@ -9,6 +9,7 @@ import {
 } from "@/types/campaign.types";
 import { CountryIsoCode } from "@/types/companyArea.types";
 import { validateWhatsappFreeTextParam } from "@/utils/whatsappTemplateValidation.utils";
+import { isValidRut } from "@/utils/rutValidator";
 
 export const createCollectFormValidationSchema = z.object({
   name: z.string().min(1, "Dale un nombre a tu formulario"),
@@ -51,21 +52,40 @@ export const updateUserValidationSchema = z.object({
     companyAreaId: z.string().optional(),
     companyRoleId: z.string().optional(),
     note: z.string().optional(),
-    docNumber: z.coerce.number("Este campo es obligatorio"),
+    docNumber: z.preprocess(
+      (v) => (v === null || v === undefined ? "" : String(v)),
+      z.string().min(1, "Este campo es obligatorio")
+    ),
     docType: z.string<DocType>(),
   }),
-}).refine(
-  (data) => {
-    if (data.password && data.password.length > 0 && data.password.length < 8) {
-      return false;
+})
+  .refine(
+    (data) => {
+      if (data.password && data.password.length > 0 && data.password.length < 8) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: "La contraseña debe tener al menos 8 caracteres",
+      path: ["password"],
     }
-    return true;
-  },
-  {
-    message: "La contraseña debe tener al menos 8 caracteres",
-    path: ["password"],
-  }
-);
+  )
+  .refine(
+    (data) => {
+      const docType = data.companyUserData?.docType;
+      const docNumber = String(data.companyUserData?.docNumber ?? "").trim();
+      if (docType === "RUT") {
+        if (!docNumber) return false;
+        return isValidRut(docNumber);
+      }
+      return true;
+    },
+    {
+      message: "El RUT ingresado no es válido (dígito verificador incorrecto)",
+      path: ["companyUserData", "docNumber"],
+    }
+  );
 
 export const createUserValidationSchema = z.object({
   name: z.string().min(1, "Este campo es obligatorio"),
@@ -82,7 +102,10 @@ export const createUserValidationSchema = z.object({
     companyAreaId: z.string().optional(),
     companyRoleId: z.string().optional(),
     note: z.string().optional(),
-    docNumber: z.coerce.number("Este campo es obligatorio"),
+    docNumber: z.preprocess(
+      (v) => (v === null || v === undefined ? "" : String(v)),
+      z.string().min(1, "Este campo es obligatorio")
+    ),
     docType: z.string<DocType>(),
   }),
 })
@@ -104,6 +127,21 @@ export const createUserValidationSchema = z.object({
     {
       message: "Debes asignar un rol personalizado al usuario",
       path: ["companyUserData", "companyRoleId"],
+    }
+  )
+  .refine(
+    (data) => {
+      const docType = data.companyUserData?.docType;
+      const docNumber = String(data.companyUserData?.docNumber ?? "").trim();
+      if (docType === "RUT") {
+        if (!docNumber) return false;
+        return isValidRut(docNumber);
+      }
+      return true;
+    },
+    {
+      message: "El RUT ingresado no es válido (dígito verificador incorrecto)",
+      path: ["companyUserData", "docNumber"],
     }
   );
 

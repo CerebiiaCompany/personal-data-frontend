@@ -29,52 +29,30 @@ export const createCompanyValidationSchema = z
   })
   .superRefine((data, ctx) => {
     if (data.countryCode === "CL") {
-      if (!isValidRut(data.nit)) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["nit"],
-          message: RUT_INVALID_MESSAGE,
-        });
+      if (data.nit && data.nit.trim().length > 0) {
+        if (!isValidRut(data.nit)) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["nit"],
+            message: RUT_INVALID_MESSAGE,
+          });
+        }
       }
     }
 
     const managerDocType = data.manager.docType;
-    if (managerDocType === "RUT" || managerDocType === "CI") {
-      if (!isValidRut(data.manager.docNumber)) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["manager", "docNumber"],
-          message: RUT_INVALID_MESSAGE,
-        });
+    const isChile = data.countryCode === "CL";
+    if (isChile || managerDocType === "RUT" || managerDocType === "CI") {
+      if (data.manager.docNumber && data.manager.docNumber.trim().length > 0) {
+        if (!isValidRut(data.manager.docNumber)) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["manager", "docNumber"],
+            message: RUT_INVALID_MESSAGE,
+          });
+        }
       }
     }
-  })
-  .transform((data) => {
-    if (data.countryCode === "CL") {
-      return {
-        ...data,
-        nit: normalizeRut(data.nit),
-        manager: {
-          ...data.manager,
-          docNumber:
-            data.manager.docType === "RUT" || data.manager.docType === "CI"
-              ? normalizeRut(data.manager.docNumber)
-              : data.manager.docNumber,
-        },
-      };
-    }
-
-    if (data.manager.docType === "RUT" || data.manager.docType === "CI") {
-      return {
-        ...data,
-        manager: {
-          ...data.manager,
-          docNumber: normalizeRut(data.manager.docNumber),
-        },
-      };
-    }
-
-    return data;
   });
 
 export const createCompanyPaymentValidationSchema = z.object({

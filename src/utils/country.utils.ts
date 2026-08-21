@@ -11,6 +11,10 @@ function getFlagUrl(
 }
 
 const COUNTRIES_DICT: Record<CountryIsoCode, { name: string; flag: string }> = {
+  cl: {
+    name: "Chile",
+    flag: getFlagUrl("cl"),
+  },
   ve: {
     name: "Venezuela",
     flag: getFlagUrl("ve"),
