@@ -1,32 +1,54 @@
 "use client";
 
 import React, { useEffect } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, FieldError } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
 import { Icon } from "@iconify/react";
 
 import CustomInput from "@/components/forms/CustomInput";
+import CustomSelect from "@/components/forms/CustomSelect";
 import Button from "@/components/base/Button";
 import ProfileSectionCard from "./ProfileSectionCard";
 import { updateCompanyIdentification } from "@/lib/company.api";
 import { CompanyProfile } from "@/types/company.types";
-import { parseApiError } from "@/utils/parseApiError";
 import { getJuridicaDocType } from "@/types/user.types";
+import { parseApiError } from "@/utils/parseApiError";
+import {
+  formatRutDisplay,
+  isValidRut,
+  normalizeRut,
+  RUT_INVALID_MESSAGE,
+} from "@/utils/rutValidator";
+import { CHILEAN_REGIONS } from "@/constants/chileanRegions";
 
-const schema = z.object({
-  company_name: z.string().optional(),
-  nit: z.string().optional(),
-  main_address: z.string().optional(),
-  city: z.string().optional(),
-  department: z.string().optional(),
-  phone_numbers: z.array(z.object({ value: z.string() })).optional(),
-  website: z.string().optional(),
-  institutional_email: z.string().optional(),
-});
+function buildIdentificationSchema(isChile: boolean) {
+  return z
+    .object({
+      company_name: z.string().optional(),
+      nit: z.string().optional(),
+      main_address: z.string().optional(),
+      city: z.string().optional(),
+      department: z.string().optional(),
+      phone_numbers: z.array(z.object({ value: z.string() })).optional(),
+      website: z.string().optional(),
+      institutional_email: z.string().optional(),
+    })
+    .superRefine((data, ctx) => {
+      if (isChile && data.nit && data.nit.trim().length > 0) {
+        if (!isValidRut(data.nit)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["nit"],
+            message: RUT_INVALID_MESSAGE,
+          });
+        }
+      }
+    });
+}
 
-type FormValues = z.infer<typeof schema>;
+type FormValues = z.infer<ReturnType<typeof buildIdentificationSchema>>;
 
 interface Props {
   companyId: string;
@@ -35,23 +57,44 @@ interface Props {
 
 const IdentificationSection = ({ companyId, profile }: Props) => {
   const [loading, setLoading] = React.useState(false);
+  const isChile = profile?.countryCode === "CL";
   const juridicaDocLabel = getJuridicaDocType(profile?.countryCode);
+
+  const schema = React.useMemo(() => buildIdentificationSchema(isChile), [isChile]);
 
   const {
     register,
     handleSubmit,
     control,
     reset,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
+    mode: "onChange",
     defaultValues: { phone_numbers: [] },
   });
+
+  const nitValue = watch("nit") ?? "";
 
   const { fields, append, remove } = useFieldArray({
     control,
     name: "phone_numbers",
   });
+
+  const selectedRegionName = watch("department");
+  const regionOptions = React.useMemo(
+    () => CHILEAN_REGIONS.map((r) => ({ title: r.name, value: r.name })),
+    []
+  );
+
+  const comunaOptions = React.useMemo(() => {
+    if (!selectedRegionName) return [];
+    const foundRegion = CHILEAN_REGIONS.find((r) => r.name === selectedRegionName);
+    if (!foundRegion) return [];
+    return foundRegion.comunas.map((c) => ({ title: c, value: c }));
+  }, [selectedRegionName]);
 
   useEffect(() => {
     if (!profile) return;
@@ -69,9 +112,10 @@ const IdentificationSection = ({ companyId, profile }: Props) => {
 
   async function onSubmit(values: FormValues) {
     setLoading(true);
+    const finalNit = isChile && values.nit ? normalizeRut(values.nit) : values.nit;
     const res = await updateCompanyIdentification(companyId, {
       company_name: values.company_name,
-      nit: values.nit,
+      nit: finalNit,
       main_address: values.main_address,
       city: values.city,
       department: values.department,
@@ -100,32 +144,78 @@ const IdentificationSection = ({ companyId, profile }: Props) => {
           {...register("company_name")}
           error={errors.company_name}
         />
-        <CustomInput
-          label={juridicaDocLabel}
-          placeholder={
-            juridicaDocLabel === "RUT" ? "Ej. 76.123.456-7" : "Ej. 820507899-5"
-          }
-          {...register("nit")}
-          error={errors.nit}
-        />
+        <div className="flex flex-col gap-1">
+          <CustomInput
+            label={juridicaDocLabel}
+            placeholder={
+              juridicaDocLabel === "RUT" ? "Ej. 76.123.456-7" : "Ej. 820507899-5"
+            }
+            value={nitValue}
+            onChange={(e) => {
+              const val = isChile ? formatRutDisplay(e.target.value) : e.target.value;
+              setValue("nit", val, { shouldValidate: true, shouldDirty: true });
+            }}
+            error={errors.nit}
+          />
+          {isChile && !errors.nit && (
+            <p className="text-xs text-stone-400 pl-2">
+              Formato chileno: números + guion + dígito verificador. Ej. 76.543.210-3
+            </p>
+          )}
+        </div>
         <CustomInput
           label="Dirección principal"
           placeholder="Ej. Cra 7 #12-34"
           {...register("main_address")}
           error={errors.main_address}
         />
-        <CustomInput
-          label="Ciudad"
-          placeholder="Ej. Bogotá"
-          {...register("city")}
-          error={errors.city}
-        />
-        <CustomInput
-          label="Departamento"
-          placeholder="Ej. Cundinamarca"
-          {...register("department")}
-          error={errors.department}
-        />
+        {isChile ? (
+          <>
+            <CustomSelect
+              label="Región"
+              options={regionOptions}
+              value={watch("department")}
+              unselectedText="Seleccionar Región"
+              onChange={(val: string) => {
+                setValue("department", val, { shouldValidate: true, shouldDirty: true });
+                const foundRegion = CHILEAN_REGIONS.find((r) => r.name === val);
+                const currentCity = watch("city");
+                if (!foundRegion || (currentCity && !foundRegion.comunas.includes(currentCity))) {
+                  setValue("city", "", { shouldValidate: true, shouldDirty: true });
+                }
+              }}
+              error={errors.department as FieldError}
+            />
+            <CustomSelect
+              label="Comuna"
+              options={comunaOptions}
+              value={watch("city")}
+              unselectedText={
+                selectedRegionName
+                  ? "Seleccionar Comuna"
+                  : "Selecciona una Región primero"
+              }
+              onChange={(val: string) => setValue("city", val, { shouldValidate: true, shouldDirty: true })}
+              disabled={!selectedRegionName || comunaOptions.length === 0}
+              error={errors.city as FieldError}
+            />
+          </>
+        ) : (
+          <>
+            <CustomInput
+              label="Ciudad"
+              placeholder="Ej. Bogotá"
+              {...register("city")}
+              error={errors.city}
+            />
+            <CustomInput
+              label="Departamento"
+              placeholder="Ej. Cundinamarca"
+              {...register("department")}
+              error={errors.department}
+            />
+          </>
+        )}
         <CustomInput
           label="Correo institucional"
           placeholder="Ej. contacto@empresa.com"

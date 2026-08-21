@@ -10,17 +10,37 @@ import CustomInput from "@/components/forms/CustomInput";
 import ProfileSectionCard from "./ProfileSectionCard";
 import { updateCompanyLegalRepresentative } from "@/lib/company.api";
 import { CompanyProfile } from "@/types/company.types";
-import { parseApiError } from "@/utils/parseApiError";
 import { getAdminDocTypeOptionsByCountry } from "@/types/user.types";
+import { parseApiError } from "@/utils/parseApiError";
+import {
+  formatRutDisplay,
+  isValidRut,
+  normalizeRut,
+  RUT_INVALID_MESSAGE,
+} from "@/utils/rutValidator";
 
-const schema = z.object({
-  full_name: z.string().optional(),
-  position: z.string().optional(),
-  document_number: z.string().optional(),
-  contact_email: z.string().optional(),
-});
+function buildLegalRepSchema(isChile: boolean) {
+  return z
+    .object({
+      full_name: z.string().optional(),
+      position: z.string().optional(),
+      document_number: z.string().optional(),
+      contact_email: z.string().optional(),
+    })
+    .superRefine((data, ctx) => {
+      if (isChile && data.document_number && data.document_number.trim().length > 0) {
+        if (!isValidRut(data.document_number)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["document_number"],
+            message: RUT_INVALID_MESSAGE,
+          });
+        }
+      }
+    });
+}
 
-type FormValues = z.infer<typeof schema>;
+type FormValues = z.infer<ReturnType<typeof buildLegalRepSchema>>;
 
 interface Props {
   companyId: string;
@@ -29,15 +49,25 @@ interface Props {
 
 const LegalRepresentativeSection = ({ companyId, profile }: Props) => {
   const [loading, setLoading] = React.useState(false);
+  const isChile = profile?.countryCode === "CL";
   const docTypeLabel =
     getAdminDocTypeOptionsByCountry(profile?.countryCode).defaultValue;
+
+  const schema = React.useMemo(() => buildLegalRepSchema(isChile), [isChile]);
 
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors },
-  } = useForm<FormValues>({ resolver: zodResolver(schema) });
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    mode: "onChange",
+  });
+
+  const docNumberValue = watch("document_number") ?? "";
 
   useEffect(() => {
     if (!profile?.manager) return;
@@ -51,7 +81,14 @@ const LegalRepresentativeSection = ({ companyId, profile }: Props) => {
 
   async function onSubmit(values: FormValues) {
     setLoading(true);
-    const res = await updateCompanyLegalRepresentative(companyId, values);
+    const finalDocNumber =
+      isChile && values.document_number
+        ? normalizeRut(values.document_number)
+        : values.document_number;
+    const res = await updateCompanyLegalRepresentative(companyId, {
+      ...values,
+      document_number: finalDocNumber,
+    });
     setLoading(false);
 
     if (res.error) return toast.error(parseApiError(res.error));
@@ -79,14 +116,28 @@ const LegalRepresentativeSection = ({ companyId, profile }: Props) => {
           {...register("position")}
           error={errors.position}
         />
-        <CustomInput
-          label={`Número de documento (${docTypeLabel})`}
-          placeholder={
-            docTypeLabel === "RUT" ? "Ej. 12.345.678-9" : "Ej. 12345678"
-          }
-          {...register("document_number")}
-          error={errors.document_number}
-        />
+        <div className="flex flex-col gap-1">
+          <CustomInput
+            label={`Número de documento (${docTypeLabel})`}
+            placeholder={
+              docTypeLabel === "RUT" ? "Ej. 12.345.678-5" : "Ej. 12345678"
+            }
+            value={docNumberValue}
+            onChange={(e) => {
+              const val = isChile ? formatRutDisplay(e.target.value) : e.target.value;
+              setValue("document_number", val, {
+                shouldValidate: true,
+                shouldDirty: true,
+              });
+            }}
+            error={errors.document_number}
+          />
+          {isChile && !errors.document_number && (
+            <p className="text-xs text-stone-400 pl-2">
+              Formato chileno: números + guion + dígito verificador. Ej. 12.345.678-5
+            </p>
+          )}
+        </div>
         <CustomInput
           label="Correo de contacto"
           placeholder="Ej. representante@empresa.com"

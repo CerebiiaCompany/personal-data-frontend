@@ -39,6 +39,76 @@ import { usePermissionCheck } from "@/hooks/usePermissionCheck";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useOwnCompanyStore } from "@/store/useOwnCompanyStore";
 
+import { CustomSelectOption } from "@/types/forms.types";
+import { formatRutDisplay } from "@/utils/rutValidator";
+
+type PhoneCountryCode = "56" | "57" | "58" | "1" | "52" | "51" | "54" | "55" | "593" | "507";
+
+const phoneCountryCodeOptions: CustomSelectOption<PhoneCountryCode>[] = [
+  { value: "56", title: "+56" },
+  { value: "57", title: "+57" },
+  { value: "58", title: "+58" },
+  { value: "1", title: "+1" },
+  { value: "52", title: "+52" },
+  { value: "51", title: "+51" },
+  { value: "54", title: "+54" },
+  { value: "55", title: "+55" },
+  { value: "593", title: "+593" },
+  { value: "507", title: "+507" },
+];
+
+function formatPhoneDisplay(value: string, indicator: string): string {
+  if (!value) return "";
+  const digits = value.replace(/\D/g, "");
+  if (indicator === "56") {
+    // Chile: 9 dígitos (ej. 9 1234 5678)
+    const truncated = digits.slice(0, 9);
+    if (truncated.length > 5) {
+      return `${truncated.slice(0, 1)} ${truncated.slice(1, 5)} ${truncated.slice(5)}`;
+    }
+    if (truncated.length > 1) {
+      return `${truncated.slice(0, 1)} ${truncated.slice(1)}`;
+    }
+    return truncated;
+  }
+  // Colombia / default: 10 dígitos (ej. 311 222 3333)
+  const truncated = digits.slice(0, 10);
+  if (truncated.length > 6) {
+    return `${truncated.slice(0, 3)} ${truncated.slice(3, 6)} ${truncated.slice(6)}`;
+  }
+  if (truncated.length > 3) {
+    return `${truncated.slice(0, 3)} ${truncated.slice(3)}`;
+  }
+  return truncated;
+}
+
+function parsePhoneAndCountryCode(
+  rawPhone?: string | null,
+  companyCountryCode?: string | null
+): { indicator: PhoneCountryCode; localPhone: string } {
+  const defaultIndicator: PhoneCountryCode = companyCountryCode === "CL" ? "56" : "57";
+  if (!rawPhone || typeof rawPhone !== "string") {
+    return { indicator: defaultIndicator, localPhone: "" };
+  }
+
+  const clean = rawPhone.trim().replace(/^\+/, "");
+  const codes: PhoneCountryCode[] = ["593", "507", "56", "57", "58", "52", "51", "54", "55", "1"];
+  for (const code of codes) {
+    if (clean.startsWith(code)) {
+      const rest = clean.slice(code.length);
+      return {
+        indicator: code,
+        localPhone: formatPhoneDisplay(rest, code),
+      };
+    }
+  }
+
+  return {
+    indicator: defaultIndicator,
+    localPhone: formatPhoneDisplay(clean, defaultIndicator),
+  };
+}
+
 interface Props {
   initialValues?: CreateUser | UpdateUser;
   userId?: string;
@@ -53,11 +123,23 @@ const CreateCompanyUserForm = ({
   const { user, setUser } = useSessionStore();
   const { isCompanyAdmin, isSuperAdmin } = usePermissionCheck();
   const companyId = useActiveCompanyId();
-  const companyCountryCode = useOwnCompanyStore(
-    (store) => store.company?.countryCode
-  );
+  const companyFromStore = useOwnCompanyStore((store) => store.company);
+  const companyCountryCode =
+    companyFromStore?.countryCode ??
+    (user as any)?.company?.countryCode ??
+    (user as any)?.companyUserData?.company?.countryCode;
   const { options: docTypeOptions, defaultValue: docTypeDefault } =
     getAdminDocTypeOptionsByCountry(companyCountryCode, { includeNit: true });
+
+  const initialPhoneData = useMemo(
+    () => parsePhoneAndCountryCode(initialValues?.companyUserData?.phone, companyCountryCode),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+
+  const [phoneIndicator, setPhoneIndicator] = useState<PhoneCountryCode>(
+    initialPhoneData.indicator
+  );
   const areas = useCompanyAreas({
     companyId: companyId,
   });
@@ -74,15 +156,25 @@ const CreateCompanyUserForm = ({
     setValue,
     watch,
   } = useForm({
+    mode: "onChange",
     resolver: zodResolver(
       initialValues ? updateUserValidationSchema : createUserValidationSchema
     ),
-    defaultValues: initialValues || {
-      role: "USER", // Por defecto crear usuarios regulares
-      companyUserData: {
-        docType: docTypeDefault,
-      },
-    },
+    defaultValues: initialValues
+      ? {
+          ...initialValues,
+          companyUserData: {
+            ...initialValues.companyUserData,
+            phone: initialPhoneData.localPhone,
+          },
+        }
+      : {
+          role: "USER", // Por defecto crear usuarios regulares
+          companyUserData: {
+            docType: docTypeDefault,
+            phone: "",
+          },
+        },
   });
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
@@ -93,7 +185,29 @@ const CreateCompanyUserForm = ({
 
   const isCreating = !initialValues;
   const systemRole = watch("role");
-  const currentDocType = watch("companyUserData.docType");  const hasNoAreas =
+  const currentDocType = watch("companyUserData.docType");
+
+  useEffect(() => {
+    if (!initialValues && companyCountryCode) {
+      const defaultInd: PhoneCountryCode = companyCountryCode === "CL" ? "56" : "57";
+      setPhoneIndicator(defaultInd);
+    }
+  }, [companyCountryCode, initialValues]);
+
+  useEffect(() => {
+    // OBS-17: red de seguridad extra por si el autofill del navegador
+    // ocurre de forma asíncrona tras el primer render, sobrepasando los
+    // señuelos y el autocomplete="new-*" de los campos reales.
+    if (isCreating) {
+      const id = window.setTimeout(() => {
+        setValue("username", "", { shouldDirty: false, shouldValidate: false });
+        setValue("password" as any, "", { shouldDirty: false, shouldValidate: false });
+      }, 50);
+      return () => window.clearTimeout(id);
+    }
+  }, [isCreating, setValue]);
+
+  const hasNoAreas =
     isCreating &&
     !areas.loading &&
     Array.isArray(areas.data) &&
@@ -154,10 +268,15 @@ const CreateCompanyUserForm = ({
     const isValid = docTypeOptions.some(
       (option) => option.value === currentDocType
     );
-    if (!isValid) {
+    if (
+      !isValid ||
+      (!initialValues &&
+        currentDocType !== docTypeDefault &&
+        (!currentDocType || (currentDocType === "CC" && companyCountryCode === "CL")))
+    ) {
       setValue("companyUserData.docType", docTypeDefault);
     }
-  }, [currentDocType, docTypeDefault, docTypeOptions, setValue]);
+  }, [currentDocType, docTypeDefault, docTypeOptions, initialValues, companyCountryCode, setValue]);
 
   async function onSubmit(data: CreateUser | UpdateUser) {
     if (!companyId) return;
@@ -178,12 +297,26 @@ const CreateCompanyUserForm = ({
 
     setLoading(true);
 
+    const rawLocalPhone = (data.companyUserData?.phone || "").trim();
+    const phoneDigits = rawLocalPhone.replace(/\D/g, "");
+    const formattedFullPhone = phoneDigits
+      ? `+${phoneIndicator} ${formatPhoneDisplay(phoneDigits, phoneIndicator)}`
+      : "";
+
+    const submitData = {
+      ...data,
+      companyUserData: {
+        ...data.companyUserData,
+        phone: formattedFullPhone,
+      },
+    };
+
     let res;
 
     if (initialValues) {
       //? handle updating
       // Remover campos vacíos de username y password si no fueron modificados
-      const updateData = { ...data };
+      const updateData = { ...submitData };
       if (!updateData.username || updateData.username.trim() === '') {
         delete updateData.username;
       }
@@ -200,7 +333,7 @@ const CreateCompanyUserForm = ({
       //? handle creating
       res = await createCompanyUser(
         companyId,
-        data as CreateUser
+        submitData as CreateUser
       );
     }
     setLoading(false);
@@ -224,6 +357,7 @@ const CreateCompanyUserForm = ({
       ref={formRef}
       onSubmit={handleSubmit(onSubmit)}
       className="flex w-full flex-col gap-6"
+      autoComplete="off"
     >
       <nav
         ref={floatingActionNavbarRef}
@@ -299,12 +433,40 @@ const CreateCompanyUserForm = ({
             placeholder="Ej. alguien@example.com"
             error={errors.companyUserData?.personalEmail}
           />
-          <CustomInput
-            label="Teléfono"
-            {...register("companyUserData.phone")}
-            placeholder="Ej. 1112223333"
-            error={errors.companyUserData?.phone}
-          />
+          <div className="flex flex-col gap-1">
+            <div className="flex gap-2 items-end">
+              <div className="w-[110px] flex-none">
+                <CustomSelect
+                  label="Indicativo"
+                  options={phoneCountryCodeOptions}
+                  value={phoneIndicator}
+                  onChange={(val) => {
+                    const newInd = val as PhoneCountryCode;
+                    setPhoneIndicator(newInd);
+                    const currentPhone = watch("companyUserData.phone") || "";
+                    const reformatted = formatPhoneDisplay(currentPhone, newInd);
+                    setValue("companyUserData.phone", reformatted, { shouldValidate: true });
+                  }}
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <CustomInput
+                  label="Teléfono"
+                  name="companyUserData.phone"
+                  value={watch("companyUserData.phone") || ""}
+                  placeholder={phoneIndicator === "56" ? "Ej. 9 1234 5678" : "Ej. 311 222 3333"}
+                  onChange={(e) => {
+                    const formatted = formatPhoneDisplay(e.target.value, phoneIndicator);
+                    setValue("companyUserData.phone", formatted, {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    });
+                  }}
+                  error={errors.companyUserData?.phone}
+                />
+              </div>
+            </div>
+          </div>
         </div>
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
           <div>
@@ -312,14 +474,31 @@ const CreateCompanyUserForm = ({
               label="Tipo de documento"
               options={docTypeOptions}
               value={currentDocType}
-              onChange={(value) => setValue("companyUserData.docType", value)}
+              onChange={(value) => setValue("companyUserData.docType", value, { shouldValidate: true })}
             />
           </div>
-          <CustomInput
-            label="Número de documento"
-            {...register("companyUserData.docNumber")}
-            error={errors.companyUserData?.docNumber as FieldError}
-          />
+          <div className="flex flex-col gap-1">
+            <CustomInput
+              label={currentDocType === "RUT" ? "Número de RUT" : "Número de documento"}
+              {...register("companyUserData.docNumber" as any)}
+              value={String(watch("companyUserData.docNumber") ?? "")}
+              onChange={(e) => {
+                const val = e.target.value;
+                const formatted = currentDocType === "RUT" ? formatRutDisplay(val) : val;
+                setValue("companyUserData.docNumber", formatted as any, {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                });
+              }}
+              placeholder={currentDocType === "RUT" ? "Ej. 12.345.678-K" : "Ej. 1020304050"}
+              error={errors.companyUserData?.docNumber as FieldError}
+            />
+            {currentDocType === "RUT" && !errors.companyUserData?.docNumber && (
+              <p className="text-xs text-stone-400 mt-0.5">
+                Formato: números + guion + dígito verificador. Ej. 12.345.678-K
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Memoizar las opciones para evitar recrearlas en cada render */}
@@ -465,12 +644,37 @@ const CreateCompanyUserForm = ({
               </div>
             )}
             
+            {/*
+              Señuelos invisibles para el password manager de Chrome/Firefox:
+              incluso con autocomplete="new-username"/"new-password" en los
+              campos reales, el navegador puede detectar este par
+              usuario+contraseña como un formulario de login y autocompletar
+              las credenciales guardadas del admin en sesión (OBS-17). Los
+              señuelos "absorben" ese autofill en vez de los campos reales.
+            */}
+            <input
+              type="text"
+              name="fakeusernameremembered"
+              autoComplete="off"
+              tabIndex={-1}
+              aria-hidden="true"
+              className="absolute h-0 w-0 opacity-0 pointer-events-none"
+            />
+            <input
+              type="password"
+              name="fakepasswordremembered"
+              autoComplete="off"
+              tabIndex={-1}
+              aria-hidden="true"
+              className="absolute h-0 w-0 opacity-0 pointer-events-none"
+            />
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
               <CustomInput
                 label={initialValues ? "Nuevo Usuario (opcional)" : "Usuario"}
                 {...register("username")}
                 placeholder={initialValues ? "Dejar vacío para mantener el actual" : "j_doe1"}
                 error={errors.username}
+                autoComplete="new-username"
               />
               <div className="flex flex-col items-start gap-1 text-left flex-1">
                 <label
@@ -486,6 +690,7 @@ const CreateCompanyUserForm = ({
                     placeholder={initialValues ? "Dejar vacío para mantener la actual" : "••••••••"}
                     {...(register("password" as any) as any)}
                     className="relative w-full flex-1 gap-2 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2.5 pr-12 text-sm text-[#0F172A] outline-none transition focus:border-[#1A2B5B] focus:bg-white focus:ring-2 focus:ring-[#1A2B5B]/12"
+                    autoComplete="new-password"
                   />
                   <button
                     type="button"

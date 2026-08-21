@@ -10,6 +10,8 @@ interface Props<T extends string> {
   onChange: (e: T) => void;
   options: CustomSelectOption<T>[];
   className?: string;
+  disabled?: boolean;
+  error?: any;
 }
 
 const CustomSelect = <T extends string>({
@@ -18,6 +20,8 @@ const CustomSelect = <T extends string>({
   value,
   unselectedText,
   className,
+  disabled,
+  error,
   onChange,
 }: Props<T>) => {
   const [dialogToggle, setDialogToggle] = useState<boolean>(false);
@@ -28,6 +32,7 @@ const CustomSelect = <T extends string>({
   const selectedOption = options.find((e) => e.value === value);
 
   function toggleDialog() {
+    if (disabled) return;
     setDialogToggle((prev) => !prev);
   }
 
@@ -84,7 +89,15 @@ const CustomSelect = <T extends string>({
       <button
         type="button"
         onClick={toggleDialog}
-        className="rounded-lg gap-2 w-full text-primary-900 border border-primary-900 flex-1 relative px-3 py-2 flex items-center justify-between bg-primary-50 text-ellipsis"
+        disabled={disabled}
+        className={clsx(
+          "rounded-lg gap-2 w-full text-primary-900 border flex-1 relative px-3 py-2 flex items-center justify-between text-ellipsis transition-colors",
+          disabled
+            ? "opacity-50 cursor-not-allowed bg-stone-100 border-stone-300 text-stone-400"
+            : error
+              ? "border-red-500 bg-red-50 text-red-900"
+              : "border-primary-900 bg-primary-50"
+        )}
       >
         {selectedOption ? (
           <div className="flex items-center gap-2">
@@ -98,6 +111,11 @@ const CustomSelect = <T extends string>({
         )}
         <Icon icon={"tabler:chevron-down"} className="text-lg" />
       </button>
+      {error && (
+        <span className="text-xs text-red-500 pl-2">
+          {error.message || String(error)}
+        </span>
+      )}
 
       <div
         ref={dialogRef}
