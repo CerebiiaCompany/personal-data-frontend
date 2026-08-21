@@ -207,6 +207,8 @@ const CreateCompanyUserForm = ({
     }
   }, [isCreating, setValue]);
 
+  // OBS-09/16: hasNoAreas ya NO bloquea la creación de usuarios (Áreas es
+  // opcional) — se conserva solo para mostrar el aviso informativo de abajo.
   const hasNoAreas =
     isCreating &&
     !areas.loading &&
@@ -218,7 +220,7 @@ const CreateCompanyUserForm = ({
     !roles.loading &&
     Array.isArray(roles.data) &&
     roles.data.length === 0;
-  const cannotCreateUser = hasNoAreas || hasNoCustomRoles;
+  const cannotCreateUser = hasNoCustomRoles;
   const areaOptions = useMemo(
     () =>
       (areas.data ?? []).map((area) => ({
@@ -280,13 +282,6 @@ const CreateCompanyUserForm = ({
 
   async function onSubmit(data: CreateUser | UpdateUser) {
     if (!companyId) return;
-
-    if (isCreating && hasNoAreas) {
-      toast.error(
-        "Es necesario crear al menos un área antes de asignarla a un nuevo usuario."
-      );
-      return;
-    }
 
     if (isCreating && hasNoCustomRoles) {
       toast.error(
@@ -534,15 +529,15 @@ const CreateCompanyUserForm = ({
         )}
 
         {hasNoAreas && (
-          <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+          <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3">
             <Icon
-              icon="tabler:alert-triangle"
-              className="mt-0.5 shrink-0 text-xl text-amber-600"
+              icon="tabler:info-circle"
+              className="mt-0.5 shrink-0 text-xl text-blue-600"
             />
-            <div className="space-y-2 text-sm text-amber-900">
+            <div className="space-y-2 text-sm text-blue-900">
               <p>
-                No hay áreas registradas en tu compañía. Es necesario crear un
-                área para poder asignársela a este usuario.
+                No hay áreas registradas en tu compañía. Es opcional — puedes crear este usuario
+                sin asignarle un área y organizarlo después si lo necesitas.
               </p>
               <Link
                 href="/admin/administracion/areas/crear"
