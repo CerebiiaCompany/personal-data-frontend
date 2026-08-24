@@ -76,6 +76,7 @@ export function buildCollectFormUserPayload(
       razonSocial: user.razonSocial as string,
       name: user.name as string,
       lastName: user.lastName as string,
+      isJuridica: true,
     };
   }
 
@@ -91,5 +92,6 @@ export function buildCollectFormUserPayload(
     lastName: user.lastName as string,
     age: Number(user.age),
     gender: user.gender as UserGender,
+    isJuridica: false,
   };
 }

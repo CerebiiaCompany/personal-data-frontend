@@ -233,13 +233,11 @@ const TreatmentForm = ({
   }, [companyId]);
 
   const purposeOptions = useMemo<CustomSelectOption<string>[]>(() => {
-    const base: CustomSelectOption<string>[] = [
-      { value: "", title: "— Sin finalidad —" },
-    ];
+    const base: CustomSelectOption<string>[] = [];
     for (const p of purposes ?? []) {
       base.push({
         value: p.id,
-        title: p.companyId ? p.label : `${p.label} (global)`,
+        title: p.label,
       });
     }
     return base;
@@ -431,6 +429,9 @@ const TreatmentForm = ({
     toast.success(
       mode === "create" ? "Tratamiento creado" : "Cambios guardados"
     );
+    if (res.warning) {
+      toast.warning(res.warning);
+    }
     // Actualizamos la base para permitir guardados sucesivos en el mismo form
     // sin falsos positivos de conflicto.
     if (res.data) {
@@ -479,7 +480,7 @@ const TreatmentForm = ({
               label="Finalidad"
               options={purposeOptions}
               value={form.purposeId}
-              unselectedText="— Sin finalidad —"
+              unselectedText="— Selecciona una finalidad —"
               onChange={(v) => patch("purposeId", v)}
             />
             <CustomSelect
@@ -490,6 +491,12 @@ const TreatmentForm = ({
               onChange={(v) => patch("legalBasis", v as LegalBasis | "")}
             />
           </div>
+          {form.legalBasis && !["CONSENT", "CONTRACT_PERFORMANCE", "LEGAL_OBLIGATION", "LEGITIMATE_INTEREST"].includes(form.legalBasis) && (
+            <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-900">
+              <Icon icon="tabler:alert-triangle" className="shrink-0 text-base text-amber-600" />
+              <span>Esta base legal no está reconocida en el Art. 13 de la Ley 21.719.</span>
+            </div>
+          )}
           <CustomTextarea
             label="Detalle de la finalidad"
             name="purposeDetail"
@@ -628,9 +635,9 @@ const TreatmentForm = ({
           <h2 className="mb-1 text-sm font-semibold text-[#1A2B5B]">
             Geolocalización — controles adicionales
           </h2>
-          <div className="mb-4 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-xs leading-relaxed text-rose-900">
-            <Icon icon="tabler:alert-triangle" className="mt-0.5 shrink-0 text-base" />
-            Este tratamiento requiere controles adicionales (Art. 16 sexies).
+          <div className="mb-4 flex items-start gap-2 rounded-xl border border-teal-200 bg-teal-50 px-3 py-2.5 text-xs font-medium leading-relaxed text-teal-900">
+            <Icon icon="tabler:info-circle" className="mt-0.5 shrink-0 text-base text-teal-600" />
+            <span>Art. 16 sexies — controles adicionales</span>
           </div>
           <div className="flex flex-col gap-4">
             <CustomInput

@@ -124,9 +124,8 @@ export default function TreatmentPurposesAbmPage() {
                 Finalidades del tratamiento
               </h1>
               <p className="max-w-2xl text-[13px] leading-relaxed text-[#64748B] sm:text-sm">
-                Catálogo propio de tu empresa para el campo &ldquo;Finalidad&rdquo;
-                de los tratamientos (RAT). Las finalidades globales del sistema
-                se muestran solo como referencia.
+                Catálogo de finalidades para el campo &ldquo;Finalidad&rdquo;
+                de los tratamientos (RAT).
               </p>
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-2 sm:pt-1">
@@ -254,10 +253,10 @@ export default function TreatmentPurposesAbmPage() {
 
         <section className="overflow-hidden rounded-2xl border border-[#E8EDF7] bg-white shadow-[0_2px_12px_rgba(15,35,70,0.04)]">
           <h2 className="border-b border-[#EEF2F8] px-5 py-4 text-sm font-semibold text-[#1A2B5B]">
-            Finalidades globales del sistema (solo lectura)
+            Finalidades base del sistema (REQ v2.1)
           </h2>
           {global.length === 0 ? (
-            <p className="px-5 py-6 text-sm text-[#64748B]">Sin finalidades globales.</p>
+            <p className="px-5 py-6 text-sm text-[#64748B]">Sin finalidades base.</p>
           ) : (
             <ul className="divide-y divide-[#EEF2F8]">
               {global.map((p) => (

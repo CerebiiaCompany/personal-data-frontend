@@ -139,7 +139,7 @@ export default function TreatmentDetailPage() {
     if (res.error) {
       if ((res.error as { missingDataOfficer?: boolean }).missingDataOfficer) {
         toast.error(
-          "No hay un Encargado de Prevención (DPO) designado para esta empresa. Asígnalo en Administración antes de solicitar la activación."
+          "No hay un Oficial de Protección de Datos (DPO) designado para esta empresa. Asígnalo en Administración antes de solicitar la activación."
         );
         return;
       }
@@ -297,7 +297,7 @@ export default function TreatmentDetailPage() {
               />
               Para activar este tratamiento se requieren: finalidad, base legal,
               al menos una categoría de datos y una de titulares, y un
-              Encargado de Prevención (DPO) designado para la empresa —
+              Oficial de Protección de Datos (DPO) designado para la empresa —
               luego debe ser aprobado explícitamente por el DPO.
             </p>
           )}
@@ -308,8 +308,8 @@ export default function TreatmentDetailPage() {
                 className="mt-0.5 shrink-0 text-base"
               />
               {canApprove
-                ? "Como Encargado de Prevención (DPO) de esta empresa, puedes aprobar la activación de este tratamiento."
-                : "La activación de este tratamiento está pendiente de que el Encargado de Prevención (DPO) designado la apruebe explícitamente."}
+                ? "Como Oficial de Protección de Datos (DPO) de esta empresa, puedes aprobar la activación de este tratamiento."
+                : "La activación de este tratamiento está pendiente de que el Oficial de Protección de Datos (DPO) designado la apruebe explícitamente."}
             </p>
           )}
         </header>
@@ -350,13 +350,21 @@ export default function TreatmentDetailPage() {
                 />
               </Field>
               <Field label="Datos sensibles">
-                {data.containsSensitiveData ? (
-                  <span className="inline-flex items-center gap-1.5 font-semibold text-rose-600">
-                    <Icon icon="tabler:shield-lock" /> Sí
-                  </span>
-                ) : (
-                  <span className="text-[#475569]">No</span>
-                )}
+                <div className="flex flex-col gap-1 items-start">
+                  {data.containsSensitiveData ? (
+                    <span className="inline-flex items-center gap-1.5 font-semibold text-rose-600">
+                      <Icon icon="tabler:shield-lock" /> Sí
+                    </span>
+                  ) : (
+                    <span className="text-[#475569]">No</span>
+                  )}
+                  {data.dataCategories.includes("GEOLOCATION") && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-teal-50 border border-teal-200 px-2.5 py-0.5 text-xs font-semibold text-teal-700">
+                      <Icon icon="tabler:map-pin" className="text-sm" />
+                      Art. 16 sexies — controles adicionales
+                    </span>
+                  )}
+                </div>
               </Field>
               <Field label="Categorías de titulares">
                 <Chips

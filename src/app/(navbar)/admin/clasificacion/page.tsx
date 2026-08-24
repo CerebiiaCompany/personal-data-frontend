@@ -11,6 +11,8 @@ import ModuleHelpButton from "@/components/tour/ModuleHelpButton";
 import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useCollectFormClasifications } from "@/hooks/useCollectFormClasifications";
+import { useCompanyProfile } from "@/hooks/useCompanyProfile";
+import { useOwnCompany } from "@/hooks/useOwnCompany";
 import { usePermissionCheck } from "@/hooks/usePermissionCheck";
 import { showDialog } from "@/utils/dialogs.utils";
 import { downloadExcelTemplate } from "@/utils/downloadExcelTemplate";
@@ -46,6 +48,9 @@ function filterByFormName(
 
 export default function ClassificationPage() {
   const companyId = useActiveCompanyId();
+  const { data: companyProfile } = useCompanyProfile(companyId);
+  const { data: ownCompany } = useOwnCompany();
+  const countryCode = companyProfile?.countryCode ?? ownCompany?.countryCode;
   const { shouldFetch } = usePermissionCheck();
   const [search, setSearch] = useState("");
   const [consentCampaignTarget, setConsentCampaignTarget] = useState<{
@@ -163,7 +168,7 @@ export default function ClassificationPage() {
                 >
                   <CheckPermission group="classification" permission="create">
                     <Button
-                      onClick={() => downloadExcelTemplate()}
+                      onClick={() => downloadExcelTemplate(countryCode)}
                       hierarchy="secondary"
                       className="rounded-xl! border-[#E3E9F4]! text-[13px]! px-4! py-2.5!"
                       startContent={
@@ -182,18 +187,6 @@ export default function ClassificationPage() {
                       }
                     >
                       Subir Excel
-                    </Button>
-                  </CheckPermission>
-                  <CheckPermission group="campaigns" permission="create">
-                    <Button
-                      onClick={handleCreateConsentCampaignClick}
-                      hierarchy="secondary"
-                      className="rounded-xl! border-emerald-200! bg-emerald-50! text-emerald-800! text-[13px]! px-4! py-2.5! hover:bg-emerald-100!"
-                      startContent={
-                        <Icon icon="tabler:send" className="text-lg" />
-                      }
-                    >
-                      Crear campaña de consentimiento
                     </Button>
                   </CheckPermission>
                 </div>

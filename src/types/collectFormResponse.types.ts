@@ -147,6 +147,14 @@ export interface CollectFormResponseUserNatural {
   gender: UserGender;
   email: string;
   phone: string;
+  /**
+   * Señal explícita de que el usuario eligió "Persona natural" en el
+   * formulario (PersonKind). El backend ya no necesita inferirlo de
+   * docType === "NIT" — eso fallaba para Chile, donde persona natural y
+   * jurídica comparten el mismo docType (RUT). Ver
+   * personal-data-backend/src/controllers/public.controller.ts:resolveIsJuridica.
+   */
+  isJuridica: false;
 }
 
 export interface CollectFormResponseUserJuridica {
@@ -159,6 +167,8 @@ export interface CollectFormResponseUserJuridica {
   lastName: string;
   email: string;
   phone: string;
+  /** Señal explícita de "Persona jurídica" — ver CollectFormResponseUserNatural.isJuridica. */
+  isJuridica: true;
 }
 
 export type CollectFormResponseUserPayload =
@@ -172,6 +182,8 @@ export type CollectFormResponseUser = CollectFormResponseUserPayload & {
   age?: number;
   gender?: UserGender;
   razonSocial?: string;
+  isJuridica?: boolean;
+  userIsJuridica?: boolean;
 };
 
 export interface CreateCollectFormResponse {
@@ -330,6 +342,8 @@ export interface CollectFormResponse {
   otpCodeId?: string | OneTimeCodePopulated;
 
   verifiedWithOTP?: boolean;
+  isJuridica?: boolean;
+  userIsJuridica?: boolean;
   consent?: ConsentInfo;
   permissions?: CollectFormPermissions;
   createdAt?: string;

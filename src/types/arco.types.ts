@@ -274,7 +274,7 @@ export const ARCO_RECTIFICATION_FIELDS = [
 export const ARCO_REQUEST_TYPE_LABELS: Record<ArcoRequestType, string> = {
   ACCESS: "Acceso",
   RECTIFICATION: "Rectificación",
-  CANCELLATION: "Cancelación",
+  CANCELLATION: "Supresión",
   OPPOSITION: "Oposición",
   PORTABILITY: "Portabilidad",
   BLOCKING: "Bloqueo preventivo",

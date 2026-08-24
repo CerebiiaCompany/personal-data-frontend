@@ -327,6 +327,7 @@ const PublicConsentForm = ({ data }: Props) => {
           gender: userInfo.gender || "OTHER",
           email: userInfo.email || "",
           phone: userInfo.phone || "",
+          isJuridica: false,
         },
         data: userData.data || {}, // Incluir datos del formulario si existen
         dataProcessing: true,

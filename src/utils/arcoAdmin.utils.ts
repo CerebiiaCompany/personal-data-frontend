@@ -56,6 +56,15 @@ export function getArcoDaysUntilDue(dueDate: string): number | null {
   return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 }
 
+export type ArcoUrgencyLevel = "GREEN" | "AMBER" | "RED";
+
+export function getArcoUrgencyLevel(daysRemaining: number | null): ArcoUrgencyLevel {
+  if (daysRemaining === null) return "GREEN";
+  if (daysRemaining <= 5) return "RED";
+  if (daysRemaining <= 14) return "AMBER";
+  return "GREEN";
+}
+
 export function getArcoResolutionDays(
   createdAt: string,
   resolvedAt?: string
@@ -174,7 +183,14 @@ export function normalizeArcoAuditEvent<T extends Record<string, unknown>>(
       name: actorName ?? "Sistema",
       role: actorRaw?.role ?? (raw.actorRole as string | undefined),
     },
-    meta: (raw.meta as Record<string, unknown> | undefined) ?? undefined,
+    // ARCO_MGMT_getCompanyAudit (backend) devuelve el campo como
+    // `metadata`, no `meta` — sin este fallback, formatArcoAuditMetaLines
+    // siempre recibía undefined y la tabla de auditoría inicial se veía
+    // sin detalle en cada fila.
+    meta:
+      (raw.meta as Record<string, unknown> | undefined) ??
+      (raw.metadata as Record<string, unknown> | undefined) ??
+      undefined,
   };
 }
 
@@ -182,14 +198,29 @@ export function normalizeArcoCompanyAuditEntry(
   raw: Record<string, unknown>
 ): ArcoCompanyAuditEntry {
   const base = normalizeArcoAuditEvent(raw);
+  // ARCO_MGMT_getCompanyAudit (backend) anida estos campos bajo
+  // `arcoRequest: { id, requestType, docNumber, status, ... } | null`
+  // (arcoManagement.controller.ts, alrededor de la línea 1698) — no vienen
+  // como requestId/docNumber/requestType/requestStatus planos. Sin esto,
+  // el link "ver solicitud" usaba el id del propio log de auditoría en vez
+  // del id de la solicitud, y tipo/documento siempre salían vacíos.
+  const arcoRequest = raw.arcoRequest as
+    | { id?: string; requestType?: string; docNumber?: string; status?: string }
+    | null
+    | undefined;
   return {
     ...base,
     requestId:
       (raw.requestId as string | undefined) ??
-      (raw.request_id as string | undefined),
-    docNumber: raw.docNumber as string | undefined,
-    requestType: raw.requestType as ArcoCompanyAuditEntry["requestType"],
-    requestStatus: raw.requestStatus as ArcoCompanyAuditEntry["requestStatus"],
+      (raw.request_id as string | undefined) ??
+      arcoRequest?.id,
+    docNumber: (raw.docNumber as string | undefined) ?? arcoRequest?.docNumber,
+    requestType:
+      (raw.requestType as ArcoCompanyAuditEntry["requestType"]) ??
+      (arcoRequest?.requestType as ArcoCompanyAuditEntry["requestType"]),
+    requestStatus:
+      (raw.requestStatus as ArcoCompanyAuditEntry["requestStatus"]) ??
+      (arcoRequest?.status as ArcoCompanyAuditEntry["requestStatus"]),
   };
 }
 

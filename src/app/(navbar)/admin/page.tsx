@@ -11,6 +11,7 @@ import ModuleHelpButton from "@/components/tour/ModuleHelpButton";
 import CustomSelect from "@/components/forms/CustomSelect";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useCampaigns } from "@/hooks/useCampaigns";
+import { useComplianceDashboard } from "@/hooks/useComplianceDashboard";
 import { useCollectFormClasifications } from "@/hooks/useCollectFormClasifications";
 import { useCompanyActionLogs } from "@/hooks/useCompanyActionLogs";
 import { useCompanyCredits } from "@/hooks/useCompanyCredits";
@@ -21,6 +22,7 @@ import { CustomSelectOption } from "@/types/forms.types";
 import { getMonthRange, MONTH_KEY, monthsOptions } from "@/types/months.types";
 import { formatDateToString } from "@/utils/date.utils";
 import { Icon } from "@iconify/react";
+import clsx from "clsx";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
@@ -160,12 +162,27 @@ export default function Home() {
     [collectFormsClasifications.data]
   );
 
+  const compliance = useComplianceDashboard({ companyId, enabled: Boolean(companyId) });
+  const score = compliance.data?.complianceScore.value ?? 0;
+  const scoreStatus = (s: number) => {
+    if (s >= 75) return { className: "text-emerald-600 border-emerald-200 bg-emerald-50", label: "Buen nivel" };
+    if (s >= 50) return { className: "text-amber-600 border-amber-200 bg-amber-50", label: "Atención" };
+    return { className: "text-rose-600 border-rose-200 bg-rose-50", label: "Crítico" };
+  };
+  const statusInfo = scoreStatus(score);
+  const CRITERIA_LABELS: Record<string, string> = {
+    hasActiveRat: "Tiene al menos un tratamiento (RAT) activo",
+    hasPublishedPolicy: "Tiene una política de tratamiento publicada",
+    hasDesignatedDataOfficer: "Tiene un Oficial de Protección de Datos (DPO) designado",
+    hasNoOverdueArcoRequests: "No tiene solicitudes ARCO vencidas",
+  };
+
   const formsStatLoading =
     companyCollectFormsCount.loading || collectFormsClasifications.loading;
   const recordsStatLoading = collectFormsTotals.loading;
 
   return (
-    <div className="flex h-full max-h-full flex-col gap-5 bg-[#F8FAFE] p-5 sm:p-6 md:p-7">
+    <div className="flex h-full max-h-full flex-col gap-5 overflow-y-auto bg-[#F8FAFE] p-5 sm:p-6 md:p-7">
       <section
         data-tour="dashboard-header"
         className="rounded-2xl border border-[#E8EDF7] bg-white px-5 py-4 shadow-[0_2px_10px_rgba(15,35,70,0.03)] md:px-6 md:py-5"
@@ -240,6 +257,127 @@ export default function Home() {
             </div>
           </div>
         </header>
+      </section>
+
+      {/* Secciones de Cumplimiento (Fusión Inicio + Cumplimiento) */}
+      <section className="rounded-2xl border border-[#E8EDF7] bg-white p-5 shadow-[0_2px_12px_rgba(15,35,70,0.04)] sm:p-6">
+        <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-sm font-semibold text-[#1A2B5B]">Score de cumplimiento</h2>
+            <p className="mt-1 text-xs text-[#64748B]">
+              4 criterios de igual peso (25 pts c/u).
+            </p>
+          </div>
+          {!compliance.loading && (
+            <span
+              className={clsx(
+                "inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-semibold",
+                statusInfo.className
+              )}
+            >
+              {statusInfo.label}
+            </span>
+          )}
+        </div>
+        {compliance.loading ? (
+          <div className="mt-4 h-16 w-32 animate-pulse rounded-xl bg-[#EEF3FB]" />
+        ) : (
+          <p className="mt-2 text-[56px] font-bold leading-none text-[#08152F]">
+            {score}
+            <span className="text-2xl font-semibold text-[#94A3B8]">/100</span>
+          </p>
+        )}
+        {compliance.data && (
+          <ul className="mt-5 flex flex-col gap-2">
+            {Object.entries(compliance.data.complianceScore.criteria).map(([key, met]) => (
+              <li key={key} className="flex items-center gap-2 text-sm">
+                <Icon
+                  icon={met ? "tabler:circle-check-filled" : "tabler:circle-x-filled"}
+                  className={met ? "text-lg text-emerald-600" : "text-lg text-rose-500"}
+                />
+                <span className={met ? "text-[#334155]" : "text-[#334155] font-medium"}>
+                  {CRITERIA_LABELS[key] ?? key}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <div className="grid w-full grid-cols-1 gap-3.5 sm:grid-cols-2 xl:grid-cols-4">
+        <DashboardStatCard
+          icon="tabler:list-details"
+          label="Tratamientos activos"
+          value={compliance.data ? `${compliance.data.treatments.activePercentage}%` : "—"}
+          subtitle={compliance.data ? `${compliance.data.treatments.active} de ${compliance.data.treatments.total} tratamientos` : "Cargando..."}
+          loading={compliance.loading}
+        />
+        <DashboardStatCard
+          icon="tabler:scale"
+          label="Solicitudes ARCO abiertas"
+          value={compliance.data ? String(compliance.data.arcoRequests.open) : "—"}
+          subtitle={compliance.data ? `${compliance.data.arcoRequests.overdue} vencidas · ${compliance.data.arcoRequests.resolvedThisMonth} resueltas este mes` : "Cargando..."}
+          loading={compliance.loading}
+        />
+        <DashboardStatCard
+          icon="tabler:shield-check"
+          label="Consentimientos activos"
+          value={compliance.data ? String(compliance.data.consents.active) : "—"}
+          subtitle={compliance.data ? `${compliance.data.consents.revoked} revocados` : "Cargando..."}
+          loading={compliance.loading}
+        />
+        <DashboardStatCard
+          icon="tabler:alert-triangle"
+          label="ARCO por vencer (5 días)"
+          value={compliance.data ? String(compliance.data.arcoRequests.dueSoon.length) : "—"}
+          subtitle="Alertas de vencimiento próximo"
+          loading={compliance.loading}
+        />
+      </div>
+
+      <section className="rounded-2xl border border-[#E8EDF7] bg-white p-5 shadow-[0_2px_12px_rgba(15,35,70,0.04)] sm:p-6">
+        <h2 className="mb-4 text-sm font-semibold text-[#1A2B5B]">
+          Solicitudes ARCO próximas a vencer
+        </h2>
+        {compliance.loading ? (
+          <div className="h-24 w-full animate-pulse rounded-xl bg-[#EEF3FB]" />
+        ) : compliance.data && compliance.data.arcoRequests.dueSoon.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[480px] text-left text-sm">
+              <thead>
+                <tr className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
+                  <th className="pb-2 pr-4">Tipo</th>
+                  <th className="pb-2 pr-4">Documento</th>
+                  <th className="pb-2">Vence</th>
+                </tr>
+              </thead>
+              <tbody>
+                {compliance.data.arcoRequests.dueSoon.map((req) => (
+                  <tr key={req.id} className="border-t border-[#EEF2F8]">
+                    <td className="py-2 pr-4 text-[#1A2B5B]">{req.requestType}</td>
+                    <td className="py-2 pr-4 text-[#475569]">
+                      {req.docType} {req.docNumber}
+                    </td>
+                    <td className="py-2 font-semibold text-amber-700">
+                      {formatDateToString({ date: new Date(req.dueDate) })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="text-xs text-[#94A3B8]">
+            No hay solicitudes ARCO por vencer en los próximos 5 días.
+          </p>
+        )}
+        <Link
+          href="/admin/arco"
+          className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-[#2563EB] hover:underline"
+        >
+          Ver todas las solicitudes ARCO
+          <Icon icon="tabler:arrow-right" className="text-sm" />
+        </Link>
       </section>
 
       <div

@@ -88,7 +88,7 @@ export const personasRights = [
   {
     key: "cancelacion",
     icon: "tabler:trash",
-    title: "Cancelación",
+    title: "Supresión",
     description:
       "Solicitar supresión cuando no exista deber legal de conservación.",
   },
@@ -152,7 +152,7 @@ export const personasArcoActions: PersonasArcoAction[] = [
   },
   {
     value: "CANCELLATION",
-    label: "Cancelación",
+    label: "Supresión",
     icon: "tabler:trash",
     hint: "Solicitar eliminación de datos",
   },

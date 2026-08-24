@@ -343,6 +343,7 @@ const CreateAdminForm = ({ initialValues }: Props) => {
             />
             <CustomInput
               label="Clave"
+              type="password"
               {...register("password" as any)}
               error={(errors as any).password}
               autoComplete="new-password"

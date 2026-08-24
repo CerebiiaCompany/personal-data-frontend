@@ -57,7 +57,7 @@ function scoreStatus(score: number): { className: string; label: string } {
 const CRITERIA_LABELS: Record<string, string> = {
   hasActiveRat: "Tiene al menos un tratamiento (RAT) activo",
   hasPublishedPolicy: "Tiene una política de tratamiento publicada",
-  hasDesignatedDataOfficer: "Tiene un Encargado de Prevención (DPO) designado",
+  hasDesignatedDataOfficer: "Tiene un Oficial de Protección de Datos (DPO) designado",
   hasNoOverdueArcoRequests: "No tiene solicitudes ARCO vencidas",
 };
 

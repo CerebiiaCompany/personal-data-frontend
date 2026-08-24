@@ -28,14 +28,21 @@ export const NAVBAR_DATA: NavbarData = [
     requiredPermission: "dashboard.view",
   },
   {
+    // Fusionado con "Inicio" en el menú visible (Pre-Go-Live GRUPO C):
+    // ambas páginas exigen el mismo permiso y siguen existiendo por
+    // separado (fusionar el CONTENIDO de ambas páginas en una sola es un
+    // trabajo de UI más grande, fuera de alcance de este cambio) — se
+    // accede desde una tarjeta dentro de "Inicio" (ver admin/page.tsx).
+    // Sin `icon`: DashboardNavbar.tsx filtra por `route.icon` para decidir
+    // qué aparece en el sidebar, mismo mecanismo ya usado para ocultar
+    // sub-rutas como "Crear formulario nuevo".
     title: "Cumplimiento",
     path: "/admin/cumplimiento",
-    icon: "tabler:shield-check",
     minRole: "USER",
     requiredPermission: "dashboard.view",
   },
   {
-    title: "Recolección",
+    title: "Formularios de Recolección",
     path: "/admin/recoleccion",
     icon: "tabler:clipboard-list",
     minRole: "USER",
@@ -48,14 +55,14 @@ export const NAVBAR_DATA: NavbarData = [
     requiredPermission: "collect.create",
   },
   {
-    title: "Políticas de tratamiento",
+    title: "Políticas de Privacidad",
     path: "/admin/plantillas",
     icon: "radix-icons:file-text",
     minRole: "USER",
     requiredPermission: "templates.view",
   },
   {
-    title: "Clasificación",
+    title: "Datos Recolectados",
     path: "/admin/clasificacion",
     icon: "material-symbols:view-column-outline",
     minRole: "USER",
@@ -64,7 +71,7 @@ export const NAVBAR_DATA: NavbarData = [
   {
     title: "Campañas",
     path: "/admin/campanas",
-    icon: "flowbite:grid-plus-outline",
+    icon: "tabler:speakerphone",
     minRole: "USER",
     requiredPermission: "campaigns.view",
   },
@@ -75,28 +82,21 @@ export const NAVBAR_DATA: NavbarData = [
     minRole: "USER",
   },
   {
-    title: "Auditoría",
+    title: "Log de Auditoría",
     path: "/admin/auditoria",
     icon: "heroicons:clipboard-document-list",
     minRole: "USER",
     requiredPermission: "audit.view",
   },
   {
-    title: "Solicitudes ARCO",
+    title: "Solicitudes de Derechos",
     path: "/admin/arco",
     icon: "tabler:scale",
     minRole: "USER",
     requiredPermission: "arcoRequests.view",
   },
   {
-    title: "Plazos",
-    path: "/admin/plazos",
-    icon: "tabler:clock-exclamation",
-    minRole: "USER",
-    requiredPermission: "arcoRequests.view",
-  },
-  {
-    title: "Tratamientos (RAT)",
+    title: "Registro de Tratamientos",
     path: "/admin/tratamientos",
     icon: "tabler:list-details",
     minRole: "USER",

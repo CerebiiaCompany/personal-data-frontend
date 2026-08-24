@@ -162,6 +162,22 @@ export async function restoreCollectFormResponse(
   );
 }
 
+/** CON-006 — revoca el consentimiento conservando el historial (no elimina el registro). */
+export async function revokeCollectFormResponseConsent(
+  companyId: string,
+  collectFormId: string,
+  responseId: string,
+  reason?: string
+): Promise<APIResponse<{ id: string; consentStatus: string; consentRevokedAt: string | null }>> {
+  return customFetch(
+    `/companies/${companyId}/collectForms/${collectFormId}/responses/${responseId}/revoke-consent`,
+    {
+      method: "PATCH",
+      body: reason ? JSON.stringify({ reason }) : undefined,
+    }
+  );
+}
+
 export async function sendConsentInvitation(
   companyId: string,
   collectFormId: string,

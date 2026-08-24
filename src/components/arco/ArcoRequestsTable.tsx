@@ -121,7 +121,30 @@ const ArcoRequestsTable = ({ items, loading, error }: Props) => {
                   {item.status !== "RESOLVED" &&
                     item.status !== "REJECTED" &&
                     daysLeft !== null && (
-                      <p className="text-xs text-[#64748B]">
+                      // Semáforo visual de urgencia (Ley 21.719 / 30 días corridos):
+                      // - Verde: >= 15 días corridos restantes.
+                      // - Ámbar / Amarillo: Entre 6 y 14 días corridos restantes.
+                      // - Rojo / Crítico: <= 5 días corridos restantes o vencida.
+                      <p
+                        className={clsx(
+                          "flex items-center gap-1.5 text-xs font-medium",
+                          daysLeft <= 5
+                            ? "text-red-600"
+                            : daysLeft <= 14
+                              ? "text-amber-700"
+                              : "text-emerald-700"
+                        )}
+                      >
+                        <span
+                          className={clsx(
+                            "inline-block h-1.5 w-1.5 rounded-full",
+                            daysLeft <= 5
+                              ? "bg-red-600"
+                              : daysLeft <= 14
+                                ? "bg-amber-500"
+                                : "bg-emerald-500"
+                          )}
+                        />
                         {daysLeft < 0
                           ? `${Math.abs(daysLeft)} día(s) de retraso`
                           : daysLeft === 0

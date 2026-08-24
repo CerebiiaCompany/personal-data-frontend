@@ -18,6 +18,7 @@ export interface APIResponse<T = any> {
     totalPages?: number;
   };
   summary?: Record<string, any>;
+  warning?: string;
   error?: APIError;
 }
 

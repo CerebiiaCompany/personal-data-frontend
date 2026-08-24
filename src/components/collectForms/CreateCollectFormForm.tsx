@@ -118,8 +118,11 @@ const CreateCollectFormForm = ({ initialValues }: Props) => {
   });
   // Item E (RF-73) — catálogo para vincular el formulario a un Treatment
   // del RAT; pageSize alto porque, igual que policyTemplates, se espera un
-  // catálogo chico por empresa, no paginado en la UI.
-  const treatments = useTreatments({ companyId, pageSize: 200 });
+  // catálogo chico por empresa, no paginado en la UI. Solo ACTIVE: un
+  // formulario público no debería quedar vinculado a un tratamiento en
+  // DRAFT/PENDING_APPROVAL/ARCHIVED — no tiene sentido legal recolectar
+  // datos para un tratamiento que aún no está vigente (o que ya no lo está).
+  const treatments = useTreatments({ companyId, pageSize: 200, status: "ACTIVE" });
 
   const marketingChannels = watch("marketingChannels");
   const questions = watch("questions");

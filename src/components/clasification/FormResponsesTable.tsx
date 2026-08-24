@@ -10,7 +10,10 @@ import EditCollectFormResponseDialog from "../dialogs/EditCollectFormResponseDia
 import { showDialog } from "@/utils/dialogs.utils";
 import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import { parseApiError } from "@/utils/parseApiError";
-import { deleteCollectFormResponse } from "@/lib/collectFormResponse.api";
+import {
+  deleteCollectFormResponse,
+  revokeCollectFormResponseConsent,
+} from "@/lib/collectFormResponse.api";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { usePermissionCheck } from "@/hooks/usePermissionCheck";
 import { useConfirm } from "@/components/dialogs/ConfirmProvider";
@@ -80,8 +83,8 @@ function otpStatusChipClass(status?: string) {
   return "bg-[#F1F5F9] text-[#64748B]";
 }
 
-function personKindChipClass(docType?: string) {
-  return isJuridicaDocType(docType)
+function personKindChipClass(isJuridica: boolean) {
+  return isJuridica
     ? "bg-[#EDE9FE] text-[#6D28D9] border border-[#DDD6FE]"
     : "bg-[#E0F2FE] text-[#0369A1] border border-[#BAE6FD]";
 }
@@ -225,38 +228,40 @@ const FormResponsesTable = ({
     return item.otpCodeId;
   };
 
-  async function deleteResponse(id: string) {
+  // CON-006 — revoca consentimiento conservando el historial (no borra el
+  // registro, a diferencia del borrado duro; preserva la evidencia legal).
+  async function revokeConsent(id: string) {
     if (!companyId) return;
 
     let reason = "";
     const confirmed = await confirm({
-      title: "¿Eliminar este registro?",
+      title: "¿Revocar el consentimiento?",
       description: (
         <>
-          ¿Estás seguro de que deseas eliminar este registro? Esta acción puede ser{" "}
-          <strong>irreversible</strong>.
+          El titular dejará de figurar como consentido para campañas de marketing y de
+          consentimiento. El registro y su historial se conservan.
         </>
       ),
       withReasonField: true,
-      reasonLabel: "Razón de eliminación (opcional)",
-      reasonPlaceholder: "Ej. Registro duplicado",
+      reasonLabel: "Motivo de la revocación (opcional)",
+      reasonPlaceholder: "Ej. Solicitud del titular",
       onReasonChange: (value) => {
         reason = value;
       },
-      confirmText: "Sí, eliminar",
+      confirmText: "Sí, revocar",
       cancelText: "Cancelar",
       danger: true,
     });
 
     if (!confirmed) return;
 
-    const res = await deleteCollectFormResponse(companyId, formId, id, reason || undefined);
+    const res = await revokeCollectFormResponseConsent(companyId, formId, id, reason || undefined);
     if (res.error) {
       toast.error(parseApiError(res.error));
       return;
     }
 
-    toast.success("Registro eliminado");
+    toast.success("Consentimiento revocado");
     refresh();
   }
 
@@ -371,7 +376,14 @@ const FormResponsesTable = ({
                     otp?.status ?? (item.consent?.otp?.verified ? "VERIFIED" : "—");
                   const obtainedVia = prettyObtainedVia(item.consent?.obtainedVia);
                   const consentStatus = item.consent?.status ?? "PENDIENTE";
-                  const isJuridica = isJuridicaDocType(user.docType);
+                  const isJuridica = Boolean(
+                    user.userIsJuridica ??
+                    user.isJuridica ??
+                    item.userIsJuridica ??
+                    item.isJuridica ??
+                    isJuridicaDocType(user.docType)
+                  );
+                  const tipoPersonaLabel = isJuridica ? "Persona Jurídica" : "Persona Natural";
                   const createdAt = splitDateTime(item.createdAt);
                   const createdByName = item.createdBy?.name || item.createdBy?.lastName
                     ? `${item.createdBy?.name || ""}${
@@ -402,7 +414,7 @@ const FormResponsesTable = ({
                         <span
                           className={clsx(
                             "inline-flex items-center px-2 py-[2px] rounded-full text-[10px] font-semibold whitespace-nowrap",
-                            personKindChipClass(user.docType)
+                            personKindChipClass(isJuridica)
                           )}
                         >
                           {isJuridica ? "Jurídica" : "Natural"}
@@ -592,7 +604,7 @@ const FormResponsesTable = ({
                           >
                             <Icon icon={expandedId === item._id ? "tabler:eye-off" : "tabler:eye"} className="text-[15px]" />
                           </button>
-                          {can("classification.edit") && (
+                          {can("classification.edit") && consentStatus !== "REVOKED" && (
                             <button
                               type="button"
                               onClick={() => handleEditResponse(item)}
@@ -612,33 +624,18 @@ const FormResponsesTable = ({
                               <Icon icon="tabler:refresh" className="text-[15px]" />
                             </button>
                           )}
-                          <button
-                            type="button"
-                            onClick={() => can("classification.edit") && deleteResponse(item._id)}
-                            disabled={!can("classification.edit")}
-                            className={clsx(
-                              "h-7 w-7 rounded-lg inline-flex items-center justify-center transition-colors",
-                              can("classification.edit")
-                                ? "hover:bg-red-50 cursor-pointer"
-                                : "opacity-40 cursor-not-allowed"
-                            )}
-                            aria-label="Eliminar registro"
-                            title={
-                              can("classification.edit")
-                                ? "Eliminar registro"
-                                : "No tienes permiso para eliminar"
-                            }
-                          >
-                            <Icon
-                              icon="bx:trash"
-                              className={clsx(
-                                "text-[15px]",
-                                can("classification.edit")
-                                  ? "text-red-500"
-                                  : "text-stone-400"
-                              )}
-                            />
-                          </button>
+                          {can("classification.edit") && consentStatus !== "REVOKED" && (
+                            <button
+                              type="button"
+                              onClick={() => revokeConsent(item._id)}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium text-amber-800 bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-colors"
+                              title="Revocar consentimiento (conserva evidencia legal)"
+                              aria-label="Revocar consentimiento"
+                            >
+                              <Icon icon="tabler:ban" className="text-[13px] text-amber-700" />
+                              Revocar
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -693,7 +690,7 @@ const FormResponsesTable = ({
                             <div>
                               <p className="text-[#7A869D] font-semibold">Tipo de persona</p>
                               <p className="text-[#1E2D4E]">
-                                {isJuridica ? "Jurídica (NIT)" : "Natural"}
+                                {tipoPersonaLabel}
                               </p>
                             </div>
                             {isJuridica && (

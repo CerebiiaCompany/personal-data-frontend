@@ -34,7 +34,7 @@ import { useCompanyUsers } from "@/hooks/useCompanyUsers";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useOwnCompanyStore } from "@/store/useOwnCompanyStore";
 import { useSessionStore } from "@/store/useSessionStore";
-import { CHILEAN_REGIONS } from "@/constants/chileanRegions";
+import { useJurisdictionGeographicDivisions } from "@/hooks/useJurisdictionGeographicDivisions";
 
 interface Props {
   initialValues?: CreateCompanyArea;
@@ -52,6 +52,7 @@ const CreateCompanyAreaForm = ({ initialValues }: Props) => {
   const defaultCountry = getDefaultAreaCountryByJurisdiction(companyCountryCode);
   const [loading, setLoading] = useState<boolean>(false);
   const [tagInput, setTagInput] = useState<string>("");
+  const [selectedProvincia, setSelectedProvincia] = useState<string>("");
   const params = useParams();
   const companyUsers = useCompanyUsers({
     companyId: companyId,
@@ -83,17 +84,18 @@ const CreateCompanyAreaForm = ({ initialValues }: Props) => {
   const currentCountry = watch("country");
   const isChile = currentCountry === "cl";
 
-  const regionOptions = useMemo(
-    () => CHILEAN_REGIONS.map((r) => ({ title: r.name, value: r.name })),
-    []
-  );
+  const { regionOptions, getProvinciaOptions, getComunaOptions } =
+    useJurisdictionGeographicDivisions(isChile ? "CL" : "CO");
 
   const selectedRegionName = watch("state");
-  const comunaOptions = useMemo(() => {
-    const foundRegion = CHILEAN_REGIONS.find((r) => r.name === selectedRegionName);
-    if (!foundRegion) return [];
-    return foundRegion.comunas.map((c) => ({ title: c, value: c }));
-  }, [selectedRegionName]);
+  const provinciaOptions = useMemo(
+    () => getProvinciaOptions(selectedRegionName),
+    [getProvinciaOptions, selectedRegionName]
+  );
+  const comunaOptions = useMemo(
+    () => getComunaOptions(selectedRegionName, selectedProvincia),
+    [getComunaOptions, selectedRegionName, selectedProvincia]
+  );
 
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
@@ -260,15 +262,26 @@ const CreateCompanyAreaForm = ({ initialValues }: Props) => {
                 unselectedText="Seleccionar Región"
                 onChange={(val) => {
                   setValue("state", val);
-                  const foundRegion = CHILEAN_REGIONS.find((r) => r.name === val);
-                  const currentCity = watch("city");
-                  if (!foundRegion || !foundRegion.comunas.includes(currentCity)) {
-                    setValue("city", "");
-                  }
+                  setSelectedProvincia("");
+                  setValue("city", "");
                 }}
                 error={errors.state}
                 className="flex-1"
               />
+              {provinciaOptions.length > 0 && (
+                <CustomSelect
+                  label="Provincia"
+                  options={provinciaOptions}
+                  value={selectedProvincia}
+                  unselectedText="Todas las Provincias"
+                  onChange={(val) => {
+                    setSelectedProvincia(val);
+                    setValue("city", "");
+                  }}
+                  disabled={!selectedRegionName}
+                  className="flex-1"
+                />
+              )}
               <CustomSelect
                 label="Comuna"
                 options={comunaOptions}

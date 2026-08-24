@@ -347,10 +347,31 @@ const CreateCompanyUserForm = ({
     router.push(callbackUrl || "/admin/administracion/usuarios");
   }
 
+  function onInvalid(errors: Record<string, any>) {
+    const findFirstMessage = (errObj: any): string | null => {
+      if (!errObj) return null;
+      if (typeof errObj.message === "string" && errObj.message) return errObj.message;
+      if (typeof errObj === "object") {
+        for (const key of Object.keys(errObj)) {
+          const msg = findFirstMessage(errObj[key]);
+          if (msg) return msg;
+        }
+      }
+      return null;
+    };
+
+    const msg = findFirstMessage(errors);
+    if (msg) {
+      toast.error(msg);
+    } else {
+      toast.error("Por favor completa los campos obligatorios del formulario.");
+    }
+  }
+
   return (
     <form
       ref={formRef}
-      onSubmit={handleSubmit(onSubmit)}
+      onSubmit={handleSubmit(onSubmit, onInvalid)}
       className="flex w-full flex-col gap-6"
       autoComplete="off"
     >
@@ -386,7 +407,6 @@ const CreateCompanyUserForm = ({
             <Button
               type="submit"
               loading={loading}
-              disabled={cannotCreateUser}
               className="rounded-xl! border-[#1A2B5B]! bg-[#1A2B5B]! px-5! py-2.5! text-[13px]! font-semibold! text-white!"
             >
               {initialValues ? "Guardar cambios" : "Crear usuario"}
@@ -738,7 +758,6 @@ const CreateCompanyUserForm = ({
         <Button
           type="submit"
           loading={loading}
-          disabled={cannotCreateUser}
           className="w-full rounded-xl! border-[#1A2B5B]! bg-[#1A2B5B]! px-6! py-3! text-[13px]! font-semibold! text-white! sm:w-auto sm:min-w-[200px]"
         >
           {initialValues ? "Guardar cambios" : "Crear usuario"}

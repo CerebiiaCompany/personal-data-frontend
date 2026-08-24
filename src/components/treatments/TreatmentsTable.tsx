@@ -104,14 +104,22 @@ const TreatmentsTable = ({ items, loading, error }: Props) => {
                 {t.legalBasis ? LEGAL_BASIS_LABELS[t.legalBasis] : "—"}
               </td>
               <td className="px-4 py-3">
-                {t.containsSensitiveData ? (
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-rose-600">
-                    <Icon icon="tabler:shield-lock" className="text-sm" />
-                    Sí
-                  </span>
-                ) : (
-                  <span className="text-xs text-[#94A3B8]">No</span>
-                )}
+                <div className="flex flex-col gap-1 items-start">
+                  {t.containsSensitiveData ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-rose-600">
+                      <Icon icon="tabler:shield-lock" className="text-sm" />
+                      Sí
+                    </span>
+                  ) : (
+                    <span className="text-xs text-[#94A3B8]">No</span>
+                  )}
+                  {t.dataCategories.includes("GEOLOCATION") && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-teal-50 border border-teal-200 px-2 py-0.5 text-[11px] font-semibold text-teal-700">
+                      <Icon icon="tabler:map-pin" className="text-xs" />
+                      Art. 16 sexies — controles adicionales
+                    </span>
+                  )}
+                </div>
               </td>
               <td className="px-4 py-3 text-sm text-[#475569]">v{t.version}</td>
               <td className="px-4 py-3 text-sm text-[#64748B]">

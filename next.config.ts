@@ -20,6 +20,36 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+
+  async redirects() {
+    return [
+      {
+        source: "/cumplimiento",
+        destination: "/admin",
+        permanent: true,
+      },
+      {
+        source: "/admin/cumplimiento",
+        destination: "/admin",
+        permanent: true,
+      },
+      {
+        source: "/inicio",
+        destination: "/admin",
+        permanent: true,
+      },
+      {
+        source: "/campanas",
+        destination: "/admin/campanas",
+        permanent: true,
+      },
+      {
+        source: "/recoleccion/campanas",
+        destination: "/admin/campanas",
+        permanent: true,
+      },
+    ];
+  },
   
   /* Compiler optimizations */
   compiler: {

@@ -39,7 +39,12 @@ export type DataCategory =
   | "UNION_MEMBERSHIP"
   | "RELIGIOUS_BELIEFS"
   | "POLITICAL_OPINIONS"
-  | "CRIMINAL_RECORD";
+  | "CRIMINAL_RECORD"
+  | "ETHNIC_ORIGIN"
+  | "SOCIOECONOMIC_STATUS"
+  | "IDEOLOGICAL_BELIEFS"
+  | "SEXUAL_LIFE"
+  | "GENDER_IDENTITY";
 
 export type DataSubjectCategory =
   | "EMPLOYEES"
@@ -97,6 +102,11 @@ export const SENSITIVE_DATA_CATEGORIES: DataCategory[] = [
   "RELIGIOUS_BELIEFS",
   "POLITICAL_OPINIONS",
   "CRIMINAL_RECORD",
+  "ETHNIC_ORIGIN",
+  "SOCIOECONOMIC_STATUS",
+  "IDEOLOGICAL_BELIEFS",
+  "SEXUAL_LIFE",
+  "GENDER_IDENTITY",
 ];
 
 export function isSensitiveDataCategory(category: DataCategory): boolean {
@@ -300,6 +310,11 @@ export const DATA_CATEGORY_OPTIONS: CustomSelectOption<DataCategory>[] = [
   { value: "RELIGIOUS_BELIEFS", title: "Creencias religiosas (sensible)" },
   { value: "POLITICAL_OPINIONS", title: "Opiniones políticas (sensible)" },
   { value: "CRIMINAL_RECORD", title: "Antecedentes penales (sensible)" },
+  { value: "ETHNIC_ORIGIN", title: "Origen étnico (sensible)" },
+  { value: "SOCIOECONOMIC_STATUS", title: "Situación socioeconómica (sensible)" },
+  { value: "IDEOLOGICAL_BELIEFS", title: "Convicciones ideológicas (sensible)" },
+  { value: "SEXUAL_LIFE", title: "Vida sexual (sensible)" },
+  { value: "GENDER_IDENTITY", title: "Identidad de género (sensible)" },
 ];
 
 export const DATA_CATEGORY_LABELS: Record<DataCategory, string> =

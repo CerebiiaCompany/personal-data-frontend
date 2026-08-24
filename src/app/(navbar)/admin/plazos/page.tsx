@@ -20,26 +20,26 @@ import { useMemo, useState } from "react";
 // urgencia. Reutiliza COMPLIANCE_getDashboard (arcoRequests.active), que ya
 // trae TODAS las solicitudes PENDING/IN_PROGRESS con su dueDate — no se creó
 // un endpoint nuevo, como pide el ítem.
-type Urgency = "ok" | "warning" | "orange" | "red" | "overdue";
+// Semáforo visual de urgencia ARCO (30 días corridos - Ley 21.719):
+// Verde: >= 15 días corridos restantes
+// Ámbar: Entre 6 y 14 días corridos restantes
+// Rojo / Crítico: <= 5 días corridos restantes o vencida
+type Urgency = "green" | "amber" | "red";
 
 const URGENCY_CONFIG: Record<
   Urgency,
   { label: string; dot: string; badge: string }
 > = {
-  ok: { label: "En plazo", dot: "bg-emerald-500", badge: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  warning: { label: "5-10 días", dot: "bg-yellow-400", badge: "bg-yellow-50 text-yellow-700 border-yellow-200" },
-  orange: { label: "1-5 días", dot: "bg-orange-500", badge: "bg-orange-50 text-orange-700 border-orange-200" },
-  red: { label: "≤1 día", dot: "bg-red-500", badge: "bg-red-50 text-red-700 border-red-200" },
-  overdue: { label: "Vencido", dot: "bg-zinc-500", badge: "bg-zinc-100 text-zinc-700 border-zinc-300" },
+  green: { label: "Verde (≥15 días)", dot: "bg-emerald-500", badge: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  amber: { label: "Ámbar (6-14 días)", dot: "bg-amber-500", badge: "bg-amber-50 text-amber-700 border-amber-200" },
+  red: { label: "Rojo (≤5 días / Vencida)", dot: "bg-red-500", badge: "bg-red-50 text-red-700 border-red-200" },
 };
 
 function getUrgency(daysRemaining: number | null): Urgency {
-  if (daysRemaining === null) return "ok";
-  if (daysRemaining < 0) return "overdue";
-  if (daysRemaining <= 1) return "red";
-  if (daysRemaining <= 5) return "orange";
-  if (daysRemaining <= 10) return "warning";
-  return "ok";
+  if (daysRemaining === null) return "green";
+  if (daysRemaining <= 5) return "red";
+  if (daysRemaining <= 14) return "amber";
+  return "green";
 }
 
 export default function PlazosPage() {

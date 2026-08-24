@@ -2,8 +2,9 @@ import ExcelJS from "exceljs";
 
 const MAX_DATA_ROWS = 1001; // soporta hasta 1000 registros
 
-export async function downloadExcelTemplate() {
+export async function downloadExcelTemplate(countryCode?: string) {
   const workbook = new ExcelJS.Workbook();
+  const isChile = countryCode === "CL";
 
   // ─── HOJA 1: Plantilla ──────────────────────────────────────────────────────
   const sheet = workbook.addWorksheet("Plantilla");
@@ -39,19 +40,22 @@ export async function downloadExcelTemplate() {
   const dataValidations = (sheet as any).dataValidations;
 
   // Tipo de Documento → columna A
-  // Incluye RUT/CI para datos chilenos además de CC/TI (Colombia) y OTHER.
+  // Si la empresa es de Chile (CL), solo se habilita RUT.
   dataValidations.add(`A2:A${MAX_DATA_ROWS}`, {
     type: "list",
     allowBlank: true,
-    formulae: ['"CC,TI,RUT,CI,OTHER"'],
+    formulae: [isChile ? '"RUT"' : '"CC,TI,RUT,CI,OTHER"'],
     showErrorMessage: true,
     errorStyle: "stop",
     errorTitle: "Tipo de Documento inválido",
-    error:
-      "Selecciona un valor de la lista:\n• CC  (Cédula de Ciudadanía — Colombia)\n• TI  (Tarjeta de Identidad — Colombia)\n• RUT (Rol Único Tributario — Chile)\n• CI  (Cédula de Identidad — Chile)\n• OTHER  (Otro documento)",
+    error: isChile
+      ? "Selecciona un valor de la lista:\n• RUT (Rol Único Tributario — Chile)"
+      : "Selecciona un valor de la lista:\n• CC  (Cédula de Ciudadanía — Colombia)\n• TI  (Tarjeta de Identidad — Colombia)\n• RUT (Rol Único Tributario — Chile)\n• CI  (Cédula de Identidad — Chile)\n• OTHER  (Otro documento)",
     showInputMessage: true,
     promptTitle: "Tipo de Documento",
-    prompt: "Haz clic y selecciona: CC, TI, RUT, CI u OTHER",
+    prompt: isChile
+      ? "Haz clic y selecciona: RUT"
+      : "Haz clic y selecciona: CC, TI, RUT, CI u OTHER",
   });
 
   // Género → columna F
@@ -75,41 +79,65 @@ export async function downloadExcelTemplate() {
     font: { italic: true, color: { argb: "FF999999" } },
   };
 
-  const row2 = sheet.addRow({
-    docType: "CC",
-    docNumber: 1234567890,
-    name: "Juan",
-    lastName: "Pérez",
-    age: 30,
-    gender: "MASCULINO",
-    email: "juan.perez@ejemplo.com",
-    phone: "3001234567",
-  });
+  const exampleRowsData = isChile
+    ? [
+        {
+          docType: "RUT",
+          docNumber: "12345678-5",
+          name: "Camila",
+          lastName: "Soto",
+          age: 28,
+          gender: "FEMENINO",
+          email: "camila.soto@ejemplo.com",
+          phone: "912345678",
+        },
+        {
+          docType: "RUT",
+          docNumber: "98765432-1",
+          name: "Juan",
+          lastName: "Pérez",
+          age: 30,
+          gender: "MASCULINO",
+          email: "juan.perez@ejemplo.com",
+          phone: "987654321",
+        },
+      ]
+    : [
+        {
+          docType: "CC",
+          docNumber: 1234567890,
+          name: "Juan",
+          lastName: "Pérez",
+          age: 30,
+          gender: "MASCULINO",
+          email: "juan.perez@ejemplo.com",
+          phone: "3001234567",
+        },
+        {
+          docType: "TI",
+          docNumber: 9876543210,
+          name: "María",
+          lastName: "González",
+          age: 25,
+          gender: "FEMENINO",
+          email: "maria.gonzalez@ejemplo.com",
+          phone: "3109876543",
+        },
+        {
+          docType: "RUT",
+          docNumber: "12345678-5",
+          name: "Camila",
+          lastName: "Soto",
+          age: 28,
+          gender: "FEMENINO",
+          email: "camila.soto@ejemplo.com",
+          phone: "912345678",
+        },
+      ];
 
-  const row3 = sheet.addRow({
-    docType: "TI",
-    docNumber: 9876543210,
-    name: "María",
-    lastName: "González",
-    age: 25,
-    gender: "FEMENINO",
-    email: "maria.gonzalez@ejemplo.com",
-    phone: "3109876543",
-  });
+  const addedExampleRows = exampleRowsData.map((data) => sheet.addRow(data));
 
-  // Ejemplo Chile (RUT): el número puede incluir guión y dígito K
-  const row4 = sheet.addRow({
-    docType: "RUT",
-    docNumber: "12345678-5",
-    name: "Camila",
-    lastName: "Soto",
-    age: 28,
-    gender: "FEMENINO",
-    email: "camila.soto@ejemplo.com",
-    phone: "912345678",
-  });
-
-  [row2, row3, row4].forEach((row) => {
+  addedExampleRows.forEach((row) => {
     row.height = 22;
     row.eachCell((cell) => {
       Object.assign(cell, exampleStyle);
@@ -137,13 +165,17 @@ export async function downloadExcelTemplate() {
   const instrRows = [
     {
       field: "Tipo de Documento",
-      description: "Tipo de documento de identidad. Usa la lista desplegable de la columna A en la hoja Plantilla. Usa RUT o CI para datos chilenos.",
-      values: "CC  |  TI  |  RUT  |  CI  |  OTHER",
+      description: isChile
+        ? "Tipo de documento de identidad. Usa la lista desplegable de la columna A en la hoja Plantilla (RUT)."
+        : "Tipo de documento de identidad. Usa la lista desplegable de la columna A en la hoja Plantilla. Usa RUT o CI para datos chilenos.",
+      values: isChile ? "RUT" : "CC  |  TI  |  RUT  |  CI  |  OTHER",
     },
     {
       field: "Numero de Documento",
-      description: "Número del documento. Para CC/TI sin puntos ni comas. Para RUT chileno puedes usar guión y dígito verificador (incl. K).",
-      values: "Ej: 1234567890  |  12345678-5",
+      description: isChile
+        ? "Número del documento RUT chileno. Puedes usar guión y dígito verificador (incl. K)."
+        : "Número del documento. Para CC/TI sin puntos ni comas. Para RUT chileno puedes usar guión y dígito verificador (incl. K).",
+      values: isChile ? "Ej: 12345678-5" : "Ej: 1234567890  |  12345678-5",
     },
     {
       field: "Nombres",

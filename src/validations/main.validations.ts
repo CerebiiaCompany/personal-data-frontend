@@ -111,16 +111,6 @@ export const createUserValidationSchema = z.object({
 })
   .refine(
     (data) =>
-      data.role === "COMPANY_ADMIN" ||
-      (typeof data.companyUserData.companyAreaId === "string" &&
-        data.companyUserData.companyAreaId.length > 0),
-    {
-      message: "Debes asignar un área al usuario",
-      path: ["companyUserData", "companyAreaId"],
-    }
-  )
-  .refine(
-    (data) =>
       data.role !== "USER" ||
       (typeof data.companyUserData.companyRoleId === "string" &&
         data.companyUserData.companyRoleId.length > 0),

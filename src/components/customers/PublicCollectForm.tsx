@@ -258,9 +258,9 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
             lastName: z.string().min(1, "Este campo es obligatorio"),
             age: z.preprocess(
               (v) => (v === "" ? undefined : v),
-              z.coerce.number("Este campo es obligatorio").int("Edad inválida")
+              z.coerce.number("Edad inválida").int("Edad inválida").optional()
             ),
-            gender: z.string<UserGender>(),
+            gender: z.optional(z.string<UserGender>()),
             razonSocial: z.string().optional(),
           });
 
