@@ -116,8 +116,10 @@ async function fetchWithRetry<T>(
   for (let attempt = 1; attempt <= retries; attempt++) {
     const code = result.error?.code;
     const isNetworkError = code === "http/network-error";
+    const isUnavailable = code === "http/unavailable";
     const isTimeout = code === "http/timeout";
-    const isRetryable = isNetworkError || (isTimeout && retryOnTimeout);
+    const isRetryable =
+      isNetworkError || isUnavailable || (isTimeout && retryOnTimeout);
 
     if (!isRetryable) return result;
 
@@ -222,6 +224,16 @@ export async function customFetch<T>(
         );
       }
 
+      if (req.status === 502 || req.status === 503 || req.status === 504) {
+        return {
+          error: {
+            message:
+              "El servicio no está disponible temporalmente. Intenta de nuevo.",
+            code: "http/unavailable",
+          },
+        };
+      }
+
       // Verificar si la respuesta es JSON válida
       const contentType = req.headers.get("content-type");
       if (!contentType || !contentType.includes("application/json")) {
@@ -295,7 +307,9 @@ export async function customFetch<T>(
   // Reintentos automáticos para endpoints críticos de sesión (comportamiento
   // histórico) cuando el caller no especifica una config explícita.
   const autoRetry =
-    endpoint.includes("/auth/") || endpoint.includes("/session");
+    endpoint.includes("/auth/") ||
+    endpoint.includes("/session") ||
+    endpoint.includes("/initial-setup/");
 
   const retries = config?.retries ?? (autoRetry ? 2 : 0);
   const retryDelayMs = config?.retryDelayMs ?? 1000;

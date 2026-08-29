@@ -13,20 +13,37 @@ interface State {
   errorInfo?: React.ErrorInfo;
 }
 
+function isRecoverableHydrationError(error: Error): boolean {
+  const message = error.message ?? "";
+  return (
+    /Minified React error #(418|419|421|422|423|425)/.test(message) ||
+    /Hydration/i.test(message) ||
+    /did not match/i.test(message)
+  );
+}
+
 class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
     this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(error: Error): Partial<State> {
+    if (isRecoverableHydrationError(error)) {
+      return {};
+    }
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    if (isRecoverableHydrationError(error)) {
+      console.warn("[ErrorBoundary] Hidratación recuperable, se continúa el render:", error.message);
+      return;
+    }
+
     console.error("[ErrorBoundary] Error capturado:", error);
     console.error("[ErrorBoundary] ErrorInfo:", errorInfo);
-    
+
     this.setState({
       error,
       errorInfo,

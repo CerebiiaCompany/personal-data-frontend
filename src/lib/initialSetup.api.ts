@@ -41,7 +41,12 @@ export interface CompleteInitialSetupPayload {
 export async function fetchInitialSetupStatus(
   companyId: string
 ): Promise<APIResponse<InitialSetupStatus>> {
-  return customFetch(`/companies/${companyId}/initial-setup/status`);
+  return customFetch(
+    `/companies/${companyId}/initial-setup/status`,
+    {},
+    undefined,
+    { retries: 2, retryDelayMs: 800, retryOnTimeout: true }
+  );
 }
 
 export async function completeInitialSetup(

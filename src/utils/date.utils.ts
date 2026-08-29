@@ -24,6 +24,37 @@ export function parseUtcDateAsLocalCalendarDate(utcDateString: string): Date {
   return localDate;
 }
 
+function calendarParts(date: Date | string): {
+  year: number;
+  month: number;
+  day: number;
+} | null {
+  if (typeof date === "string") {
+    const isoDate = date.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (isoDate) {
+      return {
+        year: Number(isoDate[1]),
+        month: Number(isoDate[2]),
+        day: Number(isoDate[3]),
+      };
+    }
+    const parsed = new Date(date);
+    if (Number.isNaN(parsed.getTime())) return null;
+    return {
+      year: parsed.getFullYear(),
+      month: parsed.getMonth() + 1,
+      day: parsed.getDate(),
+    };
+  }
+
+  if (Number.isNaN(date.getTime())) return null;
+  return {
+    year: date.getFullYear(),
+    month: date.getMonth() + 1,
+    day: date.getDate(),
+  };
+}
+
 export function formatDateToString({
   date,
   format = "DD/MM/YYYY",
@@ -33,27 +64,18 @@ export function formatDateToString({
 }): string {
   if (!date) return "";
 
-  const parsedDate = parseUtcDateAsLocalCalendarDate(
-    typeof date === "string" ? date : new Date(date).toString()
-  );
+  const parts = calendarParts(date);
+  if (!parts) return "";
+
+  const day = String(parts.day).padStart(2, "0");
+  const month = String(parts.month).padStart(2, "0");
+  const year = String(parts.year);
 
   switch (format) {
     case "DD/MM/YYYY":
-      return `${parsedDate.getDate().toString().padStart(2, "00")}/${(
-        parsedDate.getMonth() + 1
-      )
-        .toString()
-        .padStart(2, "00")}/${parsedDate.getFullYear()}`;
-
+      return `${day}/${month}/${year}`;
     case "YYYY-MM-DD":
-      const year = parsedDate.getFullYear();
-      const month = (parsedDate.getMonth() + 1).toString().padStart(2, "0");
-      const day = parsedDate.getDate().toString().padStart(2, "0");
-
-      // Format the date string as YYYY-MM-DD
-      const formattedDate = `${year}-${month}-${day}`;
-      return formattedDate;
-
+      return `${year}-${month}-${day}`;
     default:
       return "Formato de fecha inválida";
   }

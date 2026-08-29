@@ -9,6 +9,7 @@ export const ERROR_DICTIONARY = {
   "http/network-error": "Error de conexión. Verifica tu red.",
   "http/timeout": "La petición excedió el tiempo de espera",
   "http/invalid-response": "Respuesta inválida del servidor",
+  "http/unavailable": "El servicio no está disponible temporalmente.",
   "auth/invalid-credentials": "Credenciales inválidas",
   "auth/unauthorized": "No estás autorizado para esta acción",
   "auth/unauthenticated": "Error en la autenticación",

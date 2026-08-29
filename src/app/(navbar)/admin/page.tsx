@@ -24,7 +24,7 @@ import { formatDateToString } from "@/utils/date.utils";
 import { Icon } from "@iconify/react";
 import clsx from "clsx";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 function formatCompactNumber(value: number) {
   return new Intl.NumberFormat("es-CO").format(value);
@@ -60,33 +60,38 @@ function DashboardStatCard({ icon, label, value, subtitle, loading }: StatCardPr
 }
 
 export default function Home() {
-  const currentDate = useMemo(() => new Date(), []);
-  const currentYear = useMemo(() => currentDate.getFullYear(), [currentDate]);
-  const currentMonth = useMemo(
-    () => monthsOptions[currentDate.getMonth()],
-    [currentDate]
-  );
+  const [year, setYear] = useState<string>("");
+  const [month, setMonth] = useState<MONTH_KEY | "">("");
+  const [nowYear, setNowYear] = useState<string>("");
+  const [nowMonth, setNowMonth] = useState<MONTH_KEY | "">("");
+  const [periodReady, setPeriodReady] = useState(false);
 
-  const [year, setYear] = useState<string>(String(currentYear));
-  const [month, setMonth] = useState<MONTH_KEY>(currentMonth.value);
+  useEffect(() => {
+    const now = new Date();
+    const nextYear = String(now.getFullYear());
+    const nextMonth = monthsOptions[now.getMonth()].value;
+    setNowYear(nextYear);
+    setNowMonth(nextMonth);
+    setYear(nextYear);
+    setMonth(nextMonth);
+    setPeriodReady(true);
+  }, []);
 
   const yearOptions = useMemo<CustomSelectOption<string>[]>(() => {
+    if (!periodReady || !year) return [];
     const options: CustomSelectOption<string>[] = [];
-    for (let y = currentYear + 1; y >= currentYear - 5; y--) {
+    const baseYear = Number(year);
+    for (let y = baseYear + 1; y >= baseYear - 5; y--) {
       options.push({ title: String(y), value: String(y) });
     }
     return options;
-  }, [currentYear]);
+  }, [periodReady, year]);
 
   const yearNumber = useMemo(() => Number(year), [year]);
-  const dateRange = useMemo(
-    () =>
-      getMonthRange(
-        month,
-        Number.isFinite(yearNumber) ? yearNumber : currentYear
-      ),
-    [month, yearNumber, currentYear]
-  );
+  const dateRange = useMemo(() => {
+    if (!periodReady || !month || !Number.isFinite(yearNumber)) return null;
+    return getMonthRange(month, yearNumber);
+  }, [periodReady, month, yearNumber]);
 
   const user = useSessionStore((store) => store.user);
   const companyId = useActiveCompanyId();
@@ -100,38 +105,42 @@ export default function Home() {
   const collectFormsClasifications = useCollectFormClasifications({
     companyId: companyId,
     pageSize: 6,
-    startDate: dateRange.startDate.toISOString(),
-    endDate: dateRange.endDate.toISOString(),
-    enabled: shouldFetch("classification.view"),
+    startDate: dateRange?.startDate.toISOString(),
+    endDate: dateRange?.endDate.toISOString(),
+    enabled: shouldFetch("classification.view") && periodReady,
   });
 
   const collectFormsTotals = useCollectFormClasifications({
     companyId: companyId,
     pageSize: 200,
-    enabled: shouldFetch("classification.view"),
+    enabled: shouldFetch("classification.view") && periodReady,
   });
 
   const campaigns = useCampaigns({
     companyId: companyId,
     pageSize: 5,
     active: true,
-    startDate: dateRange.startDate.toISOString(),
-    endDate: dateRange.endDate.toISOString(),
-    enabled: shouldFetch("campaigns.view"),
+    startDate: dateRange?.startDate.toISOString(),
+    endDate: dateRange?.endDate.toISOString(),
+    enabled: shouldFetch("campaigns.view") && periodReady,
   });
 
   const userActionLogs = useCompanyActionLogs({
     companyId: companyId,
-    startDate: dateRange.startDate.toISOString(),
-    endDate: dateRange.endDate.toISOString(),
+    startDate: dateRange?.startDate.toISOString(),
+    endDate: dateRange?.endDate.toISOString(),
     pageSize: 3,
-    enabled: isCompanyAdmin || isSuperAdmin,
+    enabled: (isCompanyAdmin || isSuperAdmin) && periodReady,
   });
 
-  const companyCredits = useCompanyCredits({
-    year: dateRange.startDate.getFullYear(),
-    month: dateRange.startDate.getMonth() + 1,
-  });
+  const companyCredits = useCompanyCredits(
+    dateRange
+      ? {
+          year: dateRange.startDate.getFullYear(),
+          month: dateRange.startDate.getMonth() + 1,
+        }
+      : undefined
+  );
 
   const companyCollectFormsCount = useCompanyCollectFormsCount({
     enabled: shouldFetch("collect.view"),
@@ -209,13 +218,14 @@ export default function Home() {
               </h4>
               <div className="flex flex-wrap items-center gap-1.5">
                 <p className="text-base text-[#60749C]">
-                  {monthsOptions.find((option) => option.value === month)?.title}{" "}
-                  {year}
+                  {periodReady
+                    ? `${monthsOptions.find((option) => option.value === month)?.title ?? ""} ${year}`
+                    : "—"}
                 </p>
                 <p className="text-base text-[#60749C]">
-                  {formatDateToString({ date: dateRange.startDate })}
-                  {" - "}
-                  {formatDateToString({ date: dateRange.endDate })}
+                  {dateRange
+                    ? `${formatDateToString({ date: dateRange.startDate })} - ${formatDateToString({ date: dateRange.endDate })}`
+                    : ""}
                 </p>
               </div>
             </div>
@@ -224,11 +234,14 @@ export default function Home() {
               data-tour="dashboard-period"
               className="flex flex-wrap items-center gap-2 sm:flex-1 sm:justify-end"
             >
-              {(month != currentMonth.value || year !== String(currentYear)) && (
+              {periodReady &&
+                nowMonth &&
+                nowYear &&
+                (month !== nowMonth || year !== nowYear) && (
                 <Button
                   onClick={() => {
-                    setMonth(currentMonth.value);
-                    setYear(String(currentYear));
+                    setMonth(nowMonth);
+                    setYear(nowYear);
                   }}
                   hierarchy="tertiary"
                   className="px-1! text-sm font-normal! text-[#1B4FCB] underline"
@@ -238,7 +251,7 @@ export default function Home() {
               )}
               <CustomSelect
                 className="w-full flex-none sm:w-[92px] [&>button]:h-[38px] [&>button]:rounded-xl! [&>button]:border-[#DDE6F4]! [&>button]:bg-white! [&>button]:px-3! [&>button]:text-[14px] [&>button]:font-medium [&>button]:text-[#0A1736]!"
-                value={month}
+                value={month || undefined}
                 onChange={(value) => setMonth(value)}
                 options={monthsOptions}
               />
