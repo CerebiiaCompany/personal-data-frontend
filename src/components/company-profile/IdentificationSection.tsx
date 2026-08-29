@@ -21,7 +21,7 @@ import {
   normalizeRut,
   RUT_INVALID_MESSAGE,
 } from "@/utils/rutValidator";
-import { CHILEAN_REGIONS } from "@/constants/chileanRegions";
+import { CHILEAN_REGIONS, findChileanRegion } from "@/constants/chileanRegions";
 
 function buildIdentificationSchema(isChile: boolean) {
   return z
@@ -93,7 +93,7 @@ const IdentificationSection = ({ companyId, profile }: Props) => {
 
   const comunaOptions = React.useMemo(() => {
     if (!selectedRegionName) return [];
-    const foundRegion = CHILEAN_REGIONS.find((r) => r.name === selectedRegionName);
+    const foundRegion = findChileanRegion(selectedRegionName);
     if (!foundRegion) return [];
     return foundRegion.comunas.map((c) => ({ title: c, value: c }));
   }, [selectedRegionName]);
@@ -184,7 +184,7 @@ const IdentificationSection = ({ companyId, profile }: Props) => {
               unselectedText="Seleccionar Región"
               onChange={(val: string) => {
                 setValue("department", val, { shouldValidate: true, shouldDirty: true });
-                const foundRegion = CHILEAN_REGIONS.find((r) => r.name === val);
+                const foundRegion = findChileanRegion(val);
                 const currentCity = watch("city");
                 if (!foundRegion || (currentCity && !foundRegion.comunas.includes(currentCity))) {
                   setValue("city", "", { shouldValidate: true, shouldDirty: true });

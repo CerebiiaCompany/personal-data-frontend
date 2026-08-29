@@ -4,7 +4,42 @@ import {
   JurisdictionGeographicDivision,
 } from "@/lib/jurisdiction.api";
 import { CustomSelectOption } from "@/types/forms.types";
-import { CHILEAN_REGIONS } from "@/constants/chileanRegions";
+import {
+  CHILEAN_REGIONS,
+  findChileanProvince,
+  findChileanRegion,
+  normalizeChilePlaceName,
+} from "@/constants/chileanRegions";
+
+function matchesChilePlace(left?: string | null, right?: string | null): boolean {
+  if (!left || !right) return false;
+  return normalizeChilePlaceName(left) === normalizeChilePlaceName(right);
+}
+
+function toOptions(values: string[]): CustomSelectOption<string>[] {
+  return values
+    .filter((value) => Boolean(value && value.trim()))
+    .map((value) => ({ title: value, value }));
+}
+
+function fallbackProvinciaOptions(selectedRegion: string): CustomSelectOption<string>[] {
+  const found = findChileanRegion(selectedRegion);
+  if (!found) return [];
+  return toOptions(found.provinces.map((province) => province.name));
+}
+
+function fallbackComunaOptions(
+  selectedRegion: string,
+  selectedProvincia?: string
+): CustomSelectOption<string>[] {
+  const found = findChileanRegion(selectedRegion);
+  if (!found) return [];
+  if (selectedProvincia) {
+    const province = findChileanProvince(selectedRegion, selectedProvincia);
+    return toOptions(province?.comunas ?? found.comunas);
+  }
+  return toOptions(found.comunas);
+}
 
 export function useJurisdictionGeographicDivisions(countryCode: string = "CL") {
   const [divisions, setDivisions] = useState<JurisdictionGeographicDivision[]>([]);
@@ -39,10 +74,12 @@ export function useJurisdictionGeographicDivisions(countryCode: string = "CL") {
   const regionOptions = useMemo<CustomSelectOption<string>[]>(() => {
     if (divisions.length > 0) {
       const set = new Set<string>();
-      divisions.forEach((d) => set.add(d.level1Name));
-      return Array.from(set).map((r) => ({ title: r, value: r }));
+      divisions.forEach((d) => {
+        if (d.level1Name?.trim()) set.add(d.level1Name);
+      });
+      const fromApi = toOptions(Array.from(set));
+      if (fromApi.length > 0) return fromApi;
     }
-    // Fallback to static CHILEAN_REGIONS
     return CHILEAN_REGIONS.map((r) => ({ title: r.name, value: r.name }));
   }, [divisions]);
 
@@ -53,11 +90,14 @@ export function useJurisdictionGeographicDivisions(countryCode: string = "CL") {
       if (divisions.length > 0) {
         const set = new Set<string>();
         divisions
-          .filter((d) => d.level1Name === selectedRegion)
-          .forEach((d) => set.add(d.level2Name));
-        return Array.from(set).map((p) => ({ title: p, value: p }));
+          .filter((d) => matchesChilePlace(d.level1Name, selectedRegion))
+          .forEach((d) => {
+            if (d.level2Name?.trim()) set.add(d.level2Name);
+          });
+        const fromApi = toOptions(Array.from(set));
+        if (fromApi.length > 0) return fromApi;
       }
-      return [];
+      return fallbackProvinciaOptions(selectedRegion);
     },
     [divisions]
   );
@@ -70,17 +110,20 @@ export function useJurisdictionGeographicDivisions(countryCode: string = "CL") {
         const set = new Set<string>();
         divisions
           .filter((d) => {
-            if (d.level1Name !== selectedRegion) return false;
-            if (selectedProvincia && d.level2Name !== selectedProvincia) return false;
-            return true;
+            if (!matchesChilePlace(d.level1Name, selectedRegion)) return false;
+            if (
+              selectedProvincia &&
+              !matchesChilePlace(d.level2Name, selectedProvincia)
+            ) {
+              return false;
+            }
+            return Boolean(d.level3Name?.trim());
           })
           .forEach((d) => set.add(d.level3Name));
-        return Array.from(set).map((c) => ({ title: c, value: c }));
+        const fromApi = toOptions(Array.from(set));
+        if (fromApi.length > 0) return fromApi;
       }
-      // Fallback to static CHILEAN_REGIONS
-      const found = CHILEAN_REGIONS.find((r) => r.name === selectedRegion);
-      if (!found) return [];
-      return found.comunas.map((c) => ({ title: c, value: c }));
+      return fallbackComunaOptions(selectedRegion, selectedProvincia);
     },
     [divisions]
   );
