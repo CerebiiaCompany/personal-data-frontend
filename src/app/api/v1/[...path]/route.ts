@@ -22,6 +22,16 @@ const HOP_BY_HOP = new Set([
   "content-length",
 ]);
 
+/** No reenviar al backend: el proxy no es el mismo recurso que el cliente cacheó. */
+const STRIP_REQUEST_HEADERS = new Set([
+  ...HOP_BY_HOP,
+  "accept-encoding",
+  "origin",
+  "referer",
+  "if-none-match",
+  "if-modified-since",
+]);
+
 const DECODED_RESPONSE_HEADERS = new Set([
   "content-encoding",
   "content-length",
@@ -111,12 +121,7 @@ async function proxy(
   const outgoing: Record<string, string> = {};
   req.headers.forEach((value, key) => {
     const lower = key.toLowerCase();
-    if (
-      HOP_BY_HOP.has(lower) ||
-      lower === "accept-encoding" ||
-      lower === "origin" ||
-      lower === "referer"
-    ) {
+    if (STRIP_REQUEST_HEADERS.has(lower)) {
       return;
     }
     outgoing[key] = value;
@@ -137,12 +142,27 @@ async function proxy(
     outgoing["content-length"] = String(body.length);
   }
 
-  const upstream = await proxyToBackend({
-    target,
-    method,
-    headers: outgoing,
-    body,
-  });
+  let upstream: { statusCode: number; headers: IncomingHttpHeaders; body: Buffer };
+  try {
+    upstream = await proxyToBackend({
+      target,
+      method,
+      headers: outgoing,
+      body,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "upstream unreachable";
+    console.error("[api-proxy] upstream error", { target, message });
+    return NextResponse.json(
+      {
+        error: {
+          code: "proxy/upstream-unreachable",
+          message: "No se pudo conectar con el servidor de datos",
+        },
+      },
+      { status: 502 }
+    );
+  }
 
   const out = new Headers();
   for (const [key, value] of Object.entries(upstream.headers)) {
@@ -153,10 +173,14 @@ async function proxy(
     if (serialized) out.set(key, serialized);
   }
 
-  const response = new NextResponse(new Uint8Array(upstream.body), {
-    status: upstream.statusCode,
-    headers: out,
-  });
+  const statusCode = upstream.statusCode;
+  const response =
+    statusCode === 304
+      ? new NextResponse(null, { status: 304, headers: out })
+      : new NextResponse(new Uint8Array(upstream.body), {
+          status: statusCode,
+          headers: out,
+        });
 
   // Reenviar Set-Cookie tal cual (sin Domain). No usar cookies.set(): Next
   // vuelve a URL-encodear el valor y express-session queda inválido (s%253A…).

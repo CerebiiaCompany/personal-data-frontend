@@ -63,9 +63,20 @@ async function arcoFetch<T>(
   try {
     const response = await fetch(resolveArcoUrl(endpoint), {
       credentials: "include",
+      cache: "no-store",
       ...options,
       headers,
     });
+
+    if (response.status === 304) {
+      return {
+        error: {
+          code: "http/not-modified",
+          message: "Los datos no cambiaron. Recarga la página si ves información desactualizada.",
+          status: 304,
+        },
+      };
+    }
 
     let body: APIResponse<T>;
     try {
@@ -75,6 +86,7 @@ async function arcoFetch<T>(
         error: {
           code: "http/invalid-response",
           message: "El servidor no respondió correctamente",
+          status: response.status,
         },
       };
     }
