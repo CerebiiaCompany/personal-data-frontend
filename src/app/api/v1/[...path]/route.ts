@@ -18,6 +18,13 @@ const HOP_BY_HOP = new Set([
   "content-length",
 ]);
 
+/** fetch() de Node descomprime el body; estas cabeceras no deben reenviarse. */
+const DECODED_RESPONSE_HEADERS = new Set([
+  "content-encoding",
+  "content-length",
+  "transfer-encoding",
+]);
+
 function backendUrl(path: string[], search: string): string {
   return `${API_BACKEND_URL}/${path.join("/")}${search}`;
 }
@@ -37,10 +44,11 @@ async function proxy(
 
   const headers = new Headers();
   req.headers.forEach((value, key) => {
-    if (!HOP_BY_HOP.has(key.toLowerCase())) {
-      headers.set(key, value);
-    }
+    const lower = key.toLowerCase();
+    if (HOP_BY_HOP.has(lower) || lower === "accept-encoding") return;
+    headers.set(key, value);
   });
+  headers.set("accept-encoding", "identity");
 
   const method = req.method.toUpperCase();
   const init: RequestInit & { duplex?: "half" } = {
@@ -60,7 +68,8 @@ async function proxy(
 
   upstream.headers.forEach((value, key) => {
     const lower = key.toLowerCase();
-    if (lower === "set-cookie" || HOP_BY_HOP.has(lower)) return;
+    if (lower === "set-cookie") return;
+    if (HOP_BY_HOP.has(lower) || DECODED_RESPONSE_HEADERS.has(lower)) return;
     out.set(key, value);
   });
 
