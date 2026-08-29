@@ -268,12 +268,17 @@ const IdentificationSection = ({ companyId, profile }: Props) => {
             Es el correo de acceso del administrador — no se muestra a los titulares.
           </p>
         </div>
-        <CustomInput
-          label="Correo público de contacto"
-          placeholder="Ej. atencion@empresa.com"
-          {...register("public_contact_email")}
-          error={errors.public_contact_email}
-        />
+        <div className="flex flex-col gap-1">
+          <CustomInput
+            label="Correo ARCO de contacto"
+            placeholder="Ej. atencion@empresa.com"
+            {...register("public_contact_email")}
+            error={errors.public_contact_email}
+          />
+          <p className="text-xs text-stone-400 pl-2">
+            Es el correo que se publica en la política de privacidad de tu empresa.
+          </p>
+        </div>
         <CustomInput
           label="Correo/URL Portal ARCO"
           placeholder="Ej. arco@empresa.com o https://empresa.com/arco"
