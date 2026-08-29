@@ -9,7 +9,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSessionStore } from "@/store/useSessionStore";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { getSession, loginUser, getPermissions } from "@/lib/auth.api";
+import { getSession, loginUser, getPermissions, resolveSessionUser } from "@/lib/auth.api";
 import { UserPermissionsResponse } from "@/types/user.types";
 import { parseApiError } from "@/utils/parseApiError";
 import AccountActivationForm from "@/components/auth/AccountActivationForm";
@@ -77,17 +77,40 @@ function LoginForm() {
       return false;
     }
 
-    const session = await getSession();
+    let sessionUser = resolveSessionUser(loginRes.data);
 
-    if (session.error) {
-      const parsedError = parseApiError(session.error);
-      setError(parsedError);
+    if (!sessionUser) {
+      const session = await getSession();
+      if (session.error) {
+        const parsedError = parseApiError(session.error);
+        setError(parsedError);
+        setLoading(false);
+        toast.error(parsedError);
+        return false;
+      }
+      sessionUser = session.data;
+    } else {
+      const sessionCheck = await getSession();
+      if (sessionCheck.error?.code === "auth/unauthenticated") {
+        setError(
+          "Inicio de sesión incompleto: el navegador no guardó la cookie de sesión. Limpia cookies de data.cerebiia.com.co e intenta de nuevo."
+        );
+        setLoading(false);
+        toast.error(
+          "No se pudo establecer la sesión. Limpia cookies del sitio e intenta otra vez."
+        );
+        return false;
+      }
+    }
+
+    if (!sessionUser) {
+      setError("No se pudo obtener la sesión del usuario");
       setLoading(false);
-      toast.error(parsedError);
+      toast.error("No se pudo obtener la sesión del usuario");
       return false;
     }
 
-    setUser(session.data);
+    setUser(sessionUser);
 
     const permissionsRes = await getPermissions();
 
@@ -113,12 +136,12 @@ function LoginForm() {
 
     setLoading(false);
     const successMessage = options?.successMessage
-      ? options.successMessage(session.data?.name)
-      : `Bienvenid@ ${session.data?.name}`;
+      ? options.successMessage(sessionUser?.name)
+      : `Bienvenid@ ${sessionUser?.name}`;
     toast.success(successMessage);
 
     let redirectUrl: string;
-    const userRole = session.data?.role || "USER";
+    const userRole = sessionUser?.role || "USER";
 
     if (callbackUrl) {
       if (callbackUrl.includes("/superadmin")) {

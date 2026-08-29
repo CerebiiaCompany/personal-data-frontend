@@ -250,7 +250,8 @@ export async function customFetch<T>(
 
       if (res.error?.code === "auth/unauthenticated") {
         const isPublic = isPublicClientContext(endpoint);
-        if (!isPublic) {
+        const isAuthProbe = endpoint === "/auth" || endpoint.startsWith("/auth?");
+        if (!isPublic && !isAuthProbe) {
           // notify user session has ended only for protected endpoints
           const sessionStore = useSessionStore.getState();
           sessionStore.logout();

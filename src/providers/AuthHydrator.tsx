@@ -2,7 +2,7 @@
 import { useEffect, useRef } from "react";
 import { useSessionStore } from "@/store/useSessionStore";
 import { parseApiError } from "@/utils/parseApiError";
-import { getSession, getPermissions } from "@/lib/auth.api";
+import { getSession, getPermissions, resolveSessionUser } from "@/lib/auth.api";
 import { UserPermissionsResponse } from "@/types/user.types";
 
 // Función auxiliar para validar si un error es válido y no vacío
@@ -122,8 +122,9 @@ export function AuthHydrator() {
           return;
         }
 
-        // Validar que session.data tenga las propiedades mínimas necesarias
-        if (!session.data.username || !session.data.role) {
+        console.log("[AuthHydrator] ✅ Sesión obtenida exitosamente");
+        const sessionUser = resolveSessionUser(session.data as any);
+        if (!sessionUser?.username || !sessionUser?.role) {
           console.error("[AuthHydrator] ❌ Datos de sesión incompletos:", session.data);
           setError("Datos de sesión incompletos");
           setLoading(false);
@@ -131,11 +132,13 @@ export function AuthHydrator() {
           return;
         }
 
-        console.log("[AuthHydrator] ✅ Sesión obtenida exitosamente");
-        console.log("[AuthHydrator]    - Usuario:", session.data?.username);
-        console.log("[AuthHydrator]    - Rol:", session.data?.role);
-        console.log("[AuthHydrator]    - Email:", session.data?.companyUserData?.personalEmail);
-        setUser(session.data);
+        console.log("[AuthHydrator]    - Usuario:", sessionUser.username);
+        console.log("[AuthHydrator]    - Rol:", sessionUser.role);
+        console.log(
+          "[AuthHydrator]    - Email:",
+          sessionUser.companyUserData?.personalEmail
+        );
+        setUser(sessionUser);
 
         // 2. Obtener permisos del usuario (no crítico, puede fallar)
         console.log("[AuthHydrator] Obteniendo permisos del usuario...");

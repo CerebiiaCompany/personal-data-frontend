@@ -9,81 +9,70 @@ type AuthSessionPayload = {
   companyUserData?: SessionUser["companyUserData"];
 };
 
+export function resolveSessionUser(
+  payload: SessionUser | AuthSessionPayload | undefined | null
+): SessionUser | undefined {
+  if (!payload) return undefined;
+
+  if ("user" in payload && payload.user) {
+    return {
+      ...payload.user,
+      company: payload.company ?? payload.user.company,
+      companyUserData:
+        payload.companyUserData ?? payload.user.companyUserData,
+    };
+  }
+
+  return payload as SessionUser;
+}
+
 export async function getSession(): Promise<APIResponse<SessionUser>> {
   const res = await customFetch<SessionUser | AuthSessionPayload>("/auth", {
     method: "GET",
   });
 
-  if (!res.data) return res as APIResponse<SessionUser>;
+  const user = resolveSessionUser(res.data);
+  if (!user) return res as APIResponse<SessionUser>;
 
-  // Compatibilidad: backend nuevo retorna { data: { user, company, companyUserData } }
-  // como objetos hermanos. Los fusionamos en un único SessionUser para que tanto
-  // `companyUserData.companyId` (fuente primaria) como `company._id` (fallback)
-  // queden disponibles para useActiveCompanyId().
-  const payload = res.data as AuthSessionPayload;
-  if ("user" in payload && payload.user) {
-    return {
-      ...res,
-      data: {
-        ...payload.user,
-        company: payload.company ?? payload.user.company,
-        companyUserData: payload.companyUserData ?? payload.user.companyUserData,
-      },
-    };
-  }
-
-  // Compatibilidad con formato anterior (data = SessionUser)
-  return res as APIResponse<SessionUser>;
+  return { ...res, data: user };
 }
 
-                /**
-                * Obtiene los permisos del usuario actual desde el backend
-                * Debe llamarse después del login o al cargar la aplicación si hay sesión activa
-                */
-                export async function getPermissions(): Promise<APIResponse<UserPermissionsResponse>> {
-                    const res = await customFetch<UserPermissionsResponse>("/auth/permissions", {
-                        method: "GET"
-                        });
+export async function getPermissions(): Promise<
+  APIResponse<UserPermissionsResponse>
+> {
+  return customFetch<UserPermissionsResponse>("/auth/permissions", {
+    method: "GET",
+  });
+}
 
-                        return res;
-                        }
+export async function loginUser(
+  username: string,
+  password: string
+): Promise<APIResponse<SessionUser | AuthSessionPayload>> {
+  return customFetch<SessionUser | AuthSessionPayload>("/auth", {
+    method: "POST",
+    body: JSON.stringify({ username, password }),
+  });
+}
 
-                        export async function loginUser(
-                        username: string,
-                        password: string
-                        ): Promise<APIResponse> {
-                            const res = await customFetch("/auth", {
-                            method: "POST",
-                            body: JSON.stringify({ username, password }),
-                            });
+export async function logoutUser(): Promise<APIResponse> {
+  return customFetch("/auth", {
+    method: "DELETE",
+  });
+}
 
-                            return res;
-                            }
-
-                            export async function logoutUser(): Promise<APIResponse> {
-                                const res = await customFetch(`/auth`, {
-                                method: "DELETE",
-                                });
-
-                                return res;
-                                }
-
-                                export async function updatePassword(
-                                newPassword: string
-                                ): Promise<APIResponse> {
-                                    const res = await customFetch("/auth/update-password", {
-                                    method: "PATCH",
-                                    body: JSON.stringify({ password: newPassword }),
-                                    });
-                                    return res;
-                                    }
+export async function updatePassword(
+  newPassword: string
+): Promise<APIResponse> {
+  return customFetch("/auth/update-password", {
+    method: "PATCH",
+    body: JSON.stringify({ password: newPassword }),
+  });
+}
 
 export async function checkActiveSession(): Promise<
   APIResponse<{ authenticated: boolean }>
 > {
-  // Timeout explícito: sin esto, en equipos con mala red el fetch podría quedar
-  // colgado indefinidamente y bloquear el envío del formulario (se llama antes
-  // de generar OTP y antes de enviar la respuesta).
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 20000);
 

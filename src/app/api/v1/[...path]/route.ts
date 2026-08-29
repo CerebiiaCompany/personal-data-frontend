@@ -28,12 +28,65 @@ const DECODED_RESPONSE_HEADERS = new Set([
   "transfer-encoding",
 ]);
 
+interface ParsedSetCookie {
+  name: string;
+  value: string;
+  path?: string;
+  maxAge?: number;
+  expires?: Date;
+  httpOnly: boolean;
+  secure: boolean;
+  sameSite?: "lax" | "strict" | "none";
+}
+
 function backendUrl(path: string[], search: string): string {
   return `${API_BACKEND_URL}/${path.join("/")}${search}`;
 }
 
-function rewriteSetCookie(cookie: string): string {
-  return cookie.replace(/;\s*Domain=[^;]*/gi, "");
+function parseSetCookieHeader(header: string): ParsedSetCookie | null {
+  const segments = header.split(";").map((part) => part.trim()).filter(Boolean);
+  if (segments.length === 0) return null;
+
+  const eq = segments[0].indexOf("=");
+  if (eq <= 0) return null;
+
+  const parsed: ParsedSetCookie = {
+    name: segments[0].slice(0, eq),
+    value: segments[0].slice(eq + 1),
+    httpOnly: false,
+    secure: false,
+  };
+
+  for (const segment of segments.slice(1)) {
+    const attrEq = segment.indexOf("=");
+    const key = (attrEq === -1 ? segment : segment.slice(0, attrEq)).toLowerCase();
+    const value = attrEq === -1 ? "" : segment.slice(attrEq + 1);
+
+    switch (key) {
+      case "path":
+        parsed.path = value;
+        break;
+      case "max-age":
+        parsed.maxAge = Number(value);
+        break;
+      case "expires":
+        parsed.expires = new Date(value);
+        break;
+      case "httponly":
+        parsed.httpOnly = true;
+        break;
+      case "secure":
+        parsed.secure = true;
+        break;
+      case "samesite":
+        parsed.sameSite = value.toLowerCase() as ParsedSetCookie["sameSite"];
+        break;
+      default:
+        break;
+    }
+  }
+
+  return parsed;
 }
 
 function collectSetCookies(headers: IncomingHttpHeaders): string[] {
@@ -45,6 +98,26 @@ function collectSetCookies(headers: IncomingHttpHeaders): string[] {
 function headerValue(value: string | string[] | undefined): string | null {
   if (value == null) return null;
   return Array.isArray(value) ? value.join(", ") : value;
+}
+
+function applySetCookie(response: NextResponse, raw: string) {
+  const parsed = parseSetCookieHeader(raw);
+  if (!parsed) return;
+
+  const isHostPrefixed = parsed.name.startsWith("__Host-");
+  const isSecurePrefixed = parsed.name.startsWith("__Secure-");
+
+  response.cookies.set(parsed.name, parsed.value, {
+    // Path=/ garantiza que el navegador envíe la cookie a /api/v1/*
+    path: isHostPrefixed ? "/" : "/",
+    httpOnly: parsed.httpOnly,
+    secure: parsed.secure || isHostPrefixed || isSecurePrefixed || true,
+    sameSite: parsed.sameSite ?? "lax",
+    ...(parsed.maxAge !== undefined && Number.isFinite(parsed.maxAge)
+      ? { maxAge: parsed.maxAge }
+      : {}),
+    ...(parsed.expires ? { expires: parsed.expires } : {}),
+  });
 }
 
 function proxyToBackend(options: {
@@ -97,10 +170,24 @@ async function proxy(
   const outgoing: Record<string, string> = {};
   req.headers.forEach((value, key) => {
     const lower = key.toLowerCase();
-    if (HOP_BY_HOP.has(lower) || lower === "accept-encoding") return;
+    if (
+      HOP_BY_HOP.has(lower) ||
+      lower === "accept-encoding" ||
+      lower === "origin" ||
+      lower === "referer"
+    ) {
+      return;
+    }
     outgoing[key] = value;
   });
+
   outgoing["accept-encoding"] = "identity";
+  outgoing["x-forwarded-host"] = req.headers.get("host") ?? "";
+  outgoing["x-forwarded-proto"] = req.nextUrl.protocol.replace(":", "");
+  outgoing["x-forwarded-for"] =
+    req.headers.get("x-forwarded-for") ??
+    req.headers.get("x-real-ip") ??
+    "";
 
   const method = req.method.toUpperCase();
   const hasBody = method !== "GET" && method !== "HEAD";
@@ -125,14 +212,16 @@ async function proxy(
     if (serialized) out.set(key, serialized);
   }
 
-  for (const cookie of collectSetCookies(upstream.headers)) {
-    out.append("set-cookie", rewriteSetCookie(cookie));
-  }
-
-  return new NextResponse(new Uint8Array(upstream.body), {
+  const response = new NextResponse(new Uint8Array(upstream.body), {
     status: upstream.statusCode,
     headers: out,
   });
+
+  for (const cookie of collectSetCookies(upstream.headers)) {
+    applySetCookie(response, cookie);
+  }
+
+  return response;
 }
 
 export const GET = proxy;
