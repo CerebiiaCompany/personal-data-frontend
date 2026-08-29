@@ -19,6 +19,7 @@ import {
   RUT_INVALID_MESSAGE,
 } from "@/utils/rutValidator";
 import { parseApiError } from "@/utils/parseApiError";
+import { useJurisdictionGeographicDivisions } from "@/hooks/useJurisdictionGeographicDivisions";
 
 // OBS-03b (ONB-01): mismo idioma superRefine + isValidRut/RUT_INVALID_MESSAGE
 // que createCompanyValidationSchema, IdentificationSection.tsx y
@@ -33,6 +34,13 @@ function buildInitialSetupSchema(isChile: boolean) {
       managerName: z.string().min(1, "El nombre del representante legal es requerido"),
       managerDocNumber: z.string().min(1, "Requerido"),
       countryCode: z.string().min(1, "Requerido"),
+      // Item CHK-137/CHK-129: campos 7-10 de ONB-01 — opcionales a nivel de
+      // schema porque solo son obligatorios cuando countryCode==='CL'
+      // (enforced abajo en superRefine, igual que nit/managerDocNumber).
+      regionName: z.string().optional(),
+      provinceName: z.string().optional(),
+      communeName: z.string().optional(),
+      address: z.string().optional(),
     })
     .superRefine((data, ctx) => {
       if (!isChile) return;
@@ -45,6 +53,18 @@ function buildInitialSetupSchema(isChile: boolean) {
           path: ["managerDocNumber"],
           message: RUT_INVALID_MESSAGE,
         });
+      }
+      if (!data.regionName) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["regionName"], message: "Requerido" });
+      }
+      if (!data.provinceName) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["provinceName"], message: "Requerido" });
+      }
+      if (!data.communeName) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["communeName"], message: "Requerido" });
+      }
+      if (!data.address) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["address"], message: "Requerido" });
       }
     });
 }
@@ -80,11 +100,30 @@ export default function InitialSetupForm({ companyId, initialCompany, onComplete
       managerName: initialCompany.manager?.name ?? "",
       managerDocNumber: initialCompany.manager?.docNumber ?? "",
       countryCode: initialCompany.countryCode ?? "CO",
+      regionName: initialCompany.regionName ?? "",
+      provinceName: initialCompany.provinceName ?? "",
+      communeName: initialCompany.communeName ?? "",
+      address: initialCompany.address ?? "",
     },
   });
 
   const nitValue = watch("nit") ?? "";
   const managerDocValue = watch("managerDocNumber") ?? "";
+
+  // Item CHK-137/CHK-129: mismo patrón Región→Provincia→Comuna que
+  // CreateCompanyAreaForm.tsx:254-297, sobre jurisdiction_geographic_divisions.
+  const { regionOptions, getProvinciaOptions, getComunaOptions } =
+    useJurisdictionGeographicDivisions("CL");
+  const selectedRegionName = watch("regionName") ?? "";
+  const selectedProvinceName = watch("provinceName") ?? "";
+  const provinciaOptions = React.useMemo(
+    () => getProvinciaOptions(selectedRegionName),
+    [getProvinciaOptions, selectedRegionName]
+  );
+  const comunaOptions = React.useMemo(
+    () => getComunaOptions(selectedRegionName, selectedProvinceName),
+    [getComunaOptions, selectedRegionName, selectedProvinceName]
+  );
 
   async function onSubmit(values: FormValues) {
     setLoading(true);
@@ -95,6 +134,10 @@ export default function InitialSetupForm({ companyId, initialCompany, onComplete
       countryCode: values.countryCode,
       managerName: values.managerName,
       managerDocNumber: isChile ? normalizeRut(values.managerDocNumber) : values.managerDocNumber,
+      regionName: values.regionName || undefined,
+      provinceName: values.provinceName || undefined,
+      communeName: values.communeName || undefined,
+      address: values.address || undefined,
     });
     setLoading(false);
 
@@ -180,6 +223,97 @@ export default function InitialSetupForm({ companyId, initialCompany, onComplete
               error={errors.managerDocNumber}
             />
           </div>
+          {isChile ? (
+            <>
+              <div className="flex flex-col gap-1">
+                <CustomSelect
+                  label="Región"
+                  options={regionOptions}
+                  value={watch("regionName")}
+                  unselectedText="Seleccionar Región"
+                  onChange={(val) => {
+                    setValue("regionName", val, { shouldValidate: true, shouldDirty: true });
+                    setValue("provinceName", "", { shouldValidate: true });
+                    setValue("communeName", "", { shouldValidate: true });
+                  }}
+                />
+                {errors.regionName && (
+                  <span className="text-sm font-semibold text-red-400">
+                    {errors.regionName.message}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-col gap-1">
+                <CustomSelect
+                  label="Provincia"
+                  options={provinciaOptions}
+                  value={watch("provinceName")}
+                  unselectedText={
+                    selectedRegionName ? "Seleccionar Provincia" : "Selecciona una Región primero"
+                  }
+                  disabled={!selectedRegionName}
+                  onChange={(val) => {
+                    setValue("provinceName", val, { shouldValidate: true, shouldDirty: true });
+                    setValue("communeName", "", { shouldValidate: true });
+                  }}
+                />
+                {errors.provinceName && (
+                  <span className="text-sm font-semibold text-red-400">
+                    {errors.provinceName.message}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-col gap-1">
+                <CustomSelect
+                  label="Comuna"
+                  options={comunaOptions}
+                  value={watch("communeName")}
+                  unselectedText={
+                    selectedRegionName ? "Seleccionar Comuna" : "Selecciona una Región primero"
+                  }
+                  disabled={!selectedRegionName || comunaOptions.length === 0}
+                  onChange={(val) =>
+                    setValue("communeName", val, { shouldValidate: true, shouldDirty: true })
+                  }
+                />
+                {errors.communeName && (
+                  <span className="text-sm font-semibold text-red-400">
+                    {errors.communeName.message}
+                  </span>
+                )}
+              </div>
+              <CustomInput
+                label="Dirección"
+                placeholder="Ej. Av. Providencia 1234, oficina 501"
+                {...register("address")}
+                error={errors.address}
+              />
+            </>
+          ) : (
+            <>
+              <CustomInput
+                label="Región (opcional)"
+                placeholder="No aplica"
+                {...register("regionName")}
+              />
+              <CustomInput
+                label="Provincia (opcional)"
+                placeholder="No aplica"
+                {...register("provinceName")}
+              />
+              <CustomInput
+                label="Comuna (opcional)"
+                placeholder="No aplica"
+                {...register("communeName")}
+              />
+              <CustomInput
+                label="Dirección (opcional)"
+                placeholder="No aplica"
+                {...register("address")}
+                error={errors.address}
+              />
+            </>
+          )}
         </div>
 
         <div className="mt-6 flex justify-end">

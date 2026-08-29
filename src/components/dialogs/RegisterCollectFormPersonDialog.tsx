@@ -21,52 +21,66 @@ import {
   PersonKind,
   personKindOptions,
 } from "@/types/collectFormResponse.types";
-import { DocType, docTypesOptions } from "@/types/user.types";
+import { DocType, getDocTypeOptionsByCountry, getJuridicaDocType } from "@/types/user.types";
 import { parseNitDocNumber } from "@/utils/collectFormUser.utils";
+import { isValidRut, normalizeRut } from "@/utils/rutValidator";
 import { useDialogBackdropClose } from "@/hooks/useDialogBackdropClose";
+import { useOwnCompanyStore } from "@/store/useOwnCompanyStore";
 
-const formSchema = z
-  .object({
-    personKind: z.enum(["NATURAL", "JURIDICA"]),
-    withoutDocument: z.boolean(),
-    docType: z.string().optional(),
-    docNumber: z.string().optional(),
-    name: z.string().optional(),
-    lastName: z.string().optional(),
-    razonSocial: z.string().optional(),
-    email: z.string().optional(),
-    phone: z.string().optional(),
-  })
-  .superRefine((data, ctx) => {
-    const email = (data.email || "").trim();
-    const phone = (data.phone || "").replace(/\D/g, "");
-    const hasDoc =
-      !data.withoutDocument &&
-      Boolean((data.docType || "").trim()) &&
-      Boolean((data.docNumber || "").trim());
-    const hasContact = Boolean(email) || Boolean(phone);
+function buildFormSchema(isChile: boolean) {
+  return z
+    .object({
+      personKind: z.enum(["NATURAL", "JURIDICA"]),
+      withoutDocument: z.boolean(),
+      docType: z.string().optional(),
+      docNumber: z.string().optional(),
+      name: z.string().optional(),
+      lastName: z.string().optional(),
+      razonSocial: z.string().optional(),
+      email: z.string().optional(),
+      phone: z.string().optional(),
+    })
+    .superRefine((data, ctx) => {
+      const email = (data.email || "").trim();
+      const phone = (data.phone || "").replace(/\D/g, "");
+      const hasDoc =
+        !data.withoutDocument &&
+        Boolean((data.docType || "").trim()) &&
+        Boolean((data.docNumber || "").trim());
+      const hasContact = Boolean(email) || Boolean(phone);
 
-    if (!hasDoc && !hasContact) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message:
-          "Indica documento o al menos un correo electrónico o teléfono de contacto",
-        path: ["email"],
-      });
-    }
-
-    if (data.personKind === "JURIDICA" && !data.withoutDocument) {
-      if (!(data.razonSocial || "").trim()) {
+      if (!hasDoc && !hasContact) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "La razón social es obligatoria",
-          path: ["razonSocial"],
+          message:
+            "Indica documento o al menos un correo electrónico o teléfono de contacto",
+          path: ["email"],
         });
       }
-    }
-  });
 
-type FormValues = z.infer<typeof formSchema>;
+      if (data.personKind === "JURIDICA" && !data.withoutDocument) {
+        if (!(data.razonSocial || "").trim()) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "La razón social es obligatoria",
+            path: ["razonSocial"],
+          });
+        }
+      }
+
+      // Item CHK-138: RUT chileno se valida con dígito verificador módulo 11
+      // (mismo criterio que el resto del código, ver rutValidator.ts).
+      if (isChile && hasDoc && !isValidRut(data.docNumber || "")) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "RUT inválido (dígito verificador incorrecto)",
+          path: ["docNumber"],
+        });
+      }
+    });
+}
+
+type FormValues = z.infer<ReturnType<typeof buildFormSchema>>;
 
 interface Props {
   companyId: string;
@@ -75,8 +89,16 @@ interface Props {
   onRegistered?: () => void;
 }
 
-function buildRecordPayload(values: FormValues): AdminCollectFormRecordInput {
+// Item CHK-138 (sprint pre go-live 2026-08-28): antes forzaba NIT (jurídica)
+// / CC (natural) sin importar el país de la empresa activa. RUT es
+// alfanumérico (dígito verificador "K") — no puede pasar por parseNitDocNumber
+// ni por el strip de no-dígitos que usaba el resto de tipos.
+function buildRecordPayload(
+  values: FormValues,
+  companyCountryCode?: string | null
+): AdminCollectFormRecordInput {
   const record: AdminCollectFormRecordInput = {};
+  const isChile = companyCountryCode === "CL";
 
   const name = (values.name || "").trim();
   const lastName = (values.lastName || "").trim();
@@ -90,31 +112,38 @@ function buildRecordPayload(values: FormValues): AdminCollectFormRecordInput {
 
   if (!values.withoutDocument) {
     if (values.personKind === "JURIDICA") {
-      record.docType = "NIT";
-      record.docNumber = parseNitDocNumber(values.docNumber || "");
+      record.docType = getJuridicaDocType(companyCountryCode);
+      record.docNumber = isChile
+        ? normalizeRut(values.docNumber || "")
+        : parseNitDocNumber(values.docNumber || "");
       const razonSocial = (values.razonSocial || "").trim();
       if (razonSocial) record.razonSocial = razonSocial;
     } else {
-      const docType = (values.docType || "CC") as DocType;
+      const docType = (values.docType ||
+        getDocTypeOptionsByCountry(companyCountryCode).defaultValue) as DocType;
       record.docType = docType;
-      record.docNumber = Number(String(values.docNumber || "").replace(/\D/g, ""));
+      record.docNumber = isChile
+        ? normalizeRut(values.docNumber || "")
+        : Number(String(values.docNumber || "").replace(/\D/g, ""));
     }
   }
 
   return record;
 }
 
-const defaultValues: FormValues = {
-  personKind: "NATURAL",
-  withoutDocument: false,
-  docType: "CC",
-  docNumber: "",
-  name: "",
-  lastName: "",
-  razonSocial: "",
-  email: "",
-  phone: "",
-};
+function buildDefaultValues(companyCountryCode?: string | null): FormValues {
+  return {
+    personKind: "NATURAL",
+    withoutDocument: false,
+    docType: getDocTypeOptionsByCountry(companyCountryCode).defaultValue,
+    docNumber: "",
+    name: "",
+    lastName: "",
+    razonSocial: "",
+    email: "",
+    phone: "",
+  };
+}
 
 const RegisterCollectFormPersonDialog = ({
   companyId,
@@ -128,6 +157,19 @@ const RegisterCollectFormPersonDialog = ({
     null
   );
 
+  // Item CHK-138: tipo de documento por país de la empresa activa, mismo
+  // patrón companyFromStore que CreateCompanyUserForm.tsx.
+  const companyFromStore = useOwnCompanyStore((store) => store.company);
+  const companyCountryCode = companyFromStore?.countryCode;
+  const isChile = companyCountryCode === "CL";
+  const docTypeOptions = getDocTypeOptionsByCountry(companyCountryCode).options;
+  const defaultValues = React.useMemo(
+    () => buildDefaultValues(companyCountryCode),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [companyCountryCode]
+  );
+  const schema = React.useMemo(() => buildFormSchema(isChile), [isChile]);
+
   const {
     register,
     handleSubmit,
@@ -136,7 +178,7 @@ const RegisterCollectFormPersonDialog = ({
     reset,
     formState: { errors },
   } = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(schema),
     defaultValues,
     mode: "onChange",
   });
@@ -161,7 +203,9 @@ const RegisterCollectFormPersonDialog = ({
   function handlePersonKindChange(kind: PersonKind) {
     setValue("personKind", kind);
     if (kind === "JURIDICA") {
-      setValue("docType", "NIT");
+      setValue("docType", getJuridicaDocType(companyCountryCode));
+    } else if (isChile) {
+      setValue("docType", "RUT");
     } else if (watch("docType") === "NIT") {
       setValue("docType", "CC");
     }
@@ -171,7 +215,7 @@ const RegisterCollectFormPersonDialog = ({
     if (!companyId || !collectFormId) return;
 
     setLoading(true);
-    const payload = buildRecordPayload(values);
+    const payload = buildRecordPayload(values, companyCountryCode);
     const res = await createAdminCollectFormResponses(
       companyId,
       collectFormId,
@@ -349,8 +393,8 @@ const RegisterCollectFormPersonDialog = ({
                   <>
                     <CustomInput
                       variant="bordered"
-                      label="NIT"
-                      placeholder="900123456"
+                      label={isChile ? "RUT de la empresa" : "NIT"}
+                      placeholder={isChile ? "76.123.456-7" : "900123456"}
                       {...register("docNumber")}
                       error={errors.docNumber}
                     />
@@ -366,14 +410,15 @@ const RegisterCollectFormPersonDialog = ({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <CustomSelect<DocType>
                       label="Tipo de documento"
-                      options={docTypesOptions}
-                      value={(watch("docType") as DocType) || "CC"}
+                      options={docTypeOptions}
+                      value={(watch("docType") as DocType) || docTypeOptions[0]?.value}
                       onChange={(value) => setValue("docType", value)}
+                      disabled={isChile}
                     />
                     <CustomInput
                       variant="bordered"
                       label="Número de documento"
-                      placeholder="1234567890"
+                      placeholder={isChile ? "12.345.678-9" : "1234567890"}
                       {...register("docNumber")}
                       error={errors.docNumber}
                     />

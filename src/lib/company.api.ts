@@ -104,11 +104,13 @@ export async function fetchCompanyDataOfficer(
   );
 }
 
+// Item CHK-053 (auditoría 2026-08-26/27): userId acepta `null` para QUITAR
+// el DPO actual (antes solo se podía asignar, nunca desasignar).
 export async function assignCompanyDataOfficer(
   companyId: string,
-  userId: string
-): Promise<APIResponse<CompanyDataOfficer>> {
-  return customFetch<CompanyDataOfficer>(`/companies/${companyId}/data-officer`, {
+  userId: string | null
+): Promise<APIResponse<CompanyDataOfficer | null>> {
+  return customFetch<CompanyDataOfficer | null>(`/companies/${companyId}/data-officer`, {
     method: "PATCH",
     body: JSON.stringify({ userId }),
   });
@@ -286,6 +288,28 @@ export async function updateCompanyEmailBranding(
   return customFetch(`/companies/${companyId}/profile/email-branding`, {
     method: "PATCH",
     body: JSON.stringify(data),
+  });
+}
+
+// Item CHK-055/056 (auditoría 2026-08-26/27): switches de jerarquía Área/Sede.
+export async function updateCompanySettings(
+  companyId: string,
+  data: { usesAreaHierarchy?: boolean; usesSiteHierarchy?: boolean }
+): Promise<APIResponse<{ usesAreaHierarchy: boolean; usesSiteHierarchy: boolean }>> {
+  return customFetch(`/companies/${companyId}/settings`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+}
+
+// Item CHK-121 (sprint pre go-live 2026-08-28): panel SMG — reenvío de
+// código de activación a la empresa que sigue con initialSetupCompletedAt
+// null / admin sin activar.
+export async function resendCompanyActivation(
+  companyId: string
+): Promise<APIResponse<{ message: string }>> {
+  return customFetch(`/superadmin/companies/${companyId}/resend-activation`, {
+    method: "POST",
   });
 }
 

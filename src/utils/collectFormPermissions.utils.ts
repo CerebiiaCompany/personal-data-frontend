@@ -4,7 +4,7 @@ import {
 } from "@/types/collectFormResponse.types";
 
 const RESTRICTION_LABELS = {
-  cancellationInProgress: "Cancelación en trámite",
+  cancellationInProgress: "Supresión en trámite",
   blockAllCampaigns: "Oposición aprobada: todas las campañas",
   blockMarketingCampaigns: "Oposición aprobada: campañas de marketing",
   blockConsentCampaigns: "Oposición aprobada: campañas de consentimiento",

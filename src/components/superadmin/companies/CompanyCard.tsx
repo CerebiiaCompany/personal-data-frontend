@@ -1,7 +1,10 @@
 import { formatDateToString } from "@/utils/date.utils";
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Icon } from "@iconify/react/dist/iconify.js";
+import { toast } from "sonner";
 import { Company, COMPANY_COUNTRY_CODE_OPTIONS } from "@/types/company.types";
+import { resendCompanyActivation } from "@/lib/company.api";
+import { parseApiError } from "@/utils/parseApiError";
 
 interface Props {
   data: Company;
@@ -40,6 +43,23 @@ const InfoRow = ({ icon, label, value }: InfoRowProps) => (
 );
 
 const CompanyCard = ({ data, onEditCountry }: Props) => {
+  // Item CHK-121 (sprint pre go-live 2026-08-28): badge de estado +
+  // reenvío de código de activación desde el panel SMG.
+  const [resending, setResending] = useState(false);
+  const isActivated = Boolean(data.initialSetupCompletedAt);
+
+  async function handleResendActivation() {
+    setResending(true);
+    const res = await resendCompanyActivation(data._id);
+    setResending(false);
+
+    if (res.error) {
+      toast.error(parseApiError(res.error));
+      return;
+    }
+    toast.success(res.data?.message ?? "Código de activación reenviado");
+  }
+
   const countryLabel =
     COMPANY_COUNTRY_CODE_OPTIONS.find((o) => o.value === data.countryCode)
       ?.title ??
@@ -76,12 +96,25 @@ const CompanyCard = ({ data, onEditCountry }: Props) => {
           >
             {data.name}
           </h4>
-          {data.plan?.name && (
-            <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-primary-50 px-2.5 py-0.5 text-xs font-semibold text-primary-700">
-              <Icon icon="tabler:crown" className="text-sm" />
-              {data.plan.name}
-            </span>
-          )}
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            {data.plan?.name && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary-50 px-2.5 py-0.5 text-xs font-semibold text-primary-700">
+                <Icon icon="tabler:crown" className="text-sm" />
+                {data.plan.name}
+              </span>
+            )}
+            {isActivated ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+                <Icon icon="tabler:circle-check-filled" className="text-sm" />
+                Activa
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+                <Icon icon="tabler:clock-hour-4" className="text-sm" />
+                Pendiente de activación
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -105,16 +138,32 @@ const CompanyCard = ({ data, onEditCountry }: Props) => {
       </div>
 
       {/* Acciones */}
-      {onEditCountry && (
-        <div className="p-5 pt-0">
-          <button
-            type="button"
-            onClick={() => onEditCountry(data)}
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-primary-50 bg-white py-2.5 text-sm font-semibold text-primary-700 transition-all hover:border-primary-500/40 hover:bg-primary-50"
-          >
-            <Icon icon="tabler:world" className="text-base" />
-            Editar país
-          </button>
+      {(onEditCountry || !isActivated) && (
+        <div className="flex flex-col gap-2 p-5 pt-0">
+          {onEditCountry && (
+            <button
+              type="button"
+              onClick={() => onEditCountry(data)}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-primary-50 bg-white py-2.5 text-sm font-semibold text-primary-700 transition-all hover:border-primary-500/40 hover:bg-primary-50"
+            >
+              <Icon icon="tabler:world" className="text-base" />
+              Editar país
+            </button>
+          )}
+          {!isActivated && (
+            <button
+              type="button"
+              onClick={handleResendActivation}
+              disabled={resending}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-amber-200 bg-amber-50 py-2.5 text-sm font-semibold text-amber-700 transition-all hover:border-amber-400 hover:bg-amber-100 disabled:opacity-60"
+            >
+              <Icon
+                icon={resending ? "tabler:loader-2" : "tabler:mail-forward"}
+                className={`text-base${resending ? " animate-spin" : ""}`}
+              />
+              {resending ? "Reenviando..." : "Reenviar código de activación"}
+            </button>
+          )}
         </div>
       )}
     </div>

@@ -32,7 +32,7 @@ const SHARED_FEATURES = [
   {
     icon: "tabler:file-certificate",
     title: "Derechos del titular",
-    description: "Acceso, rectificación, cancelación y oposición.",
+    description: "Acceso, rectificación, supresión y oposición.",
   },
   {
     icon: "tabler:route",
@@ -86,7 +86,7 @@ export const personasRights = [
     description: "Corregir datos incompletos, inexactos o desactualizados.",
   },
   {
-    key: "cancelacion",
+    key: "supresion",
     icon: "tabler:trash",
     title: "Supresión",
     description:
@@ -265,7 +265,7 @@ export const PERSONAS_COUNTRY_CONTENT: Record<
     heroTitle: "Gestiona tus datos personales en",
     heroHighlight: "Chile con trazabilidad",
     heroDescription:
-      "Identifica empresas que tratan tu información, ejerce derechos de acceso, rectificación, cancelación y oposición, y consulta el estado de tus solicitudes.",
+      "Identifica empresas que tratan tu información, ejerce derechos de acceso, rectificación, supresión y oposición, y consulta el estado de tus solicitudes.",
     rightsLabel: "Derechos del titular",
     docTypeOptions: [
       { value: "RUT", title: "RUT" },

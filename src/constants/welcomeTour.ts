@@ -35,7 +35,7 @@ export const WELCOME_TOUR_SLIDES: WelcomeTourSlide[] = [
     id: "rights",
     title: "Atiende derechos ARCO",
     description:
-      "Gestiona solicitudes de acceso, rectificación, cancelación y oposición con plazos y trazabilidad.",
+      "Gestiona solicitudes de acceso, rectificación, supresión y oposición con plazos y trazabilidad.",
     imageSrc: "/onboarding/welcome-slide-04-rights.png",
     imageAlt: "Ilustración de atención de derechos ARCO",
   },

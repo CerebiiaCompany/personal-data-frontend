@@ -77,4 +77,6 @@ export interface CompanyRole extends CreateCompanyRole {
   updatedAt: string;
   /** Usuarios asignados a este rol (incluido por el endpoint de roles). */
   users?: RoleAssignedUser[];
+  /** Item CHK-044: true para los 5 roles predefinidos Ley 21.719 — no editables/eliminables. */
+  isPredefined?: boolean;
 }

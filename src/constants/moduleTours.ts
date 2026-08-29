@@ -198,7 +198,7 @@ export const MODULE_TOURS: Record<ModuleTourId, ModuleTourDefinition> = {
         target: "arco-header",
         title: "Solicitudes ARCO",
         description:
-          "Atiende derechos de acceso, rectificación, cancelación, oposición y portabilidad de titulares.",
+          "Atiende derechos de acceso, rectificación, supresión, oposición y portabilidad de titulares.",
       },
       {
         target: "arco-summary",

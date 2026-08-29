@@ -53,17 +53,28 @@ function LoginForm() {
     },
   });
 
-  async function onSubmit(data: any) {
+  // Item CHK-127 (sprint pre go-live 2026-08-28): extraído de onSubmit para
+  // reutilizarlo tras la activación de cuenta (AccountActivationForm) — el
+  // usuario recién activado ya tiene username+password válidos (los acaba
+  // de definir), así que "auto-login" es simplemente ejecutar este mismo
+  // flujo de login normal en vez de mandarlo a /login a escribirlos de
+  // nuevo. Devuelve `true` si el login+redirect fue exitoso.
+  async function performLogin(
+    username: string,
+    password: string,
+    options?: { successMessage?: (name?: string) => string }
+  ): Promise<boolean> {
     setLoading(true);
     setError(undefined);
 
-    const loginRes = await loginUser(data.username, data.password);
+    const loginRes = await loginUser(username, password);
 
     if (loginRes.error) {
       const parsedError = parseApiError(loginRes.error);
       setError(parsedError);
       setLoading(false);
-      return toast.error(parsedError);
+      toast.error(parsedError);
+      return false;
     }
 
     const session = await getSession();
@@ -72,7 +83,8 @@ function LoginForm() {
       const parsedError = parseApiError(session.error);
       setError(parsedError);
       setLoading(false);
-      return toast.error(parsedError);
+      toast.error(parsedError);
+      return false;
     }
 
     setUser(session.data);
@@ -100,7 +112,10 @@ function LoginForm() {
     }
 
     setLoading(false);
-    toast.success(`Bienvenid@ ${session.data?.name}`);
+    const successMessage = options?.successMessage
+      ? options.successMessage(session.data?.name)
+      : `Bienvenid@ ${session.data?.name}`;
+    toast.success(successMessage);
 
     let redirectUrl: string;
     const userRole = session.data?.role || "USER";
@@ -120,10 +135,31 @@ function LoginForm() {
     }
 
     router.push(redirectUrl);
+    return true;
+  }
+
+  async function onSubmit(data: any) {
+    await performLogin(data.username, data.password);
+  }
+
+  // Item CHK-127: tras completar la activación (email + password ya
+  // definidos por el propio usuario en ese formulario), inicia sesión
+  // automáticamente y lo lleva a /admin — InitialSetupGate.tsx (montado en
+  // (navbar)/layout.tsx) ya intercepta ahí y muestra ONB-01 si
+  // initialSetupCompletedAt es null (CHK-128, ya implementado).
+  async function handleActivationLogin(username: string, password: string) {
+    return performLogin(username, password, {
+      successMessage: () => "Cuenta activada. Iniciando sesión...",
+    });
   }
 
   if (mode === "activate") {
-    return <AccountActivationForm onBackToLogin={() => setMode("login")} />;
+    return (
+      <AccountActivationForm
+        onBackToLogin={() => setMode("login")}
+        onActivated={handleActivationLogin}
+      />
+    );
   }
 
   return (

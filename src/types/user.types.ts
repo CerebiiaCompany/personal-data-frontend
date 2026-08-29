@@ -150,17 +150,35 @@ export function getAdminDocTypeOptionsByCountry(
   };
 }
 
+// Item BUG-STAGING-4 (reporte SMG, 27 ago 2026): antes buscaba el label en
+// companyUserDocTypeOptions ∪ chileAdminDocTypeOptions (7 valores) — "CI"
+// (Cédula de identidad) es un valor válido del enum DocType del backend
+// (prisma/schema.prisma) que no aparece en NINGUNA de las dos listas de UI,
+// así que cualquier usuario con docType="CI" mostraba "Tipo de documento
+// inválido" en Mi Perfil aunque su dato en BD fuera perfectamente válido.
+// Record<DocType,string> fuerza en compilación que los 8 valores del enum
+// tengan label — mismo patrón que COUNTRIES_DICT (country.utils.ts).
+const DOC_TYPE_LABELS: Record<DocType, string> = {
+  CC: "C.C.",
+  TI: "T.I.",
+  NIT: "NIT",
+  OTHER: "Otro",
+  RUT: "RUT",
+  CI: "Cédula de identidad",
+  PASSPORT: "Pasaporte",
+  CIE: "Cédula de Identidad Extranjera",
+};
+
 export const parseDocTypeToString = (type: DocType): string =>
-  [...companyUserDocTypeOptions, ...chileAdminDocTypeOptions].find(
-    (e) => e.value === type
-  )?.title || "Tipo de documento inválido";
+  DOC_TYPE_LABELS[type] ?? "Tipo de documento inválido";
 
 export interface CreateUser {
   name: string;
   lastName: string;
   username: string;
   role: UserRole;
-  password: string;
+  /** Item CHK-051: opcional — si se omite, el servidor genera una temporal. */
+  password?: string;
   companyUserData: {
     position: string;
     phone: string;

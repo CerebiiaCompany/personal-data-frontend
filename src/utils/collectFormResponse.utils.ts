@@ -5,8 +5,9 @@ import {
   UpdateCollectFormResponseInput,
   UserGender,
 } from "@/types/collectFormResponse.types";
-import { DocType } from "@/types/user.types";
+import { DocType, getDocTypeOptionsByCountry, getJuridicaDocType } from "@/types/user.types";
 import { parseNitDocNumber } from "@/utils/collectFormUser.utils";
+import { isValidRut, normalizeRut } from "@/utils/rutValidator";
 
 /** Detecta valores anonimizados que el backend devuelve con asteriscos (ej. ju***@g****.com). */
 export function isMaskedPersonalData(value?: string | null): boolean {
@@ -43,7 +44,15 @@ export function responseToEditableFormValues(
   response: CollectFormResponse
 ): EditableCollectFormResponseFormValues {
   const user = response.user;
-  const isJuridica = isJuridicaDocType(user.docType);
+  // Item CHK-138 (sprint pre go-live 2026-08-28): RUT (CL) no distingue
+  // natural/jurídica por formato como NIT/CC — el flag explícito isJuridica
+  // (guardado desde la creación, ver buildCollectFormUserPayload) es la
+  // fuente de verdad cuando está presente; docType queda como fallback para
+  // respuestas legacy sin el flag.
+  const explicitIsJuridica: boolean | undefined =
+    (user as { isJuridica?: boolean; userIsJuridica?: boolean }).isJuridica ??
+    (user as { isJuridica?: boolean; userIsJuridica?: boolean }).userIsJuridica;
+  const isJuridica = explicitIsJuridica ?? isJuridicaDocType(user.docType);
   const hasDoc = Boolean(user.docType && user.docNumber != null);
 
   return {
@@ -65,28 +74,39 @@ function normalizePhone(value: string): string {
   return value.replace(/\D/g, "");
 }
 
-function resolveDocFields(values: EditableCollectFormResponseFormValues): {
+function resolveDocFields(
+  values: EditableCollectFormResponseFormValues,
+  companyCountryCode?: string | null
+): {
   docType?: string;
   docNumber?: string | number;
 } {
   if (values.withoutDocument) return {};
 
+  const isChile = companyCountryCode === "CL";
+
   if (values.personKind === "JURIDICA") {
     return {
-      docType: "NIT",
-      docNumber: parseNitDocNumber(values.docNumber || ""),
+      docType: getJuridicaDocType(companyCountryCode),
+      docNumber: isChile
+        ? normalizeRut(values.docNumber || "")
+        : parseNitDocNumber(values.docNumber || ""),
     };
   }
 
   return {
-    docType: (values.docType || "CC") as DocType,
-    docNumber: Number(String(values.docNumber || "").replace(/\D/g, "")),
+    docType: (values.docType ||
+      getDocTypeOptionsByCountry(companyCountryCode).defaultValue) as DocType,
+    docNumber: isChile
+      ? normalizeRut(values.docNumber || "")
+      : Number(String(values.docNumber || "").replace(/\D/g, "")),
   };
 }
 
 export function buildCollectFormResponseUpdatePayload(
   current: EditableCollectFormResponseFormValues,
-  initial: EditableCollectFormResponseFormValues
+  initial: EditableCollectFormResponseFormValues,
+  companyCountryCode?: string | null
 ): UpdateCollectFormResponseInput | null {
   const payload: UpdateCollectFormResponseInput = {};
   let hasChanges = false;
@@ -136,8 +156,8 @@ export function buildCollectFormResponseUpdatePayload(
     setField("phone", currentPhone);
   }
 
-  const currentDoc = resolveDocFields(current);
-  const initialDoc = resolveDocFields(initial);
+  const currentDoc = resolveDocFields(current, companyCountryCode);
+  const initialDoc = resolveDocFields(initial, companyCountryCode);
 
   if (current.withoutDocument !== initial.withoutDocument) {
     if (!current.withoutDocument && !isMaskedPersonalData(current.docNumber)) {
@@ -208,7 +228,8 @@ function fieldChanged(
 /** Validación en tiempo real para el formulario de edición. */
 export function validateEditableCollectFormResponse(
   current: EditableCollectFormResponseFormValues,
-  initial: EditableCollectFormResponseFormValues
+  initial: EditableCollectFormResponseFormValues,
+  companyCountryCode?: string | null
 ): {
   valid: boolean;
   errors: EditCollectFormFieldErrors;
@@ -216,7 +237,9 @@ export function validateEditableCollectFormResponse(
   canSave: boolean;
 } {
   const errors: EditCollectFormFieldErrors = {};
-  const hasChanges = buildCollectFormResponseUpdatePayload(current, initial) !== null;
+  const isChile = companyCountryCode === "CL";
+  const hasChanges =
+    buildCollectFormResponseUpdatePayload(current, initial, companyCountryCode) !== null;
 
   const flagMaskedPartial = (
     key: keyof EditableCollectFormResponseFormValues,
@@ -261,20 +284,31 @@ export function validateEditableCollectFormResponse(
   }
 
   if (!current.withoutDocument && !isMaskedPersonalData(current.docNumber)) {
-    const docDigits = String(current.docNumber).replace(/\D/g, "");
     const docChanged = fieldChanged(current.docNumber, initial.docNumber);
     const docTypeChanged = current.docType !== initial.docType;
 
     if (docChanged || docTypeChanged || current.withoutDocument !== initial.withoutDocument) {
-      if (!docDigits) {
+      const rawDoc = current.docNumber.trim();
+      if (!rawDoc) {
         errors.docNumber = "El número de documento es obligatorio";
+      } else if (isChile) {
+        // Item CHK-138: RUT es alfanumérico (dígito verificador "K") — no
+        // pasa por el strip de no-dígitos que usa el resto de tipos.
+        if (!isValidRut(rawDoc)) {
+          errors.docNumber = "RUT inválido (dígito verificador incorrecto)";
+        }
       } else {
-        const docNum =
-          current.personKind === "JURIDICA"
-            ? parseNitDocNumber(current.docNumber)
-            : Number(docDigits);
-        if (!isValidDocNumber(docNum)) {
-          errors.docNumber = "Número de documento inválido";
+        const docDigits = rawDoc.replace(/\D/g, "");
+        if (!docDigits) {
+          errors.docNumber = "El número de documento es obligatorio";
+        } else {
+          const docNum =
+            current.personKind === "JURIDICA"
+              ? parseNitDocNumber(current.docNumber)
+              : Number(docDigits);
+          if (!isValidDocNumber(docNum)) {
+            errors.docNumber = "Número de documento inválido";
+          }
         }
       }
     }

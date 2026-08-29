@@ -16,6 +16,7 @@ import { useCompanyArcoSummary } from "@/hooks/useCompanyArcoSummary";
 import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import { fetchArcoOfficers } from "@/lib/arcoAdmin.api";
 import { useSessionStore } from "@/store/useSessionStore";
+import { useOwnCompanyStore } from "@/store/useOwnCompanyStore";
 import { ArcoOfficerUser } from "@/types/arco.admin.types";
 import { ArcoRequestStatus } from "@/types/arco.types";
 import { Icon } from "@iconify/react/dist/iconify.js";
@@ -25,6 +26,15 @@ import { useEffect, useMemo, useState } from "react";
 
 export default function ArcoAdminPage() {
   const user = useSessionStore((store) => store.user);
+  // Item CHK-019 (auditoría 2026-08-27): "Supresión" en CL (Art. 7 Ley
+  // 21.719) vs "Cancelación" en el resto — mismo criterio de país que
+  // CreateCompanyAreaForm.tsx.
+  const companyFromStore = useOwnCompanyStore((store) => store.company);
+  const companyCountryCode =
+    companyFromStore?.countryCode ??
+    (user as any)?.company?.countryCode ??
+    (user as any)?.companyUserData?.company?.countryCode;
+  const cancellationOrSuppressionLabel = companyCountryCode === "CL" ? "supresión" : "cancelación";
   const router = useRouter();
   const companyId = useActiveCompanyId();
   const { canView, loading: accessLoading } = useArcoMyAccess({ companyId });
@@ -158,8 +168,9 @@ export default function ArcoAdminPage() {
                 Gestión ARCO
               </h1>
               <p className="max-w-2xl text-sm text-[#64748B]">
-                Atiende solicitudes de acceso, rectificación, cancelación y
-                oposición de titulares de datos.
+                Atiende solicitudes de acceso, rectificación,{" "}
+                {cancellationOrSuppressionLabel} y oposición de titulares de
+                datos.
               </p>
             </div>
             <div className="flex shrink-0 flex-wrap gap-2">

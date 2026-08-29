@@ -14,14 +14,21 @@ import { CustomSelectOption } from "./forms.types";
 
 export type TreatmentStatus = "DRAFT" | "PENDING_APPROVAL" | "ACTIVE" | "ARCHIVED";
 
+// Corregido (auditoría CHK-009/016/062/063/064, 2026-08-27): las 6 bases
+// reales del Art. 13 Ley 21.719 para CL. VITAL_INTEREST,
+// PUBLIC_INTEREST_OR_AUTHORITY y PUBLIC_SOURCE se eliminaron (no tienen
+// contraparte en el Art. 13 para organizaciones privadas); el backend ya no
+// las acepta (enum LegalBasis, schema.prisma). ECONOMIC_FINANCIAL_DATA
+// (Art. 13 a) y RIGHTS_DEFENSE (Art. 13 e) son nuevas. Para CL, el
+// desplegable real se arma desde BD vía useJurisdictionLegalBases (ver
+// TreatmentForm.tsx) — este tipo es el contrato compartido con el backend.
 export type LegalBasis =
   | "CONSENT"
+  | "ECONOMIC_FINANCIAL_DATA"
   | "CONTRACT_PERFORMANCE"
   | "LEGAL_OBLIGATION"
   | "LEGITIMATE_INTEREST"
-  | "VITAL_INTEREST"
-  | "PUBLIC_INTEREST_OR_AUTHORITY"
-  | "PUBLIC_SOURCE";
+  | "RIGHTS_DEFENSE";
 
 export type DataCategory =
   | "IDENTIFICATION"
@@ -135,6 +142,9 @@ export interface Treatment {
   legalBasisJustification: string | null;
   /** Item CON-001/B8 (Art. 12 + Art. 14) — obligatorio para activar cuando legalBasis === "CONSENT". */
   consentTemplateId: string | null;
+  /** Item CHK-076 (sprint de cierre 2026-08-28) — literales e/j del Art. 14 ter, texto libre opcional. */
+  dataSource: string | null;
+  nonDeliveryConsequences: string | null;
 
   dataCategories: DataCategory[];
   containsSensitiveData: boolean;
@@ -218,6 +228,8 @@ export interface TreatmentInput {
   legalBasis?: LegalBasis | null;
   legalBasisJustification?: string | null;
   consentTemplateId?: string | null;
+  dataSource?: string | null;
+  nonDeliveryConsequences?: string | null;
   dataCategories?: DataCategory[];
   dataSubjectCategories?: DataSubjectCategory[];
   internalOwnerId?: string | null;
@@ -274,24 +286,30 @@ export const SYSTEM_TYPE_LABELS: Record<SystemType, string> = SYSTEM_TYPE_OPTION
   {} as Record<SystemType, string>
 );
 
+// Catálogo genérico (usado como fallback para países sin tabla
+// jurisdiction_legal_bases poblada, ej. CO — ver useJurisdictionLegalBases).
+// Para CL, TreatmentForm.tsx reemplaza estas opciones por las de BD
+// (jurisdiction_legal_bases WHERE country='CL'), que incluye además
+// ECONOMIC_FINANCIAL_DATA y RIGHTS_DEFENSE.
 export const LEGAL_BASIS_OPTIONS: CustomSelectOption<LegalBasis>[] = [
   { value: "CONSENT", title: "Consentimiento del titular" },
   { value: "CONTRACT_PERFORMANCE", title: "Ejecución de un contrato" },
   { value: "LEGAL_OBLIGATION", title: "Obligación legal" },
   { value: "LEGITIMATE_INTEREST", title: "Interés legítimo" },
-  { value: "VITAL_INTEREST", title: "Interés vital del titular" },
-  {
-    value: "PUBLIC_INTEREST_OR_AUTHORITY",
-    title: "Interés público o ejercicio de autoridad",
-  },
-  { value: "PUBLIC_SOURCE", title: "Fuente de acceso público" },
 ];
 
-export const LEGAL_BASIS_LABELS: Record<LegalBasis, string> =
-  LEGAL_BASIS_OPTIONS.reduce(
-    (acc, opt) => ({ ...acc, [opt.value]: opt.title }),
-    {} as Record<LegalBasis, string>
-  );
+// Completo para las 6 bases (no solo las de LEGAL_BASIS_OPTIONS, que es un
+// subconjunto usado como fallback de país) — usado para mostrar el label de
+// CUALQUIER tratamiento ya guardado (tabla, historial, detalle),
+// independiente de con qué catálogo se creó.
+export const LEGAL_BASIS_LABELS: Record<LegalBasis, string> = {
+  CONSENT: "Consentimiento del titular",
+  ECONOMIC_FINANCIAL_DATA: "Datos económicos, financieros, bancarios o comerciales",
+  CONTRACT_PERFORMANCE: "Ejecución de un contrato",
+  LEGAL_OBLIGATION: "Obligación legal",
+  LEGITIMATE_INTEREST: "Interés legítimo",
+  RIGHTS_DEFENSE: "Formulación, ejercicio o defensa de un derecho",
+};
 
 export const DATA_CATEGORY_OPTIONS: CustomSelectOption<DataCategory>[] = [
   { value: "IDENTIFICATION", title: "Identificación" },

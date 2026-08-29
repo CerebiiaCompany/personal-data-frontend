@@ -48,17 +48,14 @@ function StatTile({
   );
 }
 
-function scoreStatus(score: number): { className: string; label: string } {
-  if (score >= 75) return { className: "text-emerald-600 border-emerald-200 bg-emerald-50", label: "Buen nivel" };
-  if (score >= 50) return { className: "text-amber-600 border-amber-200 bg-amber-50", label: "Atención" };
-  return { className: "text-rose-600 border-rose-200 bg-rose-50", label: "Crítico" };
-}
-
-const CRITERIA_LABELS: Record<string, string> = {
-  hasActiveRat: "Tiene al menos un tratamiento (RAT) activo",
-  hasPublishedPolicy: "Tiene una política de tratamiento publicada",
-  hasDesignatedDataOfficer: "Tiene un Oficial de Protección de Datos (DPO) designado",
-  hasNoOverdueArcoRequests: "No tiene solicitudes ARCO vencidas",
+// Item CHK-093 (sprint pre go-live 2026-08-28): category ya viene calculada
+// por el backend (compliance.controller.ts categorizeScore) — este mapa solo
+// traduce esa categoría a estilo visual, sin reimplementar las bandas.
+const CATEGORY_CLASSNAME: Record<string, string> = {
+  Crítico: "text-rose-600 border-rose-200 bg-rose-50",
+  "Atención requerida": "text-amber-600 border-amber-200 bg-amber-50",
+  "Buen nivel": "text-emerald-600 border-emerald-200 bg-emerald-50",
+  Excelente: "text-emerald-700 border-emerald-300 bg-emerald-100",
 };
 
 function formatDate(iso: string): string {
@@ -71,8 +68,9 @@ export default function ComplianceDashboardPage() {
   const companyId = useActiveCompanyId();
   const { data, loading } = useComplianceDashboard({ companyId, enabled: Boolean(companyId) });
 
-  const score = data?.complianceScore.value ?? 0;
-  const status = scoreStatus(score);
+  const score = data?.complianceScore.score ?? 0;
+  const category = data?.complianceScore.category ?? "Crítico";
+  const categoryClassName = CATEGORY_CLASSNAME[category] ?? CATEGORY_CLASSNAME["Crítico"];
 
   return (
     <div className="flex h-full max-h-full flex-col gap-5 overflow-y-auto bg-[#F8FAFE] p-5 sm:p-6 md:p-7">
@@ -92,17 +90,17 @@ export default function ComplianceDashboardPage() {
           <div>
             <h2 className="text-sm font-semibold text-[#1A2B5B]">Score de cumplimiento</h2>
             <p className="mt-1 text-xs text-[#64748B]">
-              4 criterios de igual peso (25 pts c/u).
+              11 criterios en 3 dimensiones ponderadas.
             </p>
           </div>
           {!loading && (
             <span
               className={clsx(
                 "inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-semibold",
-                status.className
+                categoryClassName
               )}
             >
-              {status.label}
+              {category}
             </span>
           )}
         </div>
@@ -115,18 +113,48 @@ export default function ComplianceDashboardPage() {
           </p>
         )}
         {data && (
+          <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3">
+            {(["A", "B", "C"] as const).map((dim) => {
+              const d = data.complianceScore.dimensions[dim];
+              return (
+                <div key={dim} className="rounded-xl border border-[#E5EBF7] bg-[#F8FAFC] px-3 py-2.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-[#94A3B8]">
+                    {d.label}
+                  </p>
+                  <p className="mt-0.5 text-lg font-bold text-[#08152F]">
+                    {Math.round(d.score * 100)}%
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {data && (
           <ul className="mt-5 flex flex-col gap-2">
-            {Object.entries(data.complianceScore.criteria).map(([key, met]) => (
-              <li key={key} className="flex items-center gap-2 text-sm">
-                <Icon
-                  icon={met ? "tabler:circle-check-filled" : "tabler:circle-x-filled"}
-                  className={met ? "text-lg text-emerald-600" : "text-lg text-rose-500"}
-                />
-                <span className={met ? "text-[#334155]" : "text-[#334155] font-medium"}>
-                  {CRITERIA_LABELS[key] ?? key}
-                </span>
-              </li>
-            ))}
+            {data.complianceScore.criteria.map((c) => {
+              const percent = Math.round(c.score * 100);
+              const icon =
+                c.score >= 1
+                  ? "tabler:circle-check-filled"
+                  : c.score === 0
+                    ? "tabler:circle-x-filled"
+                    : "tabler:circle-dashed";
+              const iconClassName =
+                c.score >= 1
+                  ? "text-lg text-emerald-600"
+                  : c.score === 0
+                    ? "text-lg text-rose-500"
+                    : "text-lg text-amber-500";
+              return (
+                <li key={c.code} className="flex items-center gap-2 text-sm">
+                  <Icon icon={icon} className={iconClassName} />
+                  <span className={c.score >= 1 ? "text-[#334155]" : "text-[#334155] font-medium"}>
+                    {c.description}
+                  </span>
+                  <span className="ml-auto shrink-0 text-xs text-[#94A3B8]">{percent}%</span>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

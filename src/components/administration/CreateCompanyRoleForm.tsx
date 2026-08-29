@@ -331,6 +331,12 @@ const CreateCompanyRoleForm = ({ initialValues }: Props) => {
                     }
 
                     for (let permission of group.permissions) {
+                      // Item CHK-045 (auditoría 2026-08-26/27): "Activar
+                      // tratamientos" no se puede otorgar desde un rol
+                      // personalizado ni siquiera vía "marcar todo".
+                      if (group.groupName === "treatments" && permission.name === "activate") {
+                        continue;
+                      }
                       groupState[permission.name as keyof typeof groupState] =
                         newValue;
                     }
@@ -340,15 +346,29 @@ const CreateCompanyRoleForm = ({ initialValues }: Props) => {
                 />
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {group.permissions.map((permission) => (
-                  <CustomCheckbox
-                    key={`${group.groupName}-${permission.name}`}
-                    label={permission.title}
-                    {...register(
-                      `permissions.${group.groupName}.${permission.name}` as `permissions.${PermissionGroupName}`
-                    )}
-                  />
-                ))}
+                {group.permissions.map((permission) => {
+                  // Item CHK-045 (auditoría 2026-08-26/27): Art. 3 e) Ley
+                  // 21.719 — activar tratamientos queda exclusivo de los
+                  // roles predefinidos Administrador y DPO (ver
+                  // chilePredefinedRoles.seed.ts); un rol personalizado
+                  // nunca puede tenerlo.
+                  const isActivateTreatments =
+                    group.groupName === "treatments" && permission.name === "activate";
+                  return (
+                    <CustomCheckbox
+                      key={`${group.groupName}-${permission.name}`}
+                      label={
+                        isActivateTreatments
+                          ? `${permission.title} (solo Administrador y DPO)`
+                          : permission.title
+                      }
+                      disabled={isActivateTreatments}
+                      {...register(
+                        `permissions.${group.groupName}.${permission.name}` as `permissions.${PermissionGroupName}`
+                      )}
+                    />
+                  );
+                })}
               </div>
             </div>
           );

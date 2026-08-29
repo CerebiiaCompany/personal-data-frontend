@@ -511,7 +511,7 @@ const PersonasArcoRequestDialog = ({
               <p className={personasTheme.body}>
                 Al enviar esta solicitud, tu registro quedará como{" "}
                 <strong className="text-primary-900">
-                  solicitud de cancelación en trámite
+                  solicitud de supresión en trámite
                 </strong>{" "}
                 y no recibirás campañas mientras la empresa revisa tu caso. Si se
                 aprueba, tus datos se eliminan en esta empresa; si se rechaza,

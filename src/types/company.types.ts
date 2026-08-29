@@ -36,6 +36,14 @@ export interface Company extends CreateCompany {
   plan: Pick<Plan, "_id" | "name" | "description" | "monthlyCredits">;
   createdAt: Date;
   updatedAt: Date;
+  // Item CHK-055/056 (auditoría 2026-08-26/27): switches de jerarquía
+  // Área/Sede, leídos por CreateCompanyUserForm.tsx para ocultar esos
+  // campos cuando la empresa no los usa.
+  usesAreaHierarchy?: boolean;
+  usesSiteHierarchy?: boolean;
+  // Item CHK-121 (sprint pre go-live 2026-08-28): panel SMG — badge de
+  // estado de activación (Activa / Pendiente de activación) en CompanyCard.tsx.
+  initialSetupCompletedAt?: string | null;
 }
 
 export interface CompanyDataOfficer {
@@ -181,4 +189,7 @@ export interface CompanyProfile {
   specialObservations?: SpecialObservations;
   brandPrimaryColor?: string | null;
   brandLogoUrl?: string | null;
+  // Item CHK-055/056 (auditoría 2026-08-26/27): switches de jerarquía.
+  usesAreaHierarchy?: boolean;
+  usesSiteHierarchy?: boolean;
 }

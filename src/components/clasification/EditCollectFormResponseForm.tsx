@@ -19,7 +19,7 @@ import {
   UserGender,
   userGendersOptions,
 } from "@/types/collectFormResponse.types";
-import { DocType, docTypesOptions } from "@/types/user.types";
+import { DocType, getDocTypeOptionsByCountry, getJuridicaDocType } from "@/types/user.types";
 import {
   buildCollectFormResponseUpdatePayload,
   EditableCollectFormResponseFormValues,
@@ -28,6 +28,7 @@ import {
   responseToEditableFormValues,
   validateEditableCollectFormResponse,
 } from "@/utils/collectFormResponse.utils";
+import { useOwnCompanyStore } from "@/store/useOwnCompanyStore";
 
 type FormValues = EditableCollectFormResponseFormValues;
 
@@ -53,6 +54,13 @@ const EditCollectFormResponseForm = ({
   variant = "dialog",
 }: Props) => {
   const [loading, setLoading] = useState(false);
+  // Item CHK-138 (sprint pre go-live 2026-08-28): tipo de documento por país
+  // de la empresa activa, mismo patrón companyFromStore que
+  // CreateCompanyUserForm.tsx / RegisterCollectFormPersonDialog.tsx.
+  const companyFromStore = useOwnCompanyStore((store) => store.company);
+  const companyCountryCode = companyFromStore?.countryCode;
+  const isChile = companyCountryCode === "CL";
+  const docTypeOptions = getDocTypeOptionsByCountry(companyCountryCode).options;
   const initialValues = useMemo(
     () => responseToEditableFormValues(response),
     [response]
@@ -82,8 +90,9 @@ const EditCollectFormResponseForm = ({
   );
 
   const validation = useMemo(
-    () => validateEditableCollectFormResponse(currentValues, initialValues),
-    [currentValues, initialValues]
+    () =>
+      validateEditableCollectFormResponse(currentValues, initialValues, companyCountryCode),
+    [currentValues, initialValues, companyCountryCode]
   );
 
   const personKind = formValues.personKind;
@@ -97,7 +106,9 @@ const EditCollectFormResponseForm = ({
   function handlePersonKindChange(kind: PersonKind) {
     setValue("personKind", kind);
     if (kind === "JURIDICA") {
-      setValue("docType", "NIT");
+      setValue("docType", getJuridicaDocType(companyCountryCode));
+    } else if (isChile) {
+      setValue("docType", "RUT");
     } else if (formValues.docType === "NIT") {
       setValue("docType", "CC");
     }
@@ -109,7 +120,8 @@ const EditCollectFormResponseForm = ({
 
     const payload = buildCollectFormResponseUpdatePayload(
       currentValues,
-      initialValues
+      initialValues,
+      companyCountryCode
     );
 
     if (!payload) {
@@ -170,8 +182,8 @@ const EditCollectFormResponseForm = ({
           <>
             <CustomInput
               variant="bordered"
-              label="NIT"
-              placeholder="900123456"
+              label={isChile ? "RUT de la empresa" : "NIT"}
+              placeholder={isChile ? "76.123.456-7" : "900123456"}
               title={maskedFieldHint(formValues.docNumber)}
               {...register("docNumber")}
               error={fieldError("docNumber")}
@@ -189,14 +201,15 @@ const EditCollectFormResponseForm = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <CustomSelect<DocType>
               label="Tipo de documento"
-              options={docTypesOptions}
-              value={(formValues.docType as DocType) || "CC"}
+              options={docTypeOptions}
+              value={(formValues.docType as DocType) || docTypeOptions[0]?.value}
               onChange={(value) => setValue("docType", value)}
+              disabled={isChile}
             />
             <CustomInput
               variant="bordered"
               label="Número de documento"
-              placeholder="1234567890"
+              placeholder={isChile ? "12.345.678-9" : "1234567890"}
               title={maskedFieldHint(formValues.docNumber)}
               {...register("docNumber")}
               error={fieldError("docNumber")}

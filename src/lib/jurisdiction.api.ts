@@ -16,6 +16,14 @@ export interface JurisdictionGeographicDivision {
   level3Name: string; // Ej: Comuna (CL) / Localidad (CO)
 }
 
+export interface JurisdictionLegalBase {
+  id: string;
+  country: string;
+  baseCode: string;
+  description: string;
+  requiresJustification: boolean;
+}
+
 export async function fetchJurisdictionDocumentTypes(
   country: string = "CL"
 ): Promise<APIResponse<JurisdictionDocumentType[]>> {
@@ -29,5 +37,13 @@ export async function fetchJurisdictionGeographicDivisions(
 ): Promise<APIResponse<JurisdictionGeographicDivision[]>> {
   return customFetch<JurisdictionGeographicDivision[]>(
     `/jurisdiction/geographic-divisions?country=${encodeURIComponent(country)}`
+  );
+}
+
+export async function fetchJurisdictionLegalBases(
+  country: string = "CL"
+): Promise<APIResponse<JurisdictionLegalBase[]>> {
+  return customFetch<JurisdictionLegalBase[]>(
+    `/jurisdiction/legal-bases?country=${encodeURIComponent(country)}`
   );
 }

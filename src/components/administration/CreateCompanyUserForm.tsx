@@ -11,6 +11,7 @@ import { Icon } from "@iconify/react/dist/iconify.js";
 import clsx from "clsx";
 import { FieldError, useForm } from "react-hook-form";
 import SelectTemplateDialog from "../dialogs/SelectTemplateDialog";
+import DialogPortal from "../dialogs/DialogPortal";
 import CustomCheckbox from "../forms/CustomCheckbox";
 import CustomInput from "../forms/CustomInput";
 import CustomSelect from "../forms/CustomSelect";
@@ -35,6 +36,7 @@ import {
 import { createCompanyUser, updateCompanyUser } from "@/lib/user.api";
 import { useCompanyAreas } from "@/hooks/useCompanyAreas";
 import { useCompanyRoles } from "@/hooks/useCompanyRoles";
+import { useCompanyDataOfficer } from "@/hooks/useCompanyDataOfficer";
 import { usePermissionCheck } from "@/hooks/usePermissionCheck";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useOwnCompanyStore } from "@/store/useOwnCompanyStore";
@@ -130,6 +132,10 @@ const CreateCompanyUserForm = ({
     (user as any)?.companyUserData?.company?.countryCode;
   const { options: docTypeOptions, defaultValue: docTypeDefault } =
     getAdminDocTypeOptionsByCountry(companyCountryCode, { includeNit: true });
+  // Item CHK-056 (auditoría 2026-08-26/27): el campo Área solo tiene sentido
+  // si la empresa activó la jerarquía de áreas/equipos en su configuración
+  // (perfil-empresa > Jerarquías organizacionales). Por defecto es false.
+  const usesAreaHierarchy = companyFromStore?.usesAreaHierarchy === true;
 
   const initialPhoneData = useMemo(
     () => parsePhoneAndCountryCode(initialValues?.companyUserData?.phone, companyCountryCode),
@@ -148,6 +154,22 @@ const CreateCompanyUserForm = ({
   });
   const [loading, setLoading] = useState<boolean>(false);
   const params = useParams();
+
+  // Item CHK-053 (auditoría 2026-08-26/27): antes la designación de DPO
+  // solo se podía hacer desde el Perfil de Empresa — se agrega el mismo
+  // control acá, en la edición del usuario. Sin restricción de rol en el
+  // frontend a propósito: el backend (COMPANY_assignDataOfficer) ya valida
+  // que el usuario tenga permiso treatments.activate o arcoRequests.respond
+  // y rechaza con 400 si no, con mensaje claro.
+  const editingUserId = userId || (params.userId as string | undefined);
+  const {
+    data: currentDataOfficer,
+    saving: savingDataOfficer,
+    assign: assignDataOfficer,
+  } = useCompanyDataOfficer({ companyId, enabled: Boolean(initialValues && editingUserId) });
+  const isCurrentDpo = Boolean(
+    editingUserId && currentDataOfficer && currentDataOfficer._id === editingUserId
+  );
 
   const {
     register,
@@ -182,6 +204,12 @@ const CreateCompanyUserForm = ({
   const [floatingNavbarToggle, setFloatingNavbarToggle] =
     useState<boolean>(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState<boolean>(false);
+  // Item CHK-051: contraseña temporal generada por el servidor al crear —
+  // se muestra una sola vez antes de navegar fuera del formulario.
+  const [tempPasswordResult, setTempPasswordResult] = useState<{
+    username: string;
+    tempPassword: string;
+  } | null>(null);
 
   const isCreating = !initialValues;
   const systemRole = watch("role");
@@ -343,6 +371,17 @@ const CreateCompanyUserForm = ({
 
     toast.success(initialValues ? "Usuario actualizado" : "Usuario creado");
 
+    // Item CHK-051: si el servidor generó una contraseña temporal, se
+    // muestra en un modal ANTES de navegar fuera — es la única vez que se
+    // ve en texto plano.
+    if (!initialValues && res.data.tempPassword) {
+      setTempPasswordResult({
+        username: submitData.username ?? "",
+        tempPassword: res.data.tempPassword,
+      });
+      return;
+    }
+
     router.refresh();
     router.push(callbackUrl || "/admin/administracion/usuarios");
   }
@@ -369,6 +408,7 @@ const CreateCompanyUserForm = ({
   }
 
   return (
+    <>
     <form
       ref={formRef}
       onSubmit={handleSubmit(onSubmit, onInvalid)}
@@ -544,51 +584,55 @@ const CreateCompanyUserForm = ({
           </p>
         </div>
 
-        {areas.loading && (
-          <p className="text-sm text-[#64748B]">Cargando áreas disponibles...</p>
-        )}
-
-        {hasNoAreas && (
-          <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3">
-            <Icon
-              icon="tabler:info-circle"
-              className="mt-0.5 shrink-0 text-xl text-blue-600"
-            />
-            <div className="space-y-2 text-sm text-blue-900">
-              <p>
-                No hay áreas registradas en tu compañía. Es opcional — puedes crear este usuario
-                sin asignarle un área y organizarlo después si lo necesitas.
-              </p>
-              <Link
-                href="/admin/administracion/areas/crear"
-                className="inline-flex items-center gap-1 font-semibold text-[#1A2B5B] underline hover:no-underline"
-              >
-                Crear área
-                <Icon icon="tabler:arrow-right" className="text-base" />
-              </Link>
-            </div>
-          </div>
-        )}
-
-        {!areas.loading && areaOptions.length > 0 && (
-          <div className="flex flex-col gap-1">
-            <CustomSelect
-              onChange={(value) =>
-                setValue("companyUserData.companyAreaId", value, {
-                  shouldValidate: true,
-                })
-              }
-              options={areaOptions}
-              label="Asignar Área"
-              unselectedText="Seleccionar área"
-              value={watch("companyUserData.companyAreaId")}
-            />
-            {errors.companyUserData?.companyAreaId && (
-              <span className="text-sm font-semibold text-red-400">
-                {errors.companyUserData.companyAreaId.message}
-              </span>
+        {usesAreaHierarchy && (
+          <>
+            {areas.loading && (
+              <p className="text-sm text-[#64748B]">Cargando áreas disponibles...</p>
             )}
-          </div>
+
+            {hasNoAreas && (
+              <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3">
+                <Icon
+                  icon="tabler:info-circle"
+                  className="mt-0.5 shrink-0 text-xl text-blue-600"
+                />
+                <div className="space-y-2 text-sm text-blue-900">
+                  <p>
+                    No hay áreas registradas en tu compañía. Es opcional — puedes crear este
+                    usuario sin asignarle un área y organizarlo después si lo necesitas.
+                  </p>
+                  <Link
+                    href="/admin/administracion/areas/crear"
+                    className="inline-flex items-center gap-1 font-semibold text-[#1A2B5B] underline hover:no-underline"
+                  >
+                    Crear área
+                    <Icon icon="tabler:arrow-right" className="text-base" />
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            {!areas.loading && areaOptions.length > 0 && (
+              <div className="flex flex-col gap-1">
+                <CustomSelect
+                  onChange={(value) =>
+                    setValue("companyUserData.companyAreaId", value, {
+                      shouldValidate: true,
+                    })
+                  }
+                  options={areaOptions}
+                  label="Asignar Área"
+                  unselectedText="Seleccionar área"
+                  value={watch("companyUserData.companyAreaId")}
+                />
+                {errors.companyUserData?.companyAreaId && (
+                  <span className="text-sm font-semibold text-red-400">
+                    {errors.companyUserData.companyAreaId.message}
+                  </span>
+                )}
+              </div>
+            )}
+          </>
         )}
 
         {systemRole === "USER" && roles.loading && (
@@ -642,6 +686,31 @@ const CreateCompanyUserForm = ({
               )}
             </div>
           )}
+
+        {/* Item CHK-053 (auditoría 2026-08-26/27): solo aplica a un usuario
+            ya existente — designar DPO no tiene sentido antes de crearlo. */}
+        {initialValues && editingUserId && (
+          <div className="flex items-start gap-3 rounded-xl border border-[#E8EDF7] bg-[#FAFCFF] p-4">
+            <CustomCheckbox
+              checked={isCurrentDpo}
+              disabled={savingDataOfficer}
+              onChange={async () => {
+                await assignDataOfficer(isCurrentDpo ? null : editingUserId!);
+              }}
+            />
+            <div className="flex flex-col gap-0.5">
+              <span className="text-sm font-medium text-[#1A2B5B]">
+                Designar como Oficial de Protección de Datos (DPO)
+              </span>
+              <span className="text-xs text-[#64748B]">
+                El DPO aprueba la activación de tratamientos del RAT y recibe
+                la asignación automática de solicitudes ARCO. Solo hay uno
+                por empresa — al activar este toggle se reemplaza al DPO
+                actual, si había otro.
+              </span>
+            </div>
+          </div>
+        )}
 
         <CustomTextarea
           {...register("companyUserData.note")}
@@ -701,54 +770,74 @@ const CreateCompanyUserForm = ({
                 error={errors.username}
                 autoComplete="new-username"
               />
-              <div className="flex flex-col items-start gap-1 text-left flex-1">
-                <label
-                  htmlFor="passwordField"
-                  className="font-medium w-full pl-2 text-stone-500 text-sm"
-                >
-                  {initialValues ? "Nueva Clave (opcional)" : "Clave"}
-                </label>
-                <div className="w-full relative">
-                  <input
-                    id="passwordField"
-                    type={isPasswordVisible ? "text" : "password"}
-                    placeholder={initialValues ? "Dejar vacío para mantener la actual" : "••••••••"}
-                    {...(register("password" as any) as any)}
-                    className="relative w-full flex-1 gap-2 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2.5 pr-12 text-sm text-[#0F172A] outline-none transition focus:border-[#1A2B5B] focus:bg-white focus:ring-2 focus:ring-[#1A2B5B]/12"
-                    autoComplete="new-password"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setIsPasswordVisible((v) => !v)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-md text-stone-500 hover:bg-stone-100 transition-colors"
-                    aria-label={
-                      isPasswordVisible
-                        ? "Ocultar contraseña"
-                        : "Mostrar contraseña"
-                    }
-                    title={
-                      isPasswordVisible
-                        ? "Ocultar contraseña"
-                        : "Mostrar contraseña"
-                    }
+              {initialValues ? (
+                <div className="flex flex-col items-start gap-1 text-left flex-1">
+                  <label
+                    htmlFor="passwordField"
+                    className="font-medium w-full pl-2 text-stone-500 text-sm"
                   >
-                    <Icon
-                      icon={
-                        isPasswordVisible
-                          ? "tabler:eye-off"
-                          : "tabler:eye"
-                      }
-                      className="text-lg"
+                    Nueva Clave (opcional)
+                  </label>
+                  <div className="w-full relative">
+                    <input
+                      id="passwordField"
+                      type={isPasswordVisible ? "text" : "password"}
+                      placeholder="Dejar vacío para mantener la actual"
+                      {...(register("password" as any) as any)}
+                      className="relative w-full flex-1 gap-2 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2.5 pr-12 text-sm text-[#0F172A] outline-none transition focus:border-[#1A2B5B] focus:bg-white focus:ring-2 focus:ring-[#1A2B5B]/12"
+                      autoComplete="new-password"
                     />
-                  </button>
-                </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsPasswordVisible((v) => !v)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-md text-stone-500 hover:bg-stone-100 transition-colors"
+                      aria-label={
+                        isPasswordVisible
+                          ? "Ocultar contraseña"
+                          : "Mostrar contraseña"
+                      }
+                      title={
+                        isPasswordVisible
+                          ? "Ocultar contraseña"
+                          : "Mostrar contraseña"
+                      }
+                    >
+                      <Icon
+                        icon={
+                          isPasswordVisible
+                            ? "tabler:eye-off"
+                            : "tabler:eye"
+                        }
+                        className="text-lg"
+                      />
+                    </button>
+                  </div>
 
-                {(errors as any).password && (
-                  <span className="text-red-400 text-sm font-semibold">
-                    {(errors as any).password.message}
+                  {(errors as any).password && (
+                    <span className="text-red-400 text-sm font-semibold">
+                      {(errors as any).password.message}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                // Item CHK-051 (auditoría 2026-08-26/27): ya no se le pide
+                // al admin inventar una clave — el servidor genera una
+                // temporal al crear (USER_create) y se muestra una sola vez
+                // justo después de crear el usuario (ver tempPasswordResult).
+                <div className="flex flex-col items-start gap-1.5 text-left flex-1">
+                  <span className="font-medium w-full pl-2 text-stone-500 text-sm">
+                    Clave
                   </span>
-                )}
-              </div>
+                  <div className="flex w-full items-start gap-2 rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 py-2.5 text-xs text-stone-500">
+                    <Icon icon="tabler:key" className="mt-0.5 shrink-0 text-base text-stone-400" />
+                    <span>
+                      Se generará automáticamente una contraseña temporal al
+                      crear el usuario. Se mostrará una sola vez para que la
+                      compartas con él.
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           </section>
@@ -764,6 +853,79 @@ const CreateCompanyUserForm = ({
         </Button>
       </div>
     </form>
+
+    {/* Item CHK-051 (auditoría 2026-08-26/27): contraseña temporal generada
+        por el servidor, mostrada una única vez antes de salir del formulario. */}
+    {tempPasswordResult && (
+      <DialogPortal>
+        <div className="fixed top-0 left-0 z-20 flex h-full w-full items-center justify-center bg-stone-900/50">
+          <div className="w-full max-w-md animate-appear rounded-xl bg-white p-6 sm:p-8">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="rounded-full border border-emerald-200 bg-emerald-50 p-2">
+                <Icon icon="tabler:key" className="text-2xl text-emerald-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-primary-900">
+                  Usuario creado
+                </h3>
+                <p className="text-sm text-stone-500">
+                  Comparte estas credenciales con {tempPasswordResult.username} —
+                  no volverán a mostrarse.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <div>
+                <p className="pl-1 text-xs font-medium text-stone-500">Usuario</p>
+                <p className="rounded-lg bg-[#F8FAFC] px-3 py-2 text-sm font-medium text-[#0F172A]">
+                  {tempPasswordResult.username}
+                </p>
+              </div>
+              <div>
+                <p className="pl-1 text-xs font-medium text-stone-500">
+                  Contraseña temporal
+                </p>
+                <div className="flex items-center gap-2">
+                  <p className="flex-1 rounded-lg bg-[#F8FAFC] px-3 py-2 font-mono text-sm font-medium text-[#0F172A]">
+                    {tempPasswordResult.tempPassword}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard
+                        ?.writeText(tempPasswordResult.tempPassword)
+                        .then(() => toast.success("Contraseña copiada"))
+                        .catch(() => toast.error("No se pudo copiar"));
+                    }}
+                    className="shrink-0 rounded-lg p-2 text-stone-500 hover:bg-stone-100"
+                    aria-label="Copiar contraseña"
+                    title="Copiar contraseña"
+                  >
+                    <Icon icon="tabler:copy" className="text-lg" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end border-t border-disabled pt-4">
+              <Button
+                hierarchy="primary"
+                type="button"
+                onClick={() => {
+                  setTempPasswordResult(null);
+                  router.refresh();
+                  router.push(callbackUrl || "/admin/administracion/usuarios");
+                }}
+              >
+                Continuar
+              </Button>
+            </div>
+          </div>
+        </div>
+      </DialogPortal>
+    )}
+    </>
   );
 };
 

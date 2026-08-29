@@ -39,7 +39,9 @@ export function useCompanyDataOfficer(params: Params) {
   }, [companyId, enabled]);
 
   const assign = useCallback(
-    async (userId: string) => {
+    // Item CHK-053 (auditoría 2026-08-26/27): userId=null quita el DPO
+    // actual (usado por el toggle del formulario de usuario).
+    async (userId: string | null) => {
       if (!companyId) return false;
       setSaving(true);
       const res = await assignCompanyDataOfficer(companyId, userId);
@@ -50,7 +52,7 @@ export function useCompanyDataOfficer(params: Params) {
       }
       setData(res.data ?? null);
       setSaving(false);
-      toast.success("Oficial de datos asignado correctamente");
+      toast.success(userId ? "Oficial de datos asignado correctamente" : "Oficial de datos removido correctamente");
       return true;
     },
     [companyId]

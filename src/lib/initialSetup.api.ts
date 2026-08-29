@@ -13,6 +13,11 @@ export interface InitialSetupCompany {
   email: string;
   countryCode: string;
   manager: InitialSetupManager | null;
+  // Item CHK-137/CHK-129: campos 7-10 de ONB-01, obligatorios solo para CL.
+  regionName?: string | null;
+  provinceName?: string | null;
+  communeName?: string | null;
+  address?: string | null;
 }
 
 export interface InitialSetupStatus {
@@ -27,6 +32,10 @@ export interface CompleteInitialSetupPayload {
   countryCode: string;
   managerName: string;
   managerDocNumber: string;
+  regionName?: string;
+  provinceName?: string;
+  communeName?: string;
+  address?: string;
 }
 
 export async function fetchInitialSetupStatus(

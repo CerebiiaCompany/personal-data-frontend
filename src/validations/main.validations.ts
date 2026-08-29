@@ -91,7 +91,13 @@ export const createUserValidationSchema = z.object({
   name: z.string().min(1, "Este campo es obligatorio"),
   lastName: z.string().min(1, "Este campo es obligatorio"),
   username: z.string().min(1, "Este campo es obligatorio"),
-  password: z.string().min(8, "La contraseña debe tener al menos 8 caracteres"),
+  // Item CHK-051 (auditoría 2026-08-26/27): ya no la escribe el admin — el
+  // servidor genera una contraseña temporal cuando se omite (USER_create).
+  password: z
+    .string()
+    .min(8, "La contraseña debe tener al menos 8 caracteres")
+    .optional()
+    .or(z.literal("")),
   role: z.string<UserRole>(),
   companyUserData: z.object({
     position: z.string().min(1, "Este campo es obligatorio"),

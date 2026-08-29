@@ -70,7 +70,14 @@ const CompanyRolesTable = ({ items, loading, error, refresh }: Props) => {
               {items.map((item) => (
                 <tr key={item._id} className="align-middle text-center">
                   <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm rounded-l-xl whitespace-nowrap">
-                    {item.position}
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span>{item.position}</span>
+                      {item.isPredefined && (
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800">
+                          Predefinido Ley 21.719
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm truncate max-w-[180px]">
                     {item.description}
@@ -81,22 +88,33 @@ const CompanyRolesTable = ({ items, loading, error, refresh }: Props) => {
 
                   <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm rounded-r-xl whitespace-nowrap">
                     <div className="flex items-center justify-center gap-1 sm:gap-1.5 h-full">
-                      <Link
-                        href={`/admin/administracion/roles/${item._id}`}
-                        className="h-full rounded-lg hover:bg-primary-900/10 transition-colors p-1 sm:p-1.5 aspect-square"
-                      >
-                        <Icon
-                          icon="material-symbols:edit-outline"
-                          className="text-lg sm:text-xl"
-                        />
-                      </Link>
-                      <button
-                        onClick={(_) => deleteRole(item._id)}
-                        className="h-full rounded-lg hover:bg-red-400/10 transition-colors p-1 sm:p-1.5 aspect-square"
-                        aria-label="Eliminar rol"
-                      >
-                        <Icon icon="bx:trash" className="text-lg sm:text-xl text-red-400" />
-                      </button>
+                      {item.isPredefined ? (
+                        <span
+                          className="p-1 sm:p-1.5 text-stone-300"
+                          title="Los roles predefinidos por la Ley 21.719 no pueden modificarse."
+                        >
+                          <Icon icon="material-symbols:lock-outline" className="text-lg sm:text-xl" />
+                        </span>
+                      ) : (
+                        <>
+                          <Link
+                            href={`/admin/administracion/roles/${item._id}`}
+                            className="h-full rounded-lg hover:bg-primary-900/10 transition-colors p-1 sm:p-1.5 aspect-square"
+                          >
+                            <Icon
+                              icon="material-symbols:edit-outline"
+                              className="text-lg sm:text-xl"
+                            />
+                          </Link>
+                          <button
+                            onClick={(_) => deleteRole(item._id)}
+                            className="h-full rounded-lg hover:bg-red-400/10 transition-colors p-1 sm:p-1.5 aspect-square"
+                            aria-label="Eliminar rol"
+                          >
+                            <Icon icon="bx:trash" className="text-lg sm:text-xl text-red-400" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>

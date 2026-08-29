@@ -334,9 +334,16 @@ function RoleCard({
             <Icon icon="tabler:shield" className="text-xl" />
           </div>
           <div className="min-w-0 flex-1">
-            <h2 className="font-sans text-base font-bold leading-snug text-[#1A2B5B] sm:text-lg">
-              {role.position}
-            </h2>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <h2 className="font-sans text-base font-bold leading-snug text-[#1A2B5B] sm:text-lg">
+                {role.position}
+              </h2>
+              {role.isPredefined && (
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800">
+                  Predefinido Ley 21.719
+                </span>
+              )}
+            </div>
             <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[#64748B] sm:text-[13px]">
               {role.description}
             </p>
@@ -419,22 +426,33 @@ function RoleCard({
             </span>
           </div>
           <div className="flex shrink-0 items-center gap-0.5">
-            <Link
-              href={`/admin/administracion/roles/${role._id}`}
-              onClick={(e) => e.stopPropagation()}
-              className="rounded-lg p-2 text-[#475569] hover:bg-slate-100"
-              aria-label="Editar rol"
-            >
-              <Icon icon="material-symbols:edit-outline" className="text-xl" />
-            </Link>
-            <button
-              type="button"
-              onClick={onDelete}
-              className="rounded-lg p-2 text-red-400 hover:bg-red-50"
-              aria-label="Eliminar rol"
-            >
-              <Icon icon="bx:trash" className="text-xl" />
-            </button>
+            {role.isPredefined ? (
+              <span
+                className="p-2 text-stone-300"
+                title="Los roles predefinidos por la Ley 21.719 no pueden modificarse."
+              >
+                <Icon icon="material-symbols:lock-outline" className="text-xl" />
+              </span>
+            ) : (
+              <>
+                <Link
+                  href={`/admin/administracion/roles/${role._id}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="rounded-lg p-2 text-[#475569] hover:bg-slate-100"
+                  aria-label="Editar rol"
+                >
+                  <Icon icon="material-symbols:edit-outline" className="text-xl" />
+                </Link>
+                <button
+                  type="button"
+                  onClick={onDelete}
+                  className="rounded-lg p-2 text-red-400 hover:bg-red-50"
+                  aria-label="Eliminar rol"
+                >
+                  <Icon icon="bx:trash" className="text-xl" />
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>

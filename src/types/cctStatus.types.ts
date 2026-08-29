@@ -3,7 +3,10 @@ export type CctInvalidReason = "expired_or_invalid" | string;
 export interface CctStatusRequest {
   cct: string;
   docType?: string;
-  docNumber?: number;
+  // Item CHK-138 (sprint pre go-live 2026-08-28): RUT chileno es alfanumérico
+  // (dígito verificador "K") — el backend (PUBLIC_CCT_checkStatus) ya acepta
+  // string vía normalizeDocNumber; solo el tipo del frontend era muy angosto.
+  docNumber?: number | string;
 }
 
 /** Respuesta fase 1: solo token */

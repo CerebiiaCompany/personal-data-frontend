@@ -28,8 +28,8 @@ export type ConsentStatus =
 export const CONSENT_STATUS_LABELS: Record<ConsentStatus, string> = {
   ACTIVE: "Consentimiento activo",
   PENDING: "Pendiente de confirmación",
-  REVOKED: "Revocado (cancelación ejecutada)",
-  CLAIM_IN_PROGRESS: "Solicitud de cancelación en trámite",
+  REVOKED: "Revocado (supresión ejecutada)",
+  CLAIM_IN_PROGRESS: "Solicitud de supresión en trámite",
   LEGAL_DISPUTE: "En disputa legal",
 };
 

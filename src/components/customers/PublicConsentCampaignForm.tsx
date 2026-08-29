@@ -33,6 +33,7 @@ import {
 import LoadingCover from "@/components/layout/LoadingCover";
 import { isCctIdentityCheck } from "@/types/cctStatus.types";
 import { getDataProtectionLegalNotice } from "@/utils/legalNotices.utils";
+import { isValidRut, normalizeRut, RUT_INVALID_MESSAGE } from "@/utils/rutValidator";
 import InternationalTransferNotice from "./InternationalTransferNotice";
 
 type PhoneCountryCode =
@@ -115,16 +116,30 @@ type CctFlowStep =
   | "submit_error"
   | "full_form";
 
-// Este formulario (campañas de consentimiento) no participa del fix de
-// RUT/CI de PublicCollectForm.tsx — mantiene su propio tipo, más angosto que
-// el DocType compartido, para no heredar valores que su schema local no
-// admite.
-type IdentityDocType = "CC" | "TI" | "NIT" | "OTHER";
+// Item CHK-138 (sprint pre go-live 2026-08-28): antes este formulario forzaba
+// CC (natural) / NIT (jurídica) sin importar el país de la empresa — un
+// titular chileno no tenía forma de identificarse con RUT. RUT agregado al
+// tipo; el número de documento ya soporta string vía resolveDocNumber/
+// buildCollectFormUserPayload (utils/collectFormUser.utils.ts), que ya era
+// country-aware pero esta pantalla no le pasaba companyCountryCode.
+type IdentityDocType = "CC" | "TI" | "NIT" | "RUT" | "OTHER";
 
 const identityDocTypeOptions: CustomSelectOption<IdentityDocType>[] = [
   ...(docTypesOptions as CustomSelectOption<IdentityDocType>[]),
   { value: "NIT", title: "NIT" },
+  { value: "RUT", title: "RUT" },
 ];
+
+/** CL se identifica con RUT (natural y jurídica comparten formato) — el
+ * resto de países mantiene el flujo original CC/TI/NIT/OTHER sin cambios. */
+function getIdentityDocTypeOptionsForCountry(
+  countryCode?: string | null
+): CustomSelectOption<IdentityDocType>[] {
+  if (countryCode === "CL") {
+    return [{ value: "RUT", title: "RUT" }];
+  }
+  return docTypesOptions as CustomSelectOption<IdentityDocType>[];
+}
 
 function CctFlowLoading({ message }: { message: string }) {
   return (
@@ -335,8 +350,13 @@ function KnownDataSummary({
 }
 
 export default function PublicConsentCampaignForm({ data, cct, qct }: Props) {
+  const companyCountryCode = companyDisplayCountryCode(data);
+  const isChile = companyCountryCode === "CL";
+
   const [cctFlowStep, setCctFlowStep] = useState<CctFlowStep>("validating_token");
-  const [identityDocType, setIdentityDocType] = useState<IdentityDocType>("CC");
+  const [identityDocType, setIdentityDocType] = useState<IdentityDocType>(
+    isChile ? "RUT" : "CC"
+  );
   const [identityDocNumber, setIdentityDocNumber] = useState("");
   const [identityError, setIdentityError] = useState<string | null>(null);
   const [personKind, setPersonKind] = useState<PersonKind>("NATURAL");
@@ -348,7 +368,7 @@ export default function PublicConsentCampaignForm({ data, cct, qct }: Props) {
   const [flowErrorMessage, setFlowErrorMessage] = useState<string | null>(null);
 
   const companyName = companyDisplayName(data);
-  const { lawReference } = getDataProtectionLegalNotice(companyDisplayCountryCode(data));
+  const { lawReference } = getDataProtectionLegalNotice(companyCountryCode);
   const isPrefillMode = Boolean(qct);
 
   React.useEffect(() => {
@@ -441,16 +461,28 @@ export default function PublicConsentCampaignForm({ data, cct, qct }: Props) {
 
   const dataSchema = React.useMemo(() => buildDataSchema(fields), [data._id]);
 
-  const naturalDocNumber = z.preprocess(
-    (v) => (v === "" ? undefined : v),
-    z.coerce.number("Número de documento inválido")
-  );
+  // Item CHK-138: RUT es alfanumérico (dígito verificador puede ser "K"), no
+  // puede coercionarse a number como CC/NIT — mismo criterio que el resto
+  // del código (ver comentario docNumber en prisma/schema.prisma, User.docNumber).
+  const rutDocNumber = z
+    .string()
+    .min(1, "Requerido")
+    .refine((v) => isValidRut(v), { message: RUT_INVALID_MESSAGE });
 
-  const juridicaDocNumber = z.preprocess((v) => {
-    if (v === "" || v === undefined || v === null) return undefined;
-    const parsed = parseNitDocNumber(String(v));
-    return Number.isNaN(parsed) ? undefined : parsed;
-  }, z.number("Número de NIT inválido"));
+  const naturalDocNumber = isChile
+    ? rutDocNumber
+    : z.preprocess(
+        (v) => (v === "" ? undefined : v),
+        z.coerce.number("Número de documento inválido")
+      );
+
+  const juridicaDocNumber = isChile
+    ? rutDocNumber
+    : z.preprocess((v) => {
+        if (v === "" || v === undefined || v === null) return undefined;
+        const parsed = parseNitDocNumber(String(v));
+        return Number.isNaN(parsed) ? undefined : parsed;
+      }, z.number("Número de NIT inválido"));
 
   const sharedUserFields = {
     email: z.email("Correo inválido").min(1, "Este campo es obligatorio"),
@@ -468,7 +500,7 @@ export default function PublicConsentCampaignForm({ data, cct, qct }: Props) {
         ? z.object({
             ...sharedUserFields,
             docNumber: juridicaDocNumber,
-            docType: z.literal("NIT"),
+            docType: isChile ? z.literal("RUT") : z.literal("NIT"),
             razonSocial: z.string().min(1, "Este campo es obligatorio"),
             name: z.string().min(1, "Este campo es obligatorio"),
             lastName: z.string().min(1, "Este campo es obligatorio"),
@@ -478,7 +510,7 @@ export default function PublicConsentCampaignForm({ data, cct, qct }: Props) {
         : z.object({
             ...sharedUserFields,
             docNumber: naturalDocNumber,
-            docType: z.enum(["CC", "TI", "OTHER"]),
+            docType: isChile ? z.literal("RUT") : z.enum(["CC", "TI", "OTHER"]),
             name: z.string().min(1, "Este campo es obligatorio"),
             lastName: z.string().min(1, "Este campo es obligatorio"),
             age: z.preprocess(
@@ -522,8 +554,8 @@ export default function PublicConsentCampaignForm({ data, cct, qct }: Props) {
     reValidateMode: "onChange",
     defaultValues: {
       user: {
-        docType: "CC" as IdentityDocType,
-        phoneCountryCode: "57" as PhoneCountryCode,
+        docType: (isChile ? "RUT" : "CC") as IdentityDocType,
+        phoneCountryCode: (isChile ? "56" : "57") as PhoneCountryCode,
         docNumber: undefined as any,
         name: "",
         lastName: "",
@@ -597,13 +629,15 @@ export default function PublicConsentCampaignForm({ data, cct, qct }: Props) {
   const handlePersonKindChange = (kind: PersonKind) => {
     setPersonKind(kind);
     if (kind === "JURIDICA") {
-      setValue("user.docType", "NIT" as unknown as IdentityDocType, { shouldValidate: true });
+      setValue("user.docType", (isChile ? "RUT" : "NIT") as unknown as IdentityDocType, {
+        shouldValidate: true,
+      });
       setValue("user.age", undefined as unknown as number, { shouldValidate: true });
       setValue("user.gender", undefined as UserGender | undefined, {
         shouldValidate: true,
       });
     } else {
-      setValue("user.docType", "CC", { shouldValidate: true });
+      setValue("user.docType", isChile ? "RUT" : "CC", { shouldValidate: true });
       setValue("user.razonSocial", "", { shouldValidate: true });
     }
   };
@@ -616,8 +650,14 @@ export default function PublicConsentCampaignForm({ data, cct, qct }: Props) {
       return;
     }
 
-    let docNumber: number;
-    if (identityDocType === "NIT") {
+    let docNumber: number | string;
+    if (identityDocType === "RUT") {
+      if (!isValidRut(trimmed)) {
+        setIdentityError(RUT_INVALID_MESSAGE);
+        return;
+      }
+      docNumber = normalizeRut(trimmed);
+    } else if (identityDocType === "NIT") {
       docNumber = parseNitDocNumber(trimmed);
       if (Number.isNaN(docNumber)) {
         setIdentityError("Número de NIT inválido");
@@ -660,6 +700,9 @@ export default function PublicConsentCampaignForm({ data, cct, qct }: Props) {
       setPersonKind("JURIDICA");
       setValue("user.docType", "NIT" as unknown as IdentityDocType);
     } else {
+      // RUT (CL) no distingue natural/jurídica por formato — se asume
+      // NATURAL por defecto; el usuario puede cambiarlo con el selector
+      // "Tipo de persona" del formulario completo (handlePersonKindChange).
       setPersonKind("NATURAL");
       setValue("user.docType", identityDocType);
     }
@@ -671,7 +714,11 @@ export default function PublicConsentCampaignForm({ data, cct, qct }: Props) {
   async function onSubmit(formData: any) {
     setSubmitting(true);
 
-    const userPayload = buildCollectFormUserPayload(formData.user, personKind);
+    const userPayload = buildCollectFormUserPayload(
+      formData.user,
+      personKind,
+      companyCountryCode
+    );
 
     const res = await registerConsentCampaignResponse(data._id, cct, {
       dataProcessing: formData.dataProcessing,
@@ -800,7 +847,7 @@ export default function PublicConsentCampaignForm({ data, cct, qct }: Props) {
             <div className="flex-1">
               <CustomSelect<IdentityDocType>
                 label="Tipo de documento"
-                options={identityDocTypeOptions}
+                options={getIdentityDocTypeOptionsForCountry(companyCountryCode)}
                 value={identityDocType}
                 onChange={setIdentityDocType}
               />
@@ -814,9 +861,11 @@ export default function PublicConsentCampaignForm({ data, cct, qct }: Props) {
                   if (identityError) setIdentityError(null);
                 }}
                 placeholder={
-                  identityDocType === "NIT"
-                    ? "Ej. 900123456"
-                    : "Ej. 1234567890"
+                  identityDocType === "RUT"
+                    ? "Ej. 12.345.678-9"
+                    : identityDocType === "NIT"
+                      ? "Ej. 900123456"
+                      : "Ej. 1234567890"
                 }
                 error={
                   identityError
@@ -1050,13 +1099,15 @@ export default function PublicConsentCampaignForm({ data, cct, qct }: Props) {
                 <div>
                   <CustomSelect<IdentityDocType>
                     label="Tipo de documento"
-                    options={docTypesOptions as CustomSelectOption<IdentityDocType>[]}
+                    options={getIdentityDocTypeOptionsForCountry(companyCountryCode)}
                     value={watch("user.docType") as IdentityDocType}
                     onChange={(v) => setValue("user.docType", v)}
+                    disabled={isChile}
                   />
                 </div>
                 <CustomInput
                   label="Número de documento"
+                  placeholder={isChile ? "Ej. 12.345.678-9" : undefined}
                   {...register("user.docNumber")}
                   error={errors.user?.docNumber as FieldError}
                 />
@@ -1148,15 +1199,17 @@ export default function PublicConsentCampaignForm({ data, cct, qct }: Props) {
             {showField("docNumber") && (
               <>
                 <CustomInput
-                  label="NIT"
+                  label={isChile ? "RUT de la empresa" : "NIT"}
                   {...register("user.docNumber")}
-                  placeholder="Ej. 900123456 o 900123456-7"
+                  placeholder={isChile ? "Ej. 76.123.456-7" : "Ej. 900123456 o 900123456-7"}
                   error={errors.user?.docNumber as FieldError}
                 />
-                <p className="text-xs text-stone-500 -mt-2 pl-2">
-                  Ingresa el NIT con o sin dígito de verificación; se enviará solo
-                  el número principal.
-                </p>
+                {!isChile && (
+                  <p className="text-xs text-stone-500 -mt-2 pl-2">
+                    Ingresa el NIT con o sin dígito de verificación; se enviará solo
+                    el número principal.
+                  </p>
+                )}
               </>
             )}
           </>

@@ -9,6 +9,9 @@ import EnumMultiSelect from "@/components/treatments/EnumMultiSelect";
 import TreatmentSystemsSection from "@/components/treatments/TreatmentSystemsSection";
 import { useTreatmentPurposes } from "@/hooks/useTreatmentPurposes";
 import { usePolicyTemplates } from "@/hooks/usePolicyTemplates";
+import { useJurisdictionLegalBases } from "@/hooks/useJurisdictionLegalBases";
+import { useSessionStore } from "@/store/useSessionStore";
+import { useOwnCompanyStore } from "@/store/useOwnCompanyStore";
 import {
   createTreatment,
   fetchTreatment,
@@ -25,7 +28,6 @@ import {
   DATA_CATEGORY_OPTIONS,
   DATA_SUBJECT_CATEGORY_OPTIONS,
   LegalBasis,
-  LEGAL_BASIS_OPTIONS,
   RetentionStartEvent,
   RetentionUnit,
   RETENTION_START_EVENT_OPTIONS,
@@ -38,6 +40,20 @@ import {
 import { Icon } from "@iconify/react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+
+// Item CHK-016/032 (auditoría 2026-08-26/27) — bases legales que tienen UI
+// dedicada en este formulario (además de CONSENT, que tiene su propio
+// selector de plantilla más abajo). Cualquier otra base (incluida
+// CONTRACT_PERFORMANCE, que no exige justificación) cae en el textarea
+// genérico opcional.
+const LEGAL_BASIS_RECOGNIZED_FOR_CL = [
+  "CONSENT",
+  "ECONOMIC_FINANCIAL_DATA",
+  "CONTRACT_PERFORMANCE",
+  "LEGAL_OBLIGATION",
+  "LEGITIMATE_INTEREST",
+  "RIGHTS_DEFENSE",
+] as const;
 
 interface Props {
   companyId: string;
@@ -57,6 +73,11 @@ interface FormState {
   // Item CON-001/B8 (Art. 12 + Art. 14) — solo se usa/gatea cuando
   // legalBasis === "CONSENT".
   consentTemplateId: string;
+  // Item CHK-076 (sprint de cierre 2026-08-28) — literales e/j del Art. 14
+  // ter, texto libre opcional. No gatean canActivate (misma decisión que
+  // automatedDecision*/geolocation* antes de sus propios checkpoints).
+  dataSource: string;
+  nonDeliveryConsequences: string;
   // Item B6: subcampos guiados, solo usados cuando legalBasis ===
   // LEGITIMATE_INTEREST — ver LEGITIMATE_INTEREST_LABELS/build/parse más
   // abajo para el formato en que se concatenan dentro de
@@ -159,6 +180,8 @@ function buildInitialState(t?: Treatment | null): FormState {
     legalBasis: t?.legalBasis ?? "",
     legalBasisJustification: t?.legalBasisJustification ?? "",
     consentTemplateId: t?.consentTemplateId ?? "",
+    dataSource: t?.dataSource ?? "",
+    nonDeliveryConsequences: t?.nonDeliveryConsequences ?? "",
     legitimateInterestPurpose: legitimateInterest.purpose,
     legitimateInterestNecessity: legitimateInterest.necessity,
     legitimateInterestBalance: legitimateInterest.balance,
@@ -205,7 +228,27 @@ const TreatmentForm = ({
     initial?.version
   );
 
-  const { data: purposes } = useTreatmentPurposes({ companyId });
+  // Item CHK-016 (auditoría 2026-08-26/27) — la base legal ya no es un
+  // catálogo hardcodeado global: se lee jurisdiction_legal_bases filtrado
+  // por el país de la empresa activa (mismo criterio de país que
+  // CreateCompanyAreaForm.tsx). Para CL trae las 6 bases reales del Art. 13;
+  // para países sin la tabla poblada, useJurisdictionLegalBases cae al
+  // catálogo genérico previo. Declarado antes de useTreatmentPurposes (item
+  // CHK-011/017) porque ese hook también lo necesita.
+  const { user } = useSessionStore();
+  const companyFromStore = useOwnCompanyStore((store) => store.company);
+  const companyCountryCode =
+    companyFromStore?.countryCode ??
+    (user as any)?.company?.countryCode ??
+    (user as any)?.companyUserData?.company?.countryCode ??
+    "CL";
+  const { options: jurisdictionLegalBasisOptions } =
+    useJurisdictionLegalBases(companyCountryCode);
+
+  // Item CHK-011/017 (auditoría 2026-08-26/27) — el catálogo de finalidades
+  // ya no es el mismo para todos los países: el backend filtra las
+  // finalidades globales por country=<jurisdicción> OR country IS NULL.
+  const { data: purposes } = useTreatmentPurposes({ companyId, country: companyCountryCode });
   // Item CON-001/B8 — solo se necesita cargar cuando la base legal elegida
   // es CONSENT, pero el hook no soporta "enabled" condicional; se carga
   // igual (mismo criterio que purposes/owners de arriba, listas chicas por
@@ -244,8 +287,8 @@ const TreatmentForm = ({
   }, [purposes]);
 
   const legalBasisOptions = useMemo<CustomSelectOption<string>[]>(
-    () => [{ value: "", title: "— Sin base legal —" }, ...LEGAL_BASIS_OPTIONS],
-    []
+    () => [{ value: "", title: "— Sin base legal —" }, ...jurisdictionLegalBasisOptions],
+    [jurisdictionLegalBasisOptions]
   );
 
   const consentTemplateOptions = useMemo<CustomSelectOption<string>[]>(() => {
@@ -283,6 +326,14 @@ const TreatmentForm = ({
   // Item D (RF-72, Art. 16 sexies).
   const hasGeolocation = form.dataCategories.includes("GEOLOCATION");
 
+  // Item CHK-031 (auditoría 2026-08-26/27): advertencia NO bloqueante —
+  // Interés legítimo + categoría sensible del Art. 2 g) exige verificar si
+  // hace falta consentimiento expreso (Art. 16). Desaparece sola si cambia
+  // la base legal o se desmarcan las categorías sensibles (deriva de
+  // form.legalBasis/containsSensitiveData, no tiene estado propio).
+  const showLegitimateInterestSensitiveWarning =
+    form.legalBasis === "LEGITIMATE_INTEREST" && containsSensitiveData;
+
   function patch<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
@@ -308,10 +359,19 @@ const TreatmentForm = ({
   }
 
   /** Item B6: LEGAL_OBLIGATION exige "Norma específica" (frontend-only — no
-   * hay cambio en canActivate, ver treatment.controller.ts item B5). */
+   * hay cambio en canActivate, ver treatment.controller.ts item B5). Item
+   * CHK-016/062/063 (auditoría 2026-08-27): ECONOMIC_FINANCIAL_DATA y
+   * RIGHTS_DEFENSE (Art. 13 a) y e)) exigen el mismo tipo de justificación
+   * puntual, igual criterio que LEGAL_OBLIGATION. */
   function validateLegalBasisFields(): string | null {
     if (form.legalBasis === "LEGAL_OBLIGATION" && !form.legalBasisJustification.trim()) {
       return "La norma específica es obligatoria para la base legal 'Obligación legal'";
+    }
+    if (form.legalBasis === "ECONOMIC_FINANCIAL_DATA" && !form.legalBasisJustification.trim()) {
+      return "Describir el tipo de obligación económica/financiera/bancaria/comercial es obligatorio para esta base legal";
+    }
+    if (form.legalBasis === "RIGHTS_DEFENSE" && !form.legalBasisJustification.trim()) {
+      return "Describir el derecho o procedimiento es obligatorio para esta base legal";
     }
     return null;
   }
@@ -339,6 +399,8 @@ const TreatmentForm = ({
       legalBasis: form.legalBasis || null,
       legalBasisJustification,
       consentTemplateId: form.legalBasis === "CONSENT" ? form.consentTemplateId || null : null,
+      dataSource: nullableText(form.dataSource),
+      nonDeliveryConsequences: nullableText(form.nonDeliveryConsequences),
       dataCategories: form.dataCategories,
       dataSubjectCategories: form.dataSubjectCategories,
       internalOwnerId: form.internalOwnerId || null,
@@ -491,7 +553,7 @@ const TreatmentForm = ({
               onChange={(v) => patch("legalBasis", v as LegalBasis | "")}
             />
           </div>
-          {form.legalBasis && !["CONSENT", "CONTRACT_PERFORMANCE", "LEGAL_OBLIGATION", "LEGITIMATE_INTEREST"].includes(form.legalBasis) && (
+          {form.legalBasis && !(LEGAL_BASIS_RECOGNIZED_FOR_CL as readonly string[]).includes(form.legalBasis) && (
             <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-900">
               <Icon icon="tabler:alert-triangle" className="shrink-0 text-base text-amber-600" />
               <span>Esta base legal no está reconocida en el Art. 13 de la Ley 21.719.</span>
@@ -505,6 +567,35 @@ const TreatmentForm = ({
             onChange={(e) => patch("purposeDetail", e.target.value)}
             placeholder="Complementa la finalidad seleccionada (no la reemplaza)."
           />
+          {/* Item CHK-076 (sprint de cierre 2026-08-28): literales e/j del
+              Art. 14 ter — texto libre opcional, sin backing estructurado
+              (decisión de producto: no se catalogan como enum/select). */}
+          <div className="flex flex-col gap-1">
+            <CustomTextarea
+              label="Fuente de los datos (Art. 14 ter e)"
+              name="dataSource"
+              rows={2}
+              value={form.dataSource}
+              onChange={(e) => patch("dataSource", e.target.value)}
+              placeholder="Ej: Proporcionados directamente por el titular al momento del registro"
+            />
+            <p className="pl-2 text-xs text-[#8B97AB]">
+              Indique de dónde provienen los datos personales tratados. Opcional.
+            </p>
+          </div>
+          <div className="flex flex-col gap-1">
+            <CustomTextarea
+              label="Consecuencias de no entregar los datos (Art. 14 ter j)"
+              name="nonDeliveryConsequences"
+              rows={2}
+              value={form.nonDeliveryConsequences}
+              onChange={(e) => patch("nonDeliveryConsequences", e.target.value)}
+              placeholder="Ej: No podremos prestar el servicio contratado"
+            />
+            <p className="pl-2 text-xs text-[#8B97AB]">
+              Indique qué ocurre si el titular no proporciona los datos. Opcional.
+            </p>
+          </div>
           {/* Item B6: ayuda contextual según la base legal elegida. Todas
               las variantes siguen escribiendo en legalBasisJustification —
               el backend no cambia, solo cambia qué se le pide al usuario. */}
@@ -524,6 +615,15 @@ const TreatmentForm = ({
               </p>
             </div>
           )}
+          {form.legalBasis === "ECONOMIC_FINANCIAL_DATA" && (
+            <CustomInput
+              label="Tipo de obligación económica, financiera, bancaria o comercial *"
+              name="legalBasisJustification"
+              value={form.legalBasisJustification}
+              onChange={(e) => patch("legalBasisJustification", e.target.value)}
+              placeholder="Ej. Evaluación de riesgo crediticio, reporte a central de riesgo, cobranza"
+            />
+          )}
           {form.legalBasis === "LEGAL_OBLIGATION" && (
             <CustomInput
               label="Norma específica *"
@@ -531,6 +631,15 @@ const TreatmentForm = ({
               value={form.legalBasisJustification}
               onChange={(e) => patch("legalBasisJustification", e.target.value)}
               placeholder="Ej. Ley 21.719, Art. 12 / Código del Trabajo, Art. 59"
+            />
+          )}
+          {form.legalBasis === "RIGHTS_DEFENSE" && (
+            <CustomInput
+              label="Derecho o procedimiento *"
+              name="legalBasisJustification"
+              value={form.legalBasisJustification}
+              onChange={(e) => patch("legalBasisJustification", e.target.value)}
+              placeholder="Ej. Defensa en juicio laboral, procedimiento ante la APDP"
             />
           )}
           {form.legalBasis === "LEGITIMATE_INTEREST" && (
@@ -565,11 +674,14 @@ const TreatmentForm = ({
               />
             </div>
           )}
-          {(form.legalBasis === "" ||
-            form.legalBasis === "CONTRACT_PERFORMANCE" ||
-            form.legalBasis === "VITAL_INTEREST" ||
-            form.legalBasis === "PUBLIC_INTEREST_OR_AUTHORITY" ||
-            form.legalBasis === "PUBLIC_SOURCE") && (
+          {/* Fallback: "", CONTRACT_PERFORMANCE (no exige justificación) o
+              cualquier base sin bloque dedicado propio (defensivo — hoy no
+              debería ocurrir, ver LEGAL_BASIS_RECOGNIZED_FOR_CL). */}
+          {form.legalBasis !== "CONSENT" &&
+            form.legalBasis !== "ECONOMIC_FINANCIAL_DATA" &&
+            form.legalBasis !== "LEGAL_OBLIGATION" &&
+            form.legalBasis !== "LEGITIMATE_INTEREST" &&
+            form.legalBasis !== "RIGHTS_DEFENSE" && (
             <CustomTextarea
               label="Justificación de la base legal"
               name="legalBasisJustification"
@@ -619,6 +731,19 @@ const TreatmentForm = ({
               </span>
             </span>
           </div>
+          {/* Item CHK-031 (auditoría 2026-08-26/27): advertencia, no
+              bloquea el guardado. */}
+          {showLegitimateInterestSensitiveWarning && (
+            <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-900">
+              <Icon icon="tabler:alert-triangle" className="mt-0.5 shrink-0 text-base text-amber-600" />
+              <span>
+                Atención: el Art. 16 de la Ley 21.719 exige consentimiento
+                expreso del titular para tratar datos de categorías
+                especiales. Verifique con su Oficial de Protección de Datos
+                si esta base legal es suficiente para este tratamiento.
+              </span>
+            </div>
+          )}
           <EnumMultiSelect
             label="Categorías de titulares"
             options={DATA_SUBJECT_CATEGORY_OPTIONS}

@@ -16,6 +16,25 @@ type Step = "email" | "code" | "password" | "done";
 
 interface Props {
   onBackToLogin: () => void;
+  // Item CHK-127 (sprint pre go-live 2026-08-28): callback al padre
+  // (LoginForm en app/login/page.tsx) para iniciar sesión automáticamente
+  // tras activar la cuenta, reusando el mismo flujo de login normal — ver
+  // performLogin/handleActivationLogin ahí. Devuelve true si el
+  // login+redirect fue exitoso; si falla o no viene el prop, se cae al
+  // paso "done" (botón manual "Ir a iniciar sesión").
+  onActivated?: (email: string, password: string) => Promise<boolean>;
+}
+
+// Item CHK-124 (sprint pre go-live 2026-08-28): el correo se ingresa una
+// sola vez en el paso "email" — el paso "code" no vuelve a mostrar un input
+// editable (la única forma de cambiarlo es el botón explícito "¿Correo
+// incorrecto? Volver atrás", que resetea a ese paso). Para que el usuario
+// tenga contexto de a qué correo se envió el código sin exponerlo completo,
+// se muestra enmascarado (patrón u***@empresa.cl) como texto de solo lectura.
+function maskEmail(email: string): string {
+  const [local, domain] = email.split("@");
+  if (!local || !domain) return email;
+  return `${local[0]}***@${domain}`;
 }
 
 const inputClassName =
@@ -40,7 +59,7 @@ const stepCopy: Record<Step, { title: string; subtitle: string }> = {
   },
 };
 
-export default function AccountActivationForm({ onBackToLogin }: Props) {
+export default function AccountActivationForm({ onBackToLogin, onActivated }: Props) {
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -108,13 +127,26 @@ export default function AccountActivationForm({ onBackToLogin }: Props) {
 
     setLoading(true);
     const res = await completeActivation(email.trim(), code.trim(), password);
-    setLoading(false);
 
     if (res.error) {
+      setLoading(false);
       toast.error(parseApiError(res.error));
       return;
     }
 
+    // Item CHK-127: auto-login tras activar — si el padre no provee
+    // onActivated (o el login falla), se cae al paso "done" con el botón
+    // manual, para no dejar al usuario sin salida.
+    if (onActivated) {
+      const loggedIn = await onActivated(email.trim(), password);
+      setLoading(false);
+      if (loggedIn) return;
+      toast.error("Cuenta activada, pero no se pudo iniciar sesión automáticamente.");
+      setStep("done");
+      return;
+    }
+
+    setLoading(false);
     toast.success("Cuenta activada. Ya puedes iniciar sesión.");
     setStep("done");
   }
@@ -156,6 +188,10 @@ export default function AccountActivationForm({ onBackToLogin }: Props) {
 
       {step === "code" && (
         <form onSubmit={handleVerifyCode} className="flex flex-col gap-5">
+          <p className="text-xs font-medium text-[#64748B]">
+            Enviamos un código a{" "}
+            <span className="font-semibold text-[#334155]">{maskEmail(email.trim())}</span>
+          </p>
           <div className="flex flex-col gap-1.5">
             <label
               htmlFor="activation-code"

@@ -7,9 +7,18 @@ import Button from "@/components/base/Button";
 
 type StepId = OnboardingStep["id"];
 
+// Item CHK-131 (sprint pre go-live 2026-08-28): estimatedTime agregado junto
+// al título de cada paso. Los 5 pasos reales de este widget no tienen los
+// mismos nombres que el listado sugerido en el prompt del sprint — se
+// mapeó cada paso real al tiempo sugerido más cercano en naturaleza
+// (dataProtectionOfficer/inviteTeamMember ~ acciones rápidas de un solo
+// campo → 5 min, igual que "Completar el perfil"/"Configurar ARCO"
+// sugeridos; firstTreatment/firstPolicyTemplate/firstCollectForm calzan
+// 1:1 con "Configurar el RAT"/"Generar la Política"/"Activar el
+// Formulario de Consentimiento").
 const STEP_COPY: Record<
   StepId,
-  { title: string; description: string; ctaLabel: string; href: string }
+  { title: string; description: string; ctaLabel: string; href: string; estimatedTime: string }
 > = {
   dataProtectionOfficer: {
     title: "Asigna tu Oficial de Protección de Datos",
@@ -17,6 +26,7 @@ const STEP_COPY: Record<
       "Es la persona responsable de atender solicitudes de titulares y garantizar el cumplimiento normativo.",
     ctaLabel: "Ir al perfil de empresa",
     href: "/admin/administracion/perfil-empresa#oficial-proteccion-datos",
+    estimatedTime: "~5 min",
   },
   firstTreatment: {
     title: "Crea tu primer Registro de Actividades de Tratamiento (RAT)",
@@ -24,6 +34,7 @@ const STEP_COPY: Record<
       "Documenta qué datos personales trata tu empresa, con qué finalidad y base legal — es la base de tu cumplimiento.",
     ctaLabel: "Crear tratamiento",
     href: "/admin/tratamientos/crear",
+    estimatedTime: "~15 min",
   },
   firstPolicyTemplate: {
     title: "Sube o genera tu primera política de tratamiento",
@@ -31,6 +42,7 @@ const STEP_COPY: Record<
       "Es el documento legal que tus titulares deben aceptar antes de entregarte sus datos.",
     ctaLabel: "Ir a políticas de tratamiento",
     href: "/admin/plantillas",
+    estimatedTime: "~5 min",
   },
   firstCollectForm: {
     title: "Crea tu primer formulario de recolección",
@@ -38,6 +50,7 @@ const STEP_COPY: Record<
       "Es el canal (web, evento, etc.) donde capturas datos y consentimiento de tus titulares.",
     ctaLabel: "Crear formulario",
     href: "/admin/recoleccion/crear-formulario",
+    estimatedTime: "~10 min",
   },
   inviteTeamMember: {
     title: "Invita a tu equipo",
@@ -45,6 +58,7 @@ const STEP_COPY: Record<
       "Delega tareas operativas (recolección, atención de solicitudes) sin compartir tu usuario de administrador.",
     ctaLabel: "Invitar usuario",
     href: "/admin/administracion/usuarios/crear",
+    estimatedTime: "~5 min",
   },
 };
 
@@ -384,15 +398,22 @@ export default function OnboardingChecklistWidget({
                         }`}
                       />
                       <div className="flex flex-col gap-0.5">
-                        <p
-                          className={`text-sm font-semibold ${
-                            celebrating || exiting
-                              ? "text-emerald-800"
-                              : "text-primary-900"
-                          }`}
-                        >
-                          {copy.title}
-                        </p>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <p
+                            className={`text-sm font-semibold ${
+                              celebrating || exiting
+                                ? "text-emerald-800"
+                                : "text-primary-900"
+                            }`}
+                          >
+                            {copy.title}
+                          </p>
+                          {!celebrating && !exiting && (
+                            <span className="rounded-full bg-stone-100 px-1.5 py-0.5 text-[10px] font-semibold text-stone-500">
+                              {copy.estimatedTime}
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-stone-500">
                           {celebrating || exiting
                             ? "¡Paso completado!"

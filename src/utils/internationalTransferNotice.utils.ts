@@ -18,7 +18,7 @@ export interface InternationalTransferNotice {
 const INTERNATIONAL_TRANSFER_NOTICE_BY_COUNTRY: Record<string, InternationalTransferNotice> = {
   CL: {
     enabled: true,
-    text: "De conformidad con lo dispuesto en el artículo 27 de la Ley N.º 19.628 sobre Protección de la Vida Privada, conforme a las modificaciones introducidas por la Ley N.º 21.719, y demás normativa aplicable, sus datos personales podrán ser transferidos internacionalmente cuando se cumplan los requisitos legales que habilitan dicha transferencia, incluyendo la existencia de un nivel adecuado de protección en el país receptor, garantías adecuadas u otro mecanismo legalmente autorizado y, cuando corresponda, el consentimiento expreso del titular.",
+    text: "De conformidad con lo dispuesto en el artículo 27 y siguientes de la Ley N.º 21.719 sobre Protección de Datos Personales, y demás normativa aplicable, sus datos personales podrán ser transferidos internacionalmente cuando se cumplan los requisitos legales que habilitan dicha transferencia, incluyendo la existencia de un nivel adecuado de protección en el país receptor, garantías adecuadas u otro mecanismo legalmente autorizado y, cuando corresponda, el consentimiento expreso del titular.",
   },
   CO: {
     enabled: true,

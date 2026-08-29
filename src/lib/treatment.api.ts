@@ -134,10 +134,18 @@ export async function archiveTreatment(
 
 export async function fetchTreatmentPurposes(
   companyId: string,
-  options: { includeInactive?: boolean } = {}
+  // Item CHK-011/017: country opcional — si se omite, el backend lo deriva
+  // de company.jurisdictionCountry (mismo criterio que
+  // jurisdiction.controller.ts). Se pasa explícito desde TreatmentForm.tsx
+  // para no depender de una consulta extra en el servidor.
+  options: { includeInactive?: boolean; country?: string } = {}
 ): Promise<APIResponse<TreatmentPurpose[]>> {
+  const params = new URLSearchParams();
+  if (options.includeInactive) params.set("includeInactive", "true");
+  if (options.country) params.set("country", options.country);
+  const qs = params.toString();
   return customFetch<TreatmentPurpose[]>(
-    `/companies/${companyId}/treatment-purposes${options.includeInactive ? "?includeInactive=true" : ""}`
+    `/companies/${companyId}/treatment-purposes${qs ? `?${qs}` : ""}`
   );
 }
 

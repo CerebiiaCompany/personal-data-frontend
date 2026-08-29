@@ -45,13 +45,17 @@ export interface ComplianceDashboard {
     active: number;
     revoked: number;
   };
+  // Item CHK-093 (sprint pre go-live 2026-08-28): motor de 11 criterios
+  // (C-01 a C-11) en 3 dimensiones ponderadas — reemplaza los 4 booleanos
+  // de igual peso que tenía antes.
   complianceScore: {
-    value: number;
-    criteria: {
-      hasActiveRat: boolean;
-      hasPublishedPolicy: boolean;
-      hasDesignatedDataOfficer: boolean;
-      hasNoOverdueArcoRequests: boolean;
+    score: number;
+    category: string;
+    dimensions: {
+      A: { score: number; label: string };
+      B: { score: number; label: string };
+      C: { score: number; label: string };
     };
+    criteria: { code: string; score: number; description: string }[];
   };
 }

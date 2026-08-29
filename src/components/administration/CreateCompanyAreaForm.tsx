@@ -29,6 +29,7 @@ import { CreateUser, docTypesOptions, UpdateUser } from "@/types/user.types";
 import { createCompanyUser, updateCompanyUser } from "@/lib/user.api";
 import { useCompanyAreas } from "@/hooks/useCompanyAreas";
 import { countriesOptions, CreateCompanyArea, getDefaultAreaCountryByJurisdiction } from "@/types/companyArea.types";
+import { normalizeCountryIsoCode } from "@/utils/country.utils";
 import { createCompanyArea, updateCompanyArea } from "@/lib/companyArea.api";
 import { useCompanyUsers } from "@/hooks/useCompanyUsers";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
@@ -66,10 +67,16 @@ const CreateCompanyAreaForm = ({ initialValues }: Props) => {
     watch,
   } = useForm({
     resolver: zodResolver(createCompanyAreaValidationSchema),
-    defaultValues: initialValues || {
-      country: defaultCountry,
-      tags: [],
-    },
+    defaultValues: initialValues
+      ? {
+          ...initialValues,
+          country:
+            normalizeCountryIsoCode(initialValues.country) ?? defaultCountry,
+        }
+      : {
+          country: defaultCountry,
+          tags: [],
+        },
   });
 
   useEffect(() => {
@@ -82,7 +89,7 @@ const CreateCompanyAreaForm = ({ initialValues }: Props) => {
   }, [companyCountryCode, initialValues, setValue, watch]);
 
   const currentCountry = watch("country");
-  const isChile = currentCountry === "cl";
+  const isChile = currentCountry?.toLowerCase() === "cl";
 
   const { regionOptions, getProvinciaOptions, getComunaOptions } =
     useJurisdictionGeographicDivisions(isChile ? "CL" : "CO");
@@ -300,13 +307,13 @@ const CreateCompanyAreaForm = ({ initialValues }: Props) => {
           ) : (
             <>
               <CustomInput
-                label={currentCountry === "co" ? "Departamento" : "Departamento/Estado"}
+                label={currentCountry?.toLowerCase() === "co" ? "Departamento" : "Departamento/Estado"}
                 {...register("state")}
                 error={errors.state}
                 className="flex-1"
               />
               <CustomInput
-                label={currentCountry === "co" ? "Municipio/Ciudad" : "Ciudad"}
+                label={currentCountry?.toLowerCase() === "co" ? "Municipio/Ciudad" : "Ciudad"}
                 {...register("city")}
                 error={errors.city}
                 className="flex-1"

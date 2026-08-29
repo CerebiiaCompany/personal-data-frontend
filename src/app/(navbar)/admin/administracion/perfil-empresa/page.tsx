@@ -19,6 +19,7 @@ import InternationalTransfersSection from "@/components/company-profile/Internat
 import RightsAttentionSection from "@/components/company-profile/RightsAttentionSection";
 import InternalRegulationsSection from "@/components/company-profile/InternalRegulationsSection";
 import SpecialObservationsSection from "@/components/company-profile/SpecialObservationsSection";
+import HierarchySettingsSection from "@/components/company-profile/HierarchySettingsSection";
 
 const topCardClass =
   "bg-white border border-[#E8EDF7] rounded-2xl shadow-[0_2px_12px_rgba(15,35,70,0.04)]";
@@ -115,6 +116,7 @@ export default function CompanyProfilePage() {
           <RightsAttentionSection companyId={companyId} />
           <InternalRegulationsSection companyId={companyId} profile={profile} />
           <SpecialObservationsSection companyId={companyId} profile={profile} />
+          <HierarchySettingsSection companyId={companyId} profile={profile} />
         </div>
       </div>
     </div>
