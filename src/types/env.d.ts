@@ -2,6 +2,7 @@
 declare namespace NodeJS {
   interface ProcessEnv {
     NEXT_PUBLIC_API_BASE_URL: string;
+    API_PROXY_TARGET?: string;
     AWS_REGION: string;
     S3_BUCKET: string;
     AWS_ACCESS_KEY_ID: string;
