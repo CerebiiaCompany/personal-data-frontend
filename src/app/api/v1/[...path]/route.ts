@@ -32,6 +32,20 @@ function rewriteSetCookie(raw: string): string {
   return raw.replace(/;\s*Domain=[^;]*/gi, "");
 }
 
+/** Dominios donde el backend (o un proxy roto) pudo haber dejado connect.sid inválida. */
+const LEGACY_SESSION_COOKIE_DOMAINS = [".cerebiia.com.co", "cerebiia.com.co"];
+
+function clearLegacySessionCookies(response: NextResponse, name: string) {
+  const expired =
+    "Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0; HttpOnly; Secure; SameSite=None";
+  for (const domain of LEGACY_SESSION_COOKIE_DOMAINS) {
+    response.headers.append(
+      "set-cookie",
+      `${name}=; Path=/; Domain=${domain}; Expires=${expired}`
+    );
+  }
+}
+
 function collectSetCookies(headers: IncomingHttpHeaders): string[] {
   const raw = headers["set-cookie"];
   if (!raw) return [];
@@ -146,8 +160,16 @@ async function proxy(
 
   // Reenviar Set-Cookie tal cual (sin Domain). No usar cookies.set(): Next
   // vuelve a URL-encodear el valor y express-session queda inválido (s%253A…).
-  for (const cookie of collectSetCookies(upstream.headers)) {
+  const upstreamCookies = collectSetCookies(upstream.headers);
+  for (const cookie of upstreamCookies) {
     response.headers.append("set-cookie", rewriteSetCookie(cookie));
+
+    const sessionName = cookie.split("=", 1)[0]?.trim();
+    if (sessionName === "connect.sid") {
+      // Borrar cookies legacy en .cerebiia.com.co: si el navegador las envía
+      // junto con la nueva (host-only), express-session falla con 401.
+      clearLegacySessionCookies(response, sessionName);
+    }
   }
 
   return response;

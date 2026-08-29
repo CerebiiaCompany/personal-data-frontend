@@ -82,7 +82,10 @@ function LoginForm() {
     if (!sessionUser) {
       const session = await getSession();
       if (session.error) {
-        const parsedError = parseApiError(session.error);
+        const parsedError =
+          session.error.code === "auth/unauthenticated"
+            ? "No se pudo validar la sesión. Borra las cookies de cerebiia.com.co en tu navegador (Configuración → Privacidad → Cookies) e intenta de nuevo."
+            : parseApiError(session.error);
         setError(parsedError);
         setLoading(false);
         toast.error(parsedError);
