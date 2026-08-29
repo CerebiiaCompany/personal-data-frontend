@@ -33,7 +33,6 @@ function buildIdentificationSchema(isChile: boolean) {
       province_name: z.string().optional(),
       phone_numbers: z.array(z.object({ value: z.string() })).optional(),
       website: z.string().optional(),
-      institutional_email: z.string().optional(),
       public_contact_email: z.string().optional(),
       arco_portal_contact: z.string().optional(),
     })
@@ -119,7 +118,6 @@ const IdentificationSection = ({ companyId, profile }: Props) => {
       province_name: geo.province,
       phone_numbers: (profile.phoneNumbers ?? []).map((v) => ({ value: v })),
       website: profile.website ?? "",
-      institutional_email: profile.email ?? "",
       public_contact_email:
         profile.publicContactEmail ??
         (profile.regionName ? profile.email ?? "" : ""),
@@ -139,7 +137,6 @@ const IdentificationSection = ({ companyId, profile }: Props) => {
       province_name: isChile ? values.province_name : undefined,
       phone_numbers: values.phone_numbers?.map((p) => p.value).filter(Boolean),
       website: values.website,
-      institutional_email: values.institutional_email,
       public_contact_email: values.public_contact_email,
       arco_portal_contact: values.arco_portal_contact,
     });
@@ -153,7 +150,7 @@ const IdentificationSection = ({ companyId, profile }: Props) => {
     <ProfileSectionCard
       icon="tabler:building-skyscraper"
       title="Identificación de la empresa"
-      description={`Nombre, ${juridicaDocLabel}, dirección, ciudad, departamento, teléfonos, sitio web y correo institucional.`}
+      description={`Nombre, ${juridicaDocLabel}, dirección, teléfonos, sitio web y contacto ARCO.`}
       onSubmit={handleSubmit(onSubmit)}
       loading={loading}
     >
@@ -259,17 +256,6 @@ const IdentificationSection = ({ companyId, profile }: Props) => {
         )}
         <div className="flex flex-col gap-1">
           <CustomInput
-            label="Correo institucional"
-            placeholder="Ej. contacto@empresa.com"
-            {...register("institutional_email")}
-            error={errors.institutional_email}
-          />
-          <p className="text-xs text-stone-400 pl-2">
-            Es el correo de acceso del administrador — no se muestra a los titulares.
-          </p>
-        </div>
-        <div className="flex flex-col gap-1">
-          <CustomInput
             label="Correo ARCO de contacto"
             placeholder="Ej. atencion@empresa.com"
             {...register("public_contact_email")}
@@ -280,8 +266,8 @@ const IdentificationSection = ({ companyId, profile }: Props) => {
           </p>
         </div>
         <CustomInput
-          label="Correo/URL Portal ARCO"
-          placeholder="Ej. arco@empresa.com o https://empresa.com/arco"
+          label="URL Portal ARCO"
+          placeholder="Ej. https://empresa.com/arco"
           {...register("arco_portal_contact")}
           error={errors.arco_portal_contact}
         />
