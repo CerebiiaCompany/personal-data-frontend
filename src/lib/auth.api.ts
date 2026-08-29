@@ -9,21 +9,30 @@ type AuthSessionPayload = {
   companyUserData?: SessionUser["companyUserData"];
 };
 
+type LoginResponsePayload = AuthSessionPayload | SessionUser | { userId?: string };
+
+function isCompleteSessionUser(value: unknown): value is SessionUser {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as SessionUser;
+  return Boolean(candidate.username && candidate.role);
+}
+
 export function resolveSessionUser(
-  payload: SessionUser | AuthSessionPayload | undefined | null
+  payload: LoginResponsePayload | undefined | null
 ): SessionUser | undefined {
   if (!payload) return undefined;
 
   if ("user" in payload && payload.user) {
-    return {
+    const merged: SessionUser = {
       ...payload.user,
       company: payload.company ?? payload.user.company,
       companyUserData:
         payload.companyUserData ?? payload.user.companyUserData,
     };
+    return isCompleteSessionUser(merged) ? merged : undefined;
   }
 
-  return payload as SessionUser;
+  return isCompleteSessionUser(payload) ? payload : undefined;
 }
 
 export async function getSession(): Promise<APIResponse<SessionUser>> {
@@ -48,8 +57,8 @@ export async function getPermissions(): Promise<
 export async function loginUser(
   username: string,
   password: string
-): Promise<APIResponse<SessionUser | AuthSessionPayload>> {
-  return customFetch<SessionUser | AuthSessionPayload>("/auth", {
+): Promise<APIResponse<LoginResponsePayload>> {
+  return customFetch<LoginResponsePayload>("/auth", {
     method: "POST",
     body: JSON.stringify({ username, password }),
   });

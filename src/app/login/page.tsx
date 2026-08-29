@@ -9,7 +9,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSessionStore } from "@/store/useSessionStore";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { getSession, loginUser, getPermissions, resolveSessionUser } from "@/lib/auth.api";
+import { getSession, loginUser, getPermissions } from "@/lib/auth.api";
 import { UserPermissionsResponse } from "@/types/user.types";
 import { parseApiError } from "@/utils/parseApiError";
 import AccountActivationForm from "@/components/auth/AccountActivationForm";
@@ -77,34 +77,24 @@ function LoginForm() {
       return false;
     }
 
-    let sessionUser = resolveSessionUser(loginRes.data);
-
-    if (!sessionUser) {
-      const session = await getSession();
-      if (session.error) {
-        const parsedError =
-          session.error.code === "auth/unauthenticated"
-            ? "No se pudo validar la sesión. Borra las cookies de cerebiia.com.co en tu navegador (Configuración → Privacidad → Cookies) e intenta de nuevo."
-            : parseApiError(session.error);
-        setError(parsedError);
-        setLoading(false);
-        toast.error(parsedError);
-        return false;
-      }
-      sessionUser = session.data;
-    } else {
-      const sessionCheck = await getSession();
-      if (sessionCheck.error?.code === "auth/unauthenticated") {
-        setError(
-          "Inicio de sesión incompleto: el navegador no guardó la cookie de sesión. Limpia cookies de data.cerebiia.com.co e intenta de nuevo."
-        );
-        setLoading(false);
-        toast.error(
-          "No se pudo establecer la sesión. Limpia cookies del sitio e intenta otra vez."
-        );
-        return false;
-      }
+    const session = await getSession();
+    if (session.error?.code === "auth/unauthenticated") {
+      const parsedError =
+        "No se pudo validar la sesión. Borra las cookies de cerebiia.com.co en tu navegador e intenta de nuevo.";
+      setError(parsedError);
+      setLoading(false);
+      toast.error(parsedError);
+      return false;
     }
+    if (session.error) {
+      const parsedError = parseApiError(session.error);
+      setError(parsedError);
+      setLoading(false);
+      toast.error(parsedError);
+      return false;
+    }
+
+    const sessionUser = session.data;
 
     if (!sessionUser) {
       setError("No se pudo obtener la sesión del usuario");

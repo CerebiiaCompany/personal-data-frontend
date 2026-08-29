@@ -385,8 +385,8 @@ const DashboardNavbar = () => {
           <div
             className="bg-[#2D60E0] max-w-8 min-w-8 w-full aspect-square grid place-content-center text-white font-bold rounded-lg text-[10px] shadow-[0_3px_10px_rgba(45,96,224,0.4)]"
           >
-            {session.user?.name[0]}
-            {session.user?.lastName[0]}
+            {session.user?.name?.[0] ?? ""}
+            {session.user?.lastName?.[0] ?? ""}
           </div>
           <div
             className={clsx([

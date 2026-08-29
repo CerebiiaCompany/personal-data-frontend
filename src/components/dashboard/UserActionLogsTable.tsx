@@ -35,13 +35,14 @@ const UserActionLogsTable = ({ items }: Props) => {
             >
               <div className="flex items-center gap-2.5">
                 <div className="bg-[#15367C] w-8 h-8 aspect-square grid place-content-center text-white font-bold rounded-md text-[11px]">
-                  {item.user?.name[0]}
-                  {item.user?.lastName[0]}
+                  {item.user?.name?.[0] ?? ""}
+                  {item.user?.lastName?.[0] ?? ""}
                 </div>
 
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-[#152F63] text-ellipsis">
-                    {item.user?.name.split(" ")[0]} {item.user?.lastName.split(" ")[0]}
+                    {item.user?.name?.split(" ")?.[0] ?? ""}{" "}
+                    {item.user?.lastName?.split(" ")?.[0] ?? ""}
                   </p>
                   <p className="text-xs text-[#6A7EA7] text-ellipsis">
                     {parseActionLogTargetModelToString(item.targetModel)}

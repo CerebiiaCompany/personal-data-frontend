@@ -190,9 +190,11 @@ export async function customFetch<T>(
         } catch {}
 
         const isPublic = isPublicClientContext(endpoint);
+        const isAuthProbe =
+          endpoint === "/auth" || endpoint.startsWith("/auth?");
 
-        if (isPublic) {
-          // For public endpoints, DO NOT logout or redirect; just return server error/message
+        if (isPublic || isAuthProbe) {
+          // Session probes and public routes must not trigger logout/redirect.
           return (
             serverBody ?? {
               error: { code: "auth/unauthenticated", message: "Error en la autenticación" },
