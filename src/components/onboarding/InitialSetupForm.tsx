@@ -269,9 +269,17 @@ export default function InitialSetupForm({ companyId, initialCompany, onComplete
                   options={comunaOptions}
                   value={watch("communeName")}
                   unselectedText={
-                    selectedRegionName ? "Seleccionar Comuna" : "Selecciona una Región primero"
+                    !selectedRegionName
+                      ? "Selecciona una Región primero"
+                      : !selectedProvinceName
+                        ? "Selecciona una Provincia primero"
+                        : "Seleccionar Comuna"
                   }
-                  disabled={!selectedRegionName || comunaOptions.length === 0}
+                  disabled={
+                    !selectedRegionName ||
+                    !selectedProvinceName ||
+                    comunaOptions.length === 0
+                  }
                   onChange={(val) =>
                     setValue("communeName", val, { shouldValidate: true, shouldDirty: true })
                   }
