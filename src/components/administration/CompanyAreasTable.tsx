@@ -16,7 +16,7 @@ import Button from "../base/Button";
 import Link from "next/link";
 import { deleteCompanyArea } from "@/lib/companyArea.api";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
-import { useOwnCompanyStore } from "@/store/useOwnCompanyStore";
+import { useCompanyCountryCode } from "@/hooks/useCompanyCountryCode";
 import { toast } from "sonner";
 import { parseApiError } from "@/utils/parseApiError";
 
@@ -29,9 +29,7 @@ interface Props {
 
 const CompanyAreasTable = ({ items, loading, error, refresh }: Props) => {
   const companyId = useActiveCompanyId();
-  const companyFromStore = useOwnCompanyStore((store) => store.company);
-  const companyCountryCode =
-    companyFromStore?.countryCode ?? items?.[0]?.country;
+  const companyCountryCode = useCompanyCountryCode(items?.[0]?.country);
   const isChileJurisdiction = isChileCompanyArea(companyCountryCode);
 
   const [selectedArea, setSelectedArea] = useState<{

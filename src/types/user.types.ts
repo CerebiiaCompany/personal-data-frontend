@@ -244,6 +244,7 @@ export interface SessionUser {
     email: string;
     phone: string;
     planId: string;
+    countryCode?: string;
     plan?: {
       _id: string;
       name: string;

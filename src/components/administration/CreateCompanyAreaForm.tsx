@@ -33,8 +33,7 @@ import { normalizeCountryIsoCode } from "@/utils/country.utils";
 import { createCompanyArea, updateCompanyArea } from "@/lib/companyArea.api";
 import { useCompanyUsers } from "@/hooks/useCompanyUsers";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
-import { useOwnCompanyStore } from "@/store/useOwnCompanyStore";
-import { useSessionStore } from "@/store/useSessionStore";
+import { useCompanyCountryCode } from "@/hooks/useCompanyCountryCode";
 import { useJurisdictionGeographicDivisions } from "@/hooks/useJurisdictionGeographicDivisions";
 import { findChileanProvinceByComuna } from "@/constants/chileanRegions";
 
@@ -44,12 +43,7 @@ interface Props {
 
 const CreateCompanyAreaForm = ({ initialValues }: Props) => {
   const companyId = useActiveCompanyId();
-  const { user } = useSessionStore();
-  const companyFromStore = useOwnCompanyStore((store) => store.company);
-  const companyCountryCode =
-    companyFromStore?.countryCode ??
-    (user as any)?.company?.countryCode ??
-    (user as any)?.companyUserData?.company?.countryCode;
+  const companyCountryCode = useCompanyCountryCode(initialValues?.country);
 
   const defaultCountry = getDefaultAreaCountryByJurisdiction(companyCountryCode);
   const [loading, setLoading] = useState<boolean>(false);
