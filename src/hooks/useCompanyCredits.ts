@@ -1,8 +1,8 @@
 import { fetchCompanyCreditsByMonth } from "@/lib/company.api";
 import { CompanyCreditsCurrentMonth } from "@/types/company.types";
 import { parseApiError } from "@/utils/parseApiError";
+import { toastApiError } from "@/utils/toastApiError";
 import { useEffect, useState, useCallback } from "react";
-import { toast } from "sonner";
 
 export function useCompanyCredits(params?: { year: number; month: number }) {
   const [data, setData] = useState<CompanyCreditsCurrentMonth | null>(null);
@@ -26,7 +26,7 @@ export function useCompanyCredits(params?: { year: number; month: number }) {
       const parsedError = parseApiError(fetchedData.error);
       setError(parsedError);
       setLoading(false);
-      toast.error(parsedError);
+      toastApiError(parsedError);
       return;
     }
 

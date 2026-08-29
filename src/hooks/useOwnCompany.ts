@@ -1,8 +1,8 @@
 import { fetchOwnCompany } from "@/lib/company.api";
 import { Company } from "@/types/company.types";
 import { parseApiError } from "@/utils/parseApiError";
+import { toastApiError } from "@/utils/toastApiError";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
 
 export function useOwnCompany() {
   const [data, setData] = useState<Company | null>(null);
@@ -17,7 +17,7 @@ export function useOwnCompany() {
       const parsedError = parseApiError(fetchedData.error);
       setError(parsedError);
       setLoading(false);
-      toast.error(parsedError);
+      toastApiError(parsedError);
       return;
     }
 

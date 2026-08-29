@@ -5,8 +5,8 @@ import {
   CollectFormClasification,
 } from "@/types/collectForm.types";
 import { parseApiError } from "@/utils/parseApiError";
+import { toastApiError } from "@/utils/toastApiError";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
 
 function normalizeClasificationItem(
   item: CollectFormClasification & { updated?: string | Date }
@@ -45,7 +45,7 @@ export function useCollectFormClasifications(params: UseCollectFormClasification
 
       // Solo mostrar error si NO es 403 (sin permisos)
       if (fetchedData.error.code !== "auth/unauthorized") {
-        toast.error(parsedError);
+        toastApiError(parsedError);
       }
       return;
     }

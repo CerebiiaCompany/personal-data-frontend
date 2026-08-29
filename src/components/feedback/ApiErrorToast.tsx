@@ -115,6 +115,10 @@ function showFeedbackToast(presentation: ApiErrorPresentation) {
       <FeedbackToast toastId={toastId} presentation={presentation} />
     ),
     {
+      id:
+        presentation.variant === "network"
+          ? "http-network-error"
+          : undefined,
       duration: presentation.duration,
       position: "top-center",
     }

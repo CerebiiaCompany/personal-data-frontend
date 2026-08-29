@@ -26,9 +26,6 @@ export function useNotifications({ companyId, enabled = true }: Params) {
     if (!companyId) return;
     const res = await fetchUnreadNotificationsCount(companyId);
     if (res.error) {
-      if (res.error.code !== "auth/unauthorized") {
-        showApiErrorToast(res.error, res.error.status);
-      }
       return;
     }
     const count = Number(res.data?.count ?? 0);

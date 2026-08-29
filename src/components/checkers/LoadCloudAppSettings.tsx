@@ -4,68 +4,67 @@ import React, { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { useSessionStore } from "@/store/useSessionStore";
 import { parseApiError } from "@/utils/parseApiError";
+import { toastApiError } from "@/utils/toastApiError";
 import { useAppSettingsStore } from "@/store/useAppSettingsStore";
 import { fetchAppSettings } from "@/lib/appSetting.api";
-import { toast } from "sonner";
 
 const LoadCloudAppSettings = () => {
   const pathname = usePathname();
-  const user = useSessionStore((store) => store.user);
-  const error = useSessionStore((store) => store.error);
-  const loading = useSessionStore((store) => store.loading);
-  
+  const userId = useSessionStore((store) => store.user?._id);
+  const sessionError = useSessionStore((store) => store.error);
+
   const settings = useAppSettingsStore((store) => store.settings);
   const setSettings = useAppSettingsStore((store) => store.setSettings);
   const setError = useAppSettingsStore((store) => store.setError);
   const setLoading = useAppSettingsStore((store) => store.setLoading);
-  
-  const hasTriedRef = useRef(false);
 
-  async function recoverSettings() {
-    // Don't fetch if there's no user or there's an auth error
-    if (!user || error || pathname === "/login") {
+  const attemptedForUserRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!userId) {
+      attemptedForUserRef.current = null;
       return;
     }
 
-    if (hasTriedRef.current) return;
-    hasTriedRef.current = true;
+    if (sessionError || settings || pathname === "/login") {
+      return;
+    }
 
-    try {
+    if (attemptedForUserRef.current === userId) {
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
       setLoading(true);
+      try {
+        const settingsData = await fetchAppSettings({});
+        if (cancelled) return;
 
-      const settingsData = await fetchAppSettings({});
+        attemptedForUserRef.current = userId;
 
-      if (settingsData.error) {
-        // Don't show error toast for auth errors, just set error
-        const parsedError = parseApiError(settingsData.error);
-        setError(parsedError);
-        
-        // Only show toast if it's not an auth error
-        if (settingsData.error.code !== "auth/unauthenticated") {
-          toast.error(parsedError);
+        if (settingsData.error) {
+          const parsedError = parseApiError(settingsData.error);
+          setError(parsedError);
+          if (settingsData.error.code !== "auth/unauthenticated") {
+            toastApiError(parsedError);
+          }
+          return;
         }
-        return;
+
+        setSettings(settingsData.data);
+      } catch (error) {
+        if (cancelled) return;
+        attemptedForUserRef.current = userId;
+        setError((error as Error).message || "Unknown error");
       }
+    })();
 
-      setSettings(settingsData.data);
-      setLoading(false);
-    } catch (error) {
-      setError((error as Error).message || "Unknown error");
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    // Only try to load settings if we have a user and no auth error
-    if (user && !error && !settings && !loading && pathname !== "/login") {
-      recoverSettings();
-    }
-    
-    // Reset ref when user changes
-    if (user) {
-      hasTriedRef.current = false;
-    }
-  }, [user, error, settings, loading, pathname]);
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, sessionError, settings, pathname, setError, setLoading, setSettings]);
 
   return null;
 };

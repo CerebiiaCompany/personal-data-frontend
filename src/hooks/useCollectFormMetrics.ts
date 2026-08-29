@@ -3,8 +3,8 @@ import {
   fetchCompanyCollectFormsCount,
 } from "@/lib/collectForm.api";
 import { parseApiError } from "@/utils/parseApiError";
+import { toastApiError } from "@/utils/toastApiError";
 import { useCallback, useEffect, useState } from "react";
-import { toast } from "sonner";
 
 export function useCompanyCollectFormsCount(params?: { enabled?: boolean }) {
   const enabled = params?.enabled ?? true;
@@ -26,7 +26,7 @@ export function useCompanyCollectFormsCount(params?: { enabled?: boolean }) {
       setLoading(false);
 
       if (fetchedData.error.code !== "auth/unauthorized") {
-        toast.error(parsedError);
+        toastApiError(parsedError);
       }
       return;
     }
@@ -79,7 +79,7 @@ export function useAcceptedPoliciesByMonth(params: {
       setLoading(false);
 
       if (fetchedData.error.code !== "auth/unauthorized") {
-        toast.error(parsedError);
+        toastApiError(parsedError);
       }
       return;
     }

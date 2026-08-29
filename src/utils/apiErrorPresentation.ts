@@ -30,10 +30,9 @@ function isRateLimitError(error: APIError, httpStatus?: number): boolean {
   if (error.code && RATE_LIMIT_CODES.has(error.code)) return true;
   const message = error.message?.toLowerCase() ?? "";
   return (
-    message.includes("intenta de nuevo") ||
     message.includes("demasiadas solicitudes") ||
     message.includes("rate limit") ||
-    message.includes("límite")
+    message.includes("límite de")
   );
 }
 

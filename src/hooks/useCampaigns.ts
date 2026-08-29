@@ -2,8 +2,8 @@ import { fetchCampaigns } from "@/lib/campaign.api";
 import { QueryParams } from "@/types/api.types";
 import { Campaign } from "@/types/campaign.types";
 import { parseApiError } from "@/utils/parseApiError";
+import { toastApiError } from "@/utils/toastApiError";
 import { useEffect, useState, useCallback, useRef } from "react";
-import { toast } from "sonner";
 
 interface UseCampaignsParams extends QueryParams {
   /**
@@ -40,7 +40,7 @@ export function useCampaigns<T = Campaign[]>(params: UseCampaignsParams) {
       
       // Solo mostrar error si NO es 403 (sin permisos)
       if (fetchedData.error.code !== "auth/unauthorized") {
-        toast.error(parsedError);
+        toastApiError(parsedError);
       }
       return;
     }

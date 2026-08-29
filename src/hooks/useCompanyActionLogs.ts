@@ -2,8 +2,8 @@ import { fetchCompanyActionLogs } from "@/lib/userActionLogs.api";
 import { APIResponse, QueryParams } from "@/types/api.types";
 import { UserActionLog } from "@/types/userActionLogs.types";
 import { parseApiError } from "@/utils/parseApiError";
+import { toastApiError } from "@/utils/toastApiError";
 import { useCallback, useEffect, useState } from "react";
-import { toast } from "sonner";
 
 interface UseCompanyActionLogsParams extends QueryParams {
   companyId: string | undefined;
@@ -38,7 +38,7 @@ export function useCompanyActionLogs(params: UseCompanyActionLogsParams) {
       setError(parsedError);
       setLoading(false);
       if (result.error.code !== "auth/unauthorized") {
-        toast.error(parsedError);
+        toastApiError(parsedError);
       }
       return;
     }
