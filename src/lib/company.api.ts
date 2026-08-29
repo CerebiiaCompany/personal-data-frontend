@@ -132,6 +132,7 @@ export async function updateCompanyIdentification(
     main_address?: string;
     city?: string;
     department?: string;
+    province_name?: string;
     phone_numbers?: string[];
     website?: string;
     institutional_email?: string;

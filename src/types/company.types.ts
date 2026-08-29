@@ -166,6 +166,12 @@ export interface CompanyProfile {
   mainAddress?: string;
   city?: string;
   department?: string;
+  // Campos geográficos de ONB-01 (Chile) — el perfil los usa con fallback
+  // a mainAddress/city/department para empresas legacy.
+  regionName?: string;
+  provinceName?: string;
+  communeName?: string;
+  address?: string;
   phoneNumbers?: string[];
   website?: string;
   manager?: {

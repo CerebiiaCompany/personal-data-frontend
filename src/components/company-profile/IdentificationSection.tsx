@@ -9,7 +9,6 @@ import { Icon } from "@iconify/react";
 
 import CustomInput from "@/components/forms/CustomInput";
 import CustomSelect from "@/components/forms/CustomSelect";
-import Button from "@/components/base/Button";
 import ProfileSectionCard from "./ProfileSectionCard";
 import { updateCompanyIdentification } from "@/lib/company.api";
 import { CompanyProfile } from "@/types/company.types";
@@ -21,7 +20,7 @@ import {
   normalizeRut,
   RUT_INVALID_MESSAGE,
 } from "@/utils/rutValidator";
-import { CHILEAN_REGIONS, findChileanRegion } from "@/constants/chileanRegions";
+import { useJurisdictionGeographicDivisions } from "@/hooks/useJurisdictionGeographicDivisions";
 
 function buildIdentificationSchema(isChile: boolean) {
   return z
@@ -31,6 +30,7 @@ function buildIdentificationSchema(isChile: boolean) {
       main_address: z.string().optional(),
       city: z.string().optional(),
       department: z.string().optional(),
+      province_name: z.string().optional(),
       phone_numbers: z.array(z.object({ value: z.string() })).optional(),
       website: z.string().optional(),
       institutional_email: z.string().optional(),
@@ -55,6 +55,15 @@ type FormValues = z.infer<ReturnType<typeof buildIdentificationSchema>>;
 interface Props {
   companyId: string;
   profile: CompanyProfile | null;
+}
+
+function resolveProfileGeography(profile: CompanyProfile) {
+  return {
+    region: profile.regionName ?? profile.department ?? "",
+    province: profile.provinceName ?? "",
+    commune: profile.communeName ?? profile.city ?? "",
+    address: profile.address ?? profile.mainAddress ?? "",
+  };
 }
 
 const IdentificationSection = ({ companyId, profile }: Props) => {
@@ -85,31 +94,35 @@ const IdentificationSection = ({ companyId, profile }: Props) => {
     name: "phone_numbers",
   });
 
-  const selectedRegionName = watch("department");
-  const regionOptions = React.useMemo(
-    () => CHILEAN_REGIONS.map((r) => ({ title: r.name, value: r.name })),
-    []
+  const { regionOptions, getProvinciaOptions, getComunaOptions } =
+    useJurisdictionGeographicDivisions(isChile ? "CL" : "CO");
+  const selectedRegionName = watch("department") ?? "";
+  const selectedProvinceName = watch("province_name") ?? "";
+  const provinciaOptions = React.useMemo(
+    () => getProvinciaOptions(selectedRegionName),
+    [getProvinciaOptions, selectedRegionName]
   );
-
-  const comunaOptions = React.useMemo(() => {
-    if (!selectedRegionName) return [];
-    const foundRegion = findChileanRegion(selectedRegionName);
-    if (!foundRegion) return [];
-    return foundRegion.comunas.map((c) => ({ title: c, value: c }));
-  }, [selectedRegionName]);
+  const comunaOptions = React.useMemo(
+    () => getComunaOptions(selectedRegionName, selectedProvinceName),
+    [getComunaOptions, selectedRegionName, selectedProvinceName]
+  );
 
   useEffect(() => {
     if (!profile) return;
+    const geo = resolveProfileGeography(profile);
     reset({
       company_name: profile.name ?? "",
       nit: profile.nit ?? "",
-      main_address: profile.mainAddress ?? "",
-      city: profile.city ?? "",
-      department: profile.department ?? "",
+      main_address: geo.address,
+      city: geo.commune,
+      department: geo.region,
+      province_name: geo.province,
       phone_numbers: (profile.phoneNumbers ?? []).map((v) => ({ value: v })),
       website: profile.website ?? "",
       institutional_email: profile.email ?? "",
-      public_contact_email: profile.publicContactEmail ?? "",
+      public_contact_email:
+        profile.publicContactEmail ??
+        (profile.regionName ? profile.email ?? "" : ""),
       arco_portal_contact: profile.arcoPortalContact ?? "",
     });
   }, [profile, reset]);
@@ -123,6 +136,7 @@ const IdentificationSection = ({ companyId, profile }: Props) => {
       main_address: values.main_address,
       city: values.city,
       department: values.department,
+      province_name: isChile ? values.province_name : undefined,
       phone_numbers: values.phone_numbers?.map((p) => p.value).filter(Boolean),
       website: values.website,
       institutional_email: values.institutional_email,
@@ -184,25 +198,46 @@ const IdentificationSection = ({ companyId, profile }: Props) => {
               unselectedText="Seleccionar Región"
               onChange={(val: string) => {
                 setValue("department", val, { shouldValidate: true, shouldDirty: true });
-                const foundRegion = findChileanRegion(val);
-                const currentCity = watch("city");
-                if (!foundRegion || (currentCity && !foundRegion.comunas.includes(currentCity))) {
-                  setValue("city", "", { shouldValidate: true, shouldDirty: true });
-                }
+                setValue("province_name", "", { shouldValidate: true });
+                setValue("city", "", { shouldValidate: true });
               }}
               error={errors.department as FieldError}
+            />
+            <CustomSelect
+              label="Provincia"
+              options={provinciaOptions}
+              value={watch("province_name")}
+              unselectedText={
+                selectedRegionName
+                  ? "Seleccionar Provincia"
+                  : "Selecciona una Región primero"
+              }
+              onChange={(val: string) => {
+                setValue("province_name", val, { shouldValidate: true, shouldDirty: true });
+                setValue("city", "", { shouldValidate: true });
+              }}
+              disabled={!selectedRegionName}
+              error={errors.province_name as FieldError}
             />
             <CustomSelect
               label="Comuna"
               options={comunaOptions}
               value={watch("city")}
               unselectedText={
-                selectedRegionName
-                  ? "Seleccionar Comuna"
-                  : "Selecciona una Región primero"
+                !selectedRegionName
+                  ? "Selecciona una Región primero"
+                  : !selectedProvinceName
+                    ? "Selecciona una Provincia primero"
+                    : "Seleccionar Comuna"
               }
-              onChange={(val: string) => setValue("city", val, { shouldValidate: true, shouldDirty: true })}
-              disabled={!selectedRegionName || comunaOptions.length === 0}
+              onChange={(val: string) =>
+                setValue("city", val, { shouldValidate: true, shouldDirty: true })
+              }
+              disabled={
+                !selectedRegionName ||
+                !selectedProvinceName ||
+                comunaOptions.length === 0
+              }
               error={errors.city as FieldError}
             />
           </>
