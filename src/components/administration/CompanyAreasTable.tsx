@@ -1,8 +1,13 @@
-import { SessionUser } from "@/types/user.types";
+"use client";
+
 import React, { useState } from "react";
 import LoadingCover from "../layout/LoadingCover";
 import { Icon } from "@iconify/react/dist/iconify.js";
-import { CompanyArea } from "@/types/companyArea.types";
+import {
+  CompanyArea,
+  isChileCompanyArea,
+  resolveCompanyAreaProvince,
+} from "@/types/companyArea.types";
 import { getCountryData } from "@/utils/country.utils";
 import CompanyAreaUsersModal from "./CompanyAreaUsersModal";
 import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
@@ -11,6 +16,8 @@ import Button from "../base/Button";
 import Link from "next/link";
 import { deleteCompanyArea } from "@/lib/companyArea.api";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
+import { useOwnCompanyStore } from "@/store/useOwnCompanyStore";
+import { useSessionStore } from "@/store/useSessionStore";
 import { toast } from "sonner";
 import { parseApiError } from "@/utils/parseApiError";
 
@@ -23,6 +30,14 @@ interface Props {
 
 const CompanyAreasTable = ({ items, loading, error, refresh }: Props) => {
   const companyId = useActiveCompanyId();
+  const companyFromStore = useOwnCompanyStore((store) => store.company);
+  const sessionUser = useSessionStore((store) => store.user);
+  const companyCountryCode =
+    companyFromStore?.countryCode ??
+    sessionUser?.company?.countryCode ??
+    items?.[0]?.country;
+  const isChileJurisdiction = isChileCompanyArea(companyCountryCode);
+
   const [selectedArea, setSelectedArea] = useState<{
     id?: string;
     name?: string;
@@ -45,6 +60,10 @@ const CompanyAreasTable = ({ items, loading, error, refresh }: Props) => {
     refresh();
   }
 
+  const locationHeaders = isChileJurisdiction
+    ? ["Región", "Provincia", "Comuna"]
+    : ["Departamento", "Municipio/Ciudad"];
+
   return (
     <div className="w-full overflow-x-auto flex-1 relative min-h-20">
       <CompanyAreaUsersModal
@@ -55,7 +74,7 @@ const CompanyAreasTable = ({ items, loading, error, refresh }: Props) => {
 
       {items && (
         <div className="w-full overflow-x-auto">
-          <table className="w-full min-w-[700px] table-auto border-separate border-spacing-y-2">
+          <table className="w-full min-w-[860px] table-auto border-separate border-spacing-y-2">
             <thead className="sticky top-0 bg-white z-10">
               <tr>
                 <th
@@ -70,18 +89,15 @@ const CompanyAreasTable = ({ items, loading, error, refresh }: Props) => {
                 >
                   País
                 </th>
-                <th
-                  scope="col"
-                  className="text-center font-medium text-stone-600 text-xs py-2 px-2 sm:px-3 whitespace-nowrap min-w-[100px]"
-                >
-                  Departamento
-                </th>
-                <th
-                  scope="col"
-                  className="text-center font-medium text-stone-600 text-xs py-2 px-2 sm:px-3 whitespace-nowrap min-w-[100px]"
-                >
-                  Ciudad
-                </th>
+                {locationHeaders.map((header) => (
+                  <th
+                    key={header}
+                    scope="col"
+                    className="text-center font-medium text-stone-600 text-xs py-2 px-2 sm:px-3 whitespace-nowrap min-w-[100px]"
+                  >
+                    {header}
+                  </th>
+                ))}
                 <th
                   scope="col"
                   className="text-center font-medium text-stone-600 text-xs py-2 px-2 sm:px-3 whitespace-nowrap min-w-[150px]"
@@ -109,62 +125,97 @@ const CompanyAreasTable = ({ items, loading, error, refresh }: Props) => {
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
-                <tr key={item._id} className="align-middle text-center">
-                  <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm rounded-l-xl whitespace-nowrap">
-                    {item.name}
-                  </td>
-                  <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm truncate max-w-[120px]">
-                    {getCountryData(item.country).name}
-                  </td>
-                  <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm truncate max-w-[120px]">
-                    {item.state}
-                  </td>
-                  <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm truncate max-w-[120px]">
-                    {item.city}
-                  </td>
-                  <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm truncate max-w-[180px]">
-                    {item.address}
-                  </td>
-                  <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm whitespace-nowrap">
-                    {item.usersCount}
-                  </td>
-                  <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm whitespace-nowrap">
-                    <div className="flex items-center justify-center gap-1 sm:gap-1.5 h-full">
-                      <Button
-                        hierarchy="tertiary"
-                        disabled={item.usersCount < 1}
-                        onClick={() =>
-                          showAreaUsers({ id: item._id, name: item.name })
-                        }
-                        className="h-full rounded-lg hover:bg-primary-900/10 transition-colors p-1 sm:p-1.5! aspect-square"
-                      >
-                        <Icon icon="tabler:eye" className="text-lg sm:text-xl" />
-                      </Button>
-                    </div>
-                  </td>
-                  <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm rounded-r-xl whitespace-nowrap">
-                    <div className="flex items-center justify-center gap-1 sm:gap-1.5 h-full">
-                      <Link
-                        href={`/admin/administracion/areas/${item._id}`}
-                        className="h-full rounded-lg hover:bg-primary-900/10 transition-colors p-1 sm:p-1.5 aspect-square"
-                      >
-                        <Icon
-                          icon="material-symbols:edit-outline"
-                          className="text-lg sm:text-xl"
-                        />
-                      </Link>
-                      <button
-                        className="h-full rounded-lg hover:bg-red-400/10 transition-colors p-1 sm:p-1.5 aspect-square"
-                        onClick={(_) => deleteArea(item._id)}
-                        aria-label="Eliminar área"
-                      >
-                        <Icon icon="bx:trash" className="text-lg sm:text-xl text-red-400" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {items.map((item) => {
+                const isChileRow = isChileCompanyArea(item.country);
+                const province = resolveCompanyAreaProvince(item);
+
+                return (
+                  <tr key={item._id} className="align-middle text-center">
+                    <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm rounded-l-xl whitespace-nowrap">
+                      {item.name}
+                    </td>
+                    <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm truncate max-w-[120px]">
+                      {getCountryData(item.country).name}
+                    </td>
+                    {isChileJurisdiction ? (
+                      isChileRow ? (
+                        <>
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm truncate max-w-[140px]">
+                            {item.state || "—"}
+                          </td>
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm truncate max-w-[140px]">
+                            {province || "—"}
+                          </td>
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm truncate max-w-[140px]">
+                            {item.city || "—"}
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm truncate max-w-[140px]">
+                            {item.state || "—"}
+                          </td>
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm truncate max-w-[140px]">
+                            —
+                          </td>
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm truncate max-w-[140px]">
+                            {item.city || "—"}
+                          </td>
+                        </>
+                      )
+                    ) : (
+                      <>
+                        <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm truncate max-w-[140px]">
+                          {item.state || "—"}
+                        </td>
+                        <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm truncate max-w-[140px]">
+                          {item.city || "—"}
+                        </td>
+                      </>
+                    )}
+                    <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm truncate max-w-[180px]">
+                      {item.address}
+                    </td>
+                    <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm whitespace-nowrap">
+                      {item.usersCount}
+                    </td>
+                    <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-1 sm:gap-1.5 h-full">
+                        <Button
+                          hierarchy="tertiary"
+                          disabled={item.usersCount < 1}
+                          onClick={() =>
+                            showAreaUsers({ id: item._id, name: item.name })
+                          }
+                          className="h-full rounded-lg hover:bg-primary-900/10 transition-colors p-1 sm:p-1.5! aspect-square"
+                        >
+                          <Icon icon="tabler:eye" className="text-lg sm:text-xl" />
+                        </Button>
+                      </div>
+                    </td>
+                    <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm rounded-r-xl whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-1 sm:gap-1.5 h-full">
+                        <Link
+                          href={`/admin/administracion/areas/${item._id}`}
+                          className="h-full rounded-lg hover:bg-primary-900/10 transition-colors p-1 sm:p-1.5 aspect-square"
+                        >
+                          <Icon
+                            icon="material-symbols:edit-outline"
+                            className="text-lg sm:text-xl"
+                          />
+                        </Link>
+                        <button
+                          className="h-full rounded-lg hover:bg-red-400/10 transition-colors p-1 sm:p-1.5 aspect-square"
+                          onClick={(_) => deleteArea(item._id)}
+                          aria-label="Eliminar área"
+                        >
+                          <Icon icon="bx:trash" className="text-lg sm:text-xl text-red-400" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

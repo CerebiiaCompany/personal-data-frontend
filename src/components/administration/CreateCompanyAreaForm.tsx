@@ -36,6 +36,7 @@ import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useOwnCompanyStore } from "@/store/useOwnCompanyStore";
 import { useSessionStore } from "@/store/useSessionStore";
 import { useJurisdictionGeographicDivisions } from "@/hooks/useJurisdictionGeographicDivisions";
+import { findChileanProvinceByComuna } from "@/constants/chileanRegions";
 
 interface Props {
   initialValues?: CreateCompanyArea;
@@ -53,7 +54,6 @@ const CreateCompanyAreaForm = ({ initialValues }: Props) => {
   const defaultCountry = getDefaultAreaCountryByJurisdiction(companyCountryCode);
   const [loading, setLoading] = useState<boolean>(false);
   const [tagInput, setTagInput] = useState<string>("");
-  const [selectedProvincia, setSelectedProvincia] = useState<string>("");
   const params = useParams();
   const companyUsers = useCompanyUsers({
     companyId: companyId,
@@ -72,6 +72,13 @@ const CreateCompanyAreaForm = ({ initialValues }: Props) => {
       country:
         normalizeCountryIsoCode(initialValues?.country) ?? defaultCountry,
       state: initialValues?.state ?? "",
+      province:
+        initialValues?.province ??
+        (initialValues?.country?.toLowerCase() === "cl" ||
+        defaultCountry === "cl"
+          ? findChileanProvinceByComuna(initialValues?.state, initialValues?.city)
+              ?.name ?? ""
+          : ""),
       city: initialValues?.city ?? "",
       address: initialValues?.address ?? "",
       tags: initialValues?.tags ?? [],
@@ -95,13 +102,14 @@ const CreateCompanyAreaForm = ({ initialValues }: Props) => {
     useJurisdictionGeographicDivisions(isChile ? "CL" : "CO");
 
   const selectedRegionName = watch("state");
+  const selectedProvinceName = watch("province") ?? "";
   const provinciaOptions = useMemo(
     () => getProvinciaOptions(selectedRegionName),
     [getProvinciaOptions, selectedRegionName]
   );
   const comunaOptions = useMemo(
-    () => getComunaOptions(selectedRegionName, selectedProvincia),
-    [getComunaOptions, selectedRegionName, selectedProvincia]
+    () => getComunaOptions(selectedRegionName, selectedProvinceName),
+    [getComunaOptions, selectedRegionName, selectedProvinceName]
   );
 
   const router = useRouter();
@@ -256,10 +264,11 @@ const CreateCompanyAreaForm = ({ initialValues }: Props) => {
           onChange={(value) => {
             setValue("country", value);
             setValue("state", "");
+            setValue("province", "");
             setValue("city", "");
           }}
         />
-        <div className="flex flex-col sm:flex-row gap-4 sm:gap-5">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-5">
           {isChile ? (
             <>
               <CustomSelect
@@ -268,40 +277,48 @@ const CreateCompanyAreaForm = ({ initialValues }: Props) => {
                 value={watch("state")}
                 unselectedText="Seleccionar Región"
                 onChange={(val) => {
-                  setValue("state", val);
-                  setSelectedProvincia("");
-                  setValue("city", "");
+                  setValue("state", val, { shouldValidate: true, shouldDirty: true });
+                  setValue("province", "", { shouldValidate: true });
+                  setValue("city", "", { shouldValidate: true });
                 }}
                 error={errors.state}
-                className="flex-1"
               />
-              {provinciaOptions.length > 0 && (
-                <CustomSelect
-                  label="Provincia"
-                  options={provinciaOptions}
-                  value={selectedProvincia}
-                  unselectedText="Todas las Provincias"
-                  onChange={(val) => {
-                    setSelectedProvincia(val);
-                    setValue("city", "");
-                  }}
-                  disabled={!selectedRegionName}
-                  className="flex-1"
-                />
-              )}
+              <CustomSelect
+                label="Provincia"
+                options={provinciaOptions}
+                value={watch("province")}
+                unselectedText={
+                  selectedRegionName
+                    ? "Seleccionar Provincia"
+                    : "Selecciona una Región primero"
+                }
+                onChange={(val) => {
+                  setValue("province", val, { shouldValidate: true, shouldDirty: true });
+                  setValue("city", "", { shouldValidate: true });
+                }}
+                disabled={!selectedRegionName}
+                error={errors.province}
+              />
               <CustomSelect
                 label="Comuna"
                 options={comunaOptions}
                 value={watch("city")}
                 unselectedText={
-                  selectedRegionName
-                    ? "Seleccionar Comuna"
-                    : "Selecciona una Región primero"
+                  !selectedRegionName
+                    ? "Selecciona una Región primero"
+                    : !selectedProvinceName
+                      ? "Selecciona una Provincia primero"
+                      : "Seleccionar Comuna"
                 }
-                onChange={(val) => setValue("city", val)}
-                disabled={!selectedRegionName || comunaOptions.length === 0}
+                onChange={(val) =>
+                  setValue("city", val, { shouldValidate: true, shouldDirty: true })
+                }
+                disabled={
+                  !selectedRegionName ||
+                  !selectedProvinceName ||
+                  comunaOptions.length === 0
+                }
                 error={errors.city}
-                className="flex-1"
               />
             </>
           ) : (
@@ -310,13 +327,12 @@ const CreateCompanyAreaForm = ({ initialValues }: Props) => {
                 label={currentCountry?.toLowerCase() === "co" ? "Departamento" : "Departamento/Estado"}
                 {...register("state")}
                 error={errors.state}
-                className="flex-1"
               />
               <CustomInput
                 label={currentCountry?.toLowerCase() === "co" ? "Municipio/Ciudad" : "Ciudad"}
                 {...register("city")}
                 error={errors.city}
-                className="flex-1"
+                className="sm:col-span-2 lg:col-span-1"
               />
             </>
           )}

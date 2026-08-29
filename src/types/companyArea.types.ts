@@ -1,5 +1,6 @@
 import { CustomSelectOption } from "./forms.types";
 import { SessionUser } from "./user.types";
+import { findChileanProvinceByComuna } from "@/constants/chileanRegions";
 
 // Item CHK-014 (auditoría 2026-08-26/27): antes solo 4 países
 // (cl/co/ve/us). LATAM completo + España, códigos ISO 3166-1 alpha-2 en
@@ -72,6 +73,8 @@ export interface CreateCompanyArea {
   name: string;
   country: CountryIsoCode;
   state: string;
+  /** Provincia (CL) u homólogo administrativo cuando aplique. */
+  province?: string;
   city: string;
   address: string;
   tags: string[];
@@ -90,3 +93,14 @@ export type CompanyAreaUser = Pick<
   SessionUser,
   "_id" | "name" | "lastName" | "companyUserData"
 >;
+
+export function isChileCompanyArea(country?: string | null): boolean {
+  return country?.toLowerCase() === "cl";
+}
+
+/** Provincia persistida o inferida desde región + comuna (filas legacy). */
+export function resolveCompanyAreaProvince(area: Pick<CompanyArea, "country" | "state" | "province" | "city">): string {
+  if (area.province?.trim()) return area.province.trim();
+  if (!isChileCompanyArea(area.country)) return "";
+  return findChileanProvinceByComuna(area.state, area.city)?.name ?? "";
+}

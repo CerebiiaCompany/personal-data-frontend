@@ -63,6 +63,21 @@ export function findChileanProvince(
   );
 }
 
+export function findChileanProvinceByComuna(
+  regionName?: string | null,
+  comunaName?: string | null
+): ChileanProvince | undefined {
+  if (!comunaName) return undefined;
+  const foundRegion = findChileanRegion(regionName);
+  if (!foundRegion) return undefined;
+  const normalizedComuna = normalizeChilePlaceName(comunaName);
+  return foundRegion.provinces.find((province) =>
+    province.comunas.some(
+      (comuna) => normalizeChilePlaceName(comuna) === normalizedComuna
+    )
+  );
+}
+
 export const CHILEAN_REGIONS: Region[] = [
   region(
     "Arica y Parinacota",

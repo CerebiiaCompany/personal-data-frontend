@@ -141,31 +141,43 @@ export const createUserValidationSchema = z.object({
     }
   );
 
-export const createCompanyAreaValidationSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1, "Nombre obligatorio")
-    .max(80, "Máximo 80 caracteres"),
-  users: z.array(z.string()).min(0).optional(),
-  country: z.string<CountryIsoCode>(),
-  state: z
-    .string()
-    .trim()
-    .min(1, "Estado/Depto obligatorio")
-    .max(80, "Máximo 80 caracteres"),
-  city: z
-    .string()
-    .trim()
-    .min(1, "Ciudad obligatoria")
-    .max(80, "Máximo 80 caracteres"),
-  address: z
-    .string()
-    .trim()
-    .min(1, "Dirección obligatoria")
-    .max(180, "Máximo 180 caracteres"),
-  tags: z.array(z.string().trim().min(0)).max(20, "Máximo 20 etiquetas"),
-});
+export const createCompanyAreaValidationSchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(1, "Nombre obligatorio")
+      .max(80, "Máximo 80 caracteres"),
+    users: z.array(z.string()).min(0).optional(),
+    country: z.string<CountryIsoCode>(),
+    state: z
+      .string()
+      .trim()
+      .min(1, "Estado/Depto obligatorio")
+      .max(80, "Máximo 80 caracteres"),
+    province: z.string().trim().max(80, "Máximo 80 caracteres").optional(),
+    city: z
+      .string()
+      .trim()
+      .min(1, "Ciudad obligatoria")
+      .max(80, "Máximo 80 caracteres"),
+    address: z
+      .string()
+      .trim()
+      .min(1, "Dirección obligatoria")
+      .max(180, "Máximo 180 caracteres"),
+    tags: z.array(z.string().trim().min(0)).max(20, "Máximo 20 etiquetas"),
+  })
+  .superRefine((data, ctx) => {
+    if (data.country?.toLowerCase() !== "cl") return;
+    if (!data.province?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["province"],
+        message: "Provincia obligatoria",
+      });
+    }
+  });
 
 export const createCompanyRoleValidationSchema = z.object({
   position: z.string().min(1, "Este campo es obligatorio"),
