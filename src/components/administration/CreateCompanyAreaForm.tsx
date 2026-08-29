@@ -65,18 +65,18 @@ const CreateCompanyAreaForm = ({ initialValues }: Props) => {
     formState: { errors },
     setValue,
     watch,
-  } = useForm({
+  } = useForm<CreateCompanyArea>({
     resolver: zodResolver(createCompanyAreaValidationSchema),
-    defaultValues: initialValues
-      ? {
-          ...initialValues,
-          country:
-            normalizeCountryIsoCode(initialValues.country) ?? defaultCountry,
-        }
-      : {
-          country: defaultCountry,
-          tags: [],
-        },
+    defaultValues: {
+      name: initialValues?.name ?? "",
+      country:
+        normalizeCountryIsoCode(initialValues?.country) ?? defaultCountry,
+      state: initialValues?.state ?? "",
+      city: initialValues?.city ?? "",
+      address: initialValues?.address ?? "",
+      tags: initialValues?.tags ?? [],
+      users: initialValues?.users ?? [],
+    },
   });
 
   useEffect(() => {
