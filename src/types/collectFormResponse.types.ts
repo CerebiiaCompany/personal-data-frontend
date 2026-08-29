@@ -345,6 +345,8 @@ export interface CollectFormResponse {
   isJuridica?: boolean;
   userIsJuridica?: boolean;
   consent?: ConsentInfo;
+  /** SHA-256 de la evidencia de consentimiento (Art. 12 Ley 21.719). */
+  consentEvidenceHash?: string | null;
   permissions?: CollectFormPermissions;
   createdAt?: string;
   updatedAt?: string;

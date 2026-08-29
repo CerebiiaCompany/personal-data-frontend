@@ -29,6 +29,7 @@ import {
   parseUserGenderToString,
 } from "@/types/collectFormResponse.types";
 import { hasAnyPermissionBlock } from "@/utils/collectFormPermissions.utils";
+import { copyToClipboard } from "@/utils/clipboard.utils";
 
 interface Props {
   items: CollectFormResponse[] | null;
@@ -96,6 +97,10 @@ function prettyObtainedVia(value?: string) {
   if (v === "MANUAL") return "Manual";
   if (v === "KIOSK") return "Kiosko";
   return value || "—";
+}
+
+function truncateHash(hash: string): string {
+  return hash.length > 10 ? `${hash.slice(0, 10)}…` : hash;
 }
 
 function extractIp(consent?: CollectFormResponse["consent"]): string {
@@ -312,7 +317,7 @@ const FormResponsesTable = ({
               !embedded && "min-h-0 flex-1 overflow-y-auto rounded-t-2xl"
             )}
           >
-            <table className="w-full min-w-[1960px] border-separate border-spacing-0">
+            <table className="w-full min-w-[2040px] border-separate border-spacing-0">
               <thead className="sticky top-0 bg-[#F4F6FA] z-10">
                 <tr>
                   {[
@@ -341,6 +346,7 @@ const FormResponsesTable = ({
                     "Camp. consentimiento",
                     "Compartir terceros",
                     "Política",
+                    "Hash",
                     "Fecha",
                     "Usó OTP",
                     "Estado",
@@ -406,6 +412,7 @@ const FormResponsesTable = ({
                     otp?.failedAttempts ?? item.consent?.otp?.failedVerifyAttempts ?? "—";
                   const consentIp = extractIp(item.consent);
                   const consentUserAgent = extractUserAgent(item.consent);
+                  const evidenceHash = item.consentEvidenceHash?.trim() || "";
 
                   return (
                     <React.Fragment key={item._id}>
@@ -560,6 +567,29 @@ const FormResponsesTable = ({
                           )}
                         </div>
                       </td>
+                      <td className="py-3 px-3 text-[11px] text-[#3A4B70] whitespace-nowrap">
+                        {evidenceHash ? (
+                          <span className="inline-flex items-center gap-1.5">
+                            <span
+                              title={evidenceHash}
+                              className="font-mono text-[10px] text-[#334A79]"
+                            >
+                              {truncateHash(evidenceHash)}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(evidenceHash, "Hash copiado")}
+                              className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-[#DDE6F5] text-[#4869A9] hover:bg-[#EEF3FC]"
+                              aria-label="Copiar hash"
+                              title="Copiar hash completo"
+                            >
+                              <Icon icon="tabler:copy" className="text-[13px]" />
+                            </button>
+                          </span>
+                        ) : (
+                          <span className="text-[#94A3B8]">—</span>
+                        )}
+                      </td>
                       <td className="py-3 px-3 text-[11px] text-[#3A4B70] whitespace-nowrap leading-tight">
                         <p className="font-medium text-[#20345E]">{createdAt.date}</p>
                         <p className="text-[#7B8BA9]">{createdAt.time}</p>
@@ -641,7 +671,7 @@ const FormResponsesTable = ({
                     </tr>
                     {expandedId === item._id && (
                       <tr>
-                        <td colSpan={29} className="px-3 pb-3">
+                        <td colSpan={30} className="px-3 pb-3">
                           <div className="rounded-xl border border-[#E7ECF4] bg-[#FAFCFF] p-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 text-[11px]">
                             {item.permissions && (
                               <div className="md:col-span-2 xl:col-span-4 rounded-lg border border-[#E3E9F5] bg-white p-3 grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -744,6 +774,16 @@ const FormResponsesTable = ({
                               <p className="text-[#1E2D4E]">
                                 {item.consent?.policy?.policyVersionLabel || "—"}
                               </p>
+                            </div>
+                            <div className="md:col-span-2 xl:col-span-4">
+                              <p className="text-[#7A869D] font-semibold">Hash de evidencia</p>
+                              {evidenceHash ? (
+                                <p className="text-[#1E2D4E] break-all font-mono text-[10px]">
+                                  {evidenceHash}
+                                </p>
+                              ) : (
+                                <p className="text-[#1E2D4E]">—</p>
+                              )}
                             </div>
                             <div>
                               <p className="text-[#7A869D] font-semibold">Consentimiento aceptado</p>
