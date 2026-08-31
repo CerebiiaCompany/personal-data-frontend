@@ -44,8 +44,16 @@ const UserActionLogsTable = ({ items }: Props) => {
                     {item.user?.name?.split(" ")?.[0] ?? ""}{" "}
                     {item.user?.lastName?.split(" ")?.[0] ?? ""}
                   </p>
-                  <p className="text-xs text-[#6A7EA7] text-ellipsis">
-                    {parseActionLogTargetModelToString(item.targetModel)}
+                  {/* Item OBS-33 (28 ago 2026): antes solo mostraba el
+                      nombre del modelo ("Empresa") — el Resumen del backend
+                      ya trae el detalle de qué campo cambió y sus valores
+                      (ej. "usesAreaHierarchy: No → Sí"), pero este widget
+                      nunca lo leía. */}
+                  <p
+                    className="truncate text-xs text-[#6A7EA7]"
+                    title={item.summary || parseActionLogTargetModelToString(item.targetModel)}
+                  >
+                    {item.summary || parseActionLogTargetModelToString(item.targetModel)}
                   </p>
                 </div>
 

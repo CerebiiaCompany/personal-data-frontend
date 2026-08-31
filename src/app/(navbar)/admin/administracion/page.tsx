@@ -6,6 +6,7 @@ import EditOwnCompanyDialog from "@/components/dialogs/EditOwnCompanyDialog";
 import ModuleHelpButton from "@/components/tour/ModuleHelpButton";
 import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import { useOwnCompany } from "@/hooks/useOwnCompany";
+import { useOwnCompanyStore } from "@/store/useOwnCompanyStore";
 import { showDialog } from "@/utils/dialogs.utils";
 import { Icon } from "@iconify/react";
 import Link from "next/link";
@@ -16,6 +17,9 @@ const topCardClass =
 
 export default function AdministrationPage() {
   const { data, loading, error, refresh } = useOwnCompany();
+  // Item OBS-176 (AREA-01): el switch es la única fuente de verdad — si
+  // está apagado, "Áreas" ni siquiera aparece en Accesos Rápidos.
+  const usesAreaHierarchy = useOwnCompanyStore((store) => store.company?.usesAreaHierarchy);
   const quickAccessCards = [
     {
       title: "Usuarios",
@@ -23,12 +27,16 @@ export default function AdministrationPage() {
       href: "/admin/administracion/usuarios",
       icon: "tabler:users-group",
     },
-    {
-      title: "Áreas",
-      description: "Administra áreas organizacionales y su estructura.",
-      href: "/admin/administracion/areas",
-      icon: "tabler:building-community",
-    },
+    ...(usesAreaHierarchy === true
+      ? [
+          {
+            title: "Áreas",
+            description: "Administra áreas organizacionales y su estructura.",
+            href: "/admin/administracion/areas",
+            icon: "tabler:building-community",
+          },
+        ]
+      : []),
     {
       title: "Roles",
       description: "Configura roles y permisos por módulo.",

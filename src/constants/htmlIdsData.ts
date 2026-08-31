@@ -15,4 +15,5 @@ export const HTML_IDS_DATA = {
   editCollectFormResponseDialog: "editCollectFormResponseDialog",
   editCompanyCountryDialog: "editCompanyCountryDialog",
   renameTemplateDialog: "renameTemplateDialog",
+  auditLogDetailModal: "auditLogDetailModalWrapper",
 };

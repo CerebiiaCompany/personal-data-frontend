@@ -1,6 +1,7 @@
 "use client";
 
 import AdministrationFormPageLayout from "@/components/administration/AdministrationFormPageLayout";
+import AreaHierarchyGate from "@/components/administration/AreaHierarchyGate";
 import CreateCompanyAreaForm from "@/components/administration/CreateCompanyAreaForm";
 import LoadingCover from "@/components/layout/LoadingCover";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
@@ -9,6 +10,14 @@ import { CompanyArea } from "@/types/companyArea.types";
 import { useParams } from "next/navigation";
 
 export default function AdministrationUpdateAreaPage() {
+  return (
+    <AreaHierarchyGate>
+      <AdministrationUpdateAreaPageContent />
+    </AreaHierarchyGate>
+  );
+}
+
+function AdministrationUpdateAreaPageContent() {
   const companyId = useActiveCompanyId();
   const areaId = useParams().areaId?.toString();
 

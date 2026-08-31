@@ -104,7 +104,9 @@ export const parseActionLogTargetModelToString = (
   "Modelo afectado inválido";
 
 export interface UserActionLog {
+  /** @deprecated el backend nunca devolvió `_id` para este recurso (usa `id`) — se mantiene tipado por compatibilidad con código previo, no usar en código nuevo. */
   _id: string;
+  id: string;
   companyId: string;
   userId?: string;
 
@@ -116,6 +118,12 @@ export interface UserActionLog {
   summary?: string;
   /** Item OBS-36 — SHA-256 de integridad, null en filas previas a este campo */
   hash?: string | null;
+  /** Item OBS-33 (31 ago 2026): snapshots antes/después ya saneados (sin
+   * password/token/hash) — usados por el botón "Ver detalles" para mostrar
+   * el diff completo campo por campo, no solo el resumen truncado. */
+  resourceId?: string | null;
+  before?: Record<string, unknown> | null;
+  after?: Record<string, unknown> | null;
 
   // virtual field
   user?: Pick<SessionUser, "name" | "lastName">;

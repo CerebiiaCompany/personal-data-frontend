@@ -26,6 +26,9 @@ import { useState } from "react";
 import { toast } from "sonner";
 import Button from "@/components/base/Button";
 import { useConfirm } from "@/components/dialogs/ConfirmProvider";
+import AuditLogDetailModal from "./AuditLogDetailModal";
+import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
+import { showDialog } from "@/utils/dialogs.utils";
 
 function truncateHash(hash: string): string {
   return hash.length > 10 ? `${hash.slice(0, 10)}…` : hash;
@@ -140,6 +143,15 @@ async function executeRestore(
 const AuditLogsTable = ({ items, loading, error, refresh }: Props) => {
   const confirm = useConfirm();
   const [restoringId, setRestoringId] = useState<string | null>(null);
+  // Item OBS-33 (31 ago 2026): "Ver detalles" abre un modal con el diff
+  // campo por campo completo (antes/después no viene truncado como el
+  // Resumen de la tabla, que corta a los primeros 3 cambios).
+  const [selectedDetailLog, setSelectedDetailLog] = useState<UserActionLog | null>(null);
+
+  const handleShowDetail = (item: UserActionLog) => {
+    setSelectedDetailLog(item);
+    showDialog(HTML_IDS_DATA.auditLogDetailModal);
+  };
 
   const handleRestore = async (item: UserActionLog) => {
     if (item.type !== "DELETE" || !isRestoreableTargetModel(item.targetModel)) return;
@@ -211,7 +223,7 @@ const AuditLogsTable = ({ items, loading, error, refresh }: Props) => {
                 </th>
                 <th
                   scope="col"
-                  className="min-w-[140px] px-2 py-2 text-center text-xs font-medium text-[#64748B] sm:px-3"
+                  className="min-w-[220px] px-2 py-2 text-center text-xs font-medium text-[#64748B] sm:px-3"
                 >
                   Resumen
                 </th>
@@ -273,7 +285,10 @@ const AuditLogsTable = ({ items, loading, error, refresh }: Props) => {
                     <td className="bg-[#F4F7FF] px-2 py-2 font-medium text-xs text-primary-900 sm:px-4 sm:py-3 sm:text-sm">
                       {parseActionLogTargetModelToString(item.targetModel)}
                     </td>
-                    <td className="mx-auto max-w-[180px] truncate bg-[#F4F7FF] px-2 py-2 font-medium text-xs text-primary-900 sm:px-4 sm:py-3 sm:text-sm">
+                    <td
+                      className="max-w-[320px] whitespace-normal break-words bg-[#F4F7FF] px-2 py-2 text-left font-medium text-xs text-primary-900 sm:px-4 sm:py-3 sm:text-sm"
+                      title={item.summary || undefined}
+                    >
                       {item.summary || "—"}
                     </td>
                     <td
@@ -303,24 +318,35 @@ const AuditLogsTable = ({ items, loading, error, refresh }: Props) => {
                       )}
                     </td>
                     <td className="rounded-r-xl bg-[#F4F7FF] px-2 py-2 font-medium text-xs sm:px-4 sm:py-3 sm:text-sm">
-                      {item.type === "DELETE" && isRestoreableTargetModel(item.targetModel) && (
-                        <Button
+                      <div className="flex items-center justify-center gap-1">
+                        <button
                           type="button"
-                          hierarchy="tertiary"
-                          className="text-xs text-primary-700 hover:bg-primary-100 rounded-lg!"
-                          onClick={() => handleRestore(item)}
-                          disabled={restoringId === item._id}
-                          startContent={
-                            restoringId === item._id ? (
-                              <span className="inline-block w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
-                            ) : (
-                              <Icon icon="tabler:arrow-back-up" className="text-base" />
-                            )
-                          }
+                          onClick={() => handleShowDetail(item)}
+                          className="p-1.5 rounded-lg text-primary-700 hover:bg-primary-100 transition-colors"
+                          aria-label="Ver detalles"
+                          title="Ver detalles del cambio"
                         >
-                          {restoringId === item._id ? "Restaurando…" : "Restaurar"}
-                        </Button>
-                      )}
+                          <Icon icon="tabler:list-details" className="text-base" />
+                        </button>
+                        {item.type === "DELETE" && isRestoreableTargetModel(item.targetModel) && (
+                          <Button
+                            type="button"
+                            hierarchy="tertiary"
+                            className="text-xs text-primary-700 hover:bg-primary-100 rounded-lg!"
+                            onClick={() => handleRestore(item)}
+                            disabled={restoringId === item._id}
+                            startContent={
+                              restoringId === item._id ? (
+                                <span className="inline-block w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
+                              ) : (
+                                <Icon icon="tabler:arrow-back-up" className="text-base" />
+                              )
+                            }
+                          >
+                            {restoringId === item._id ? "Restaurando…" : "Restaurar"}
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -344,6 +370,8 @@ const AuditLogsTable = ({ items, loading, error, refresh }: Props) => {
           </button>
         </div>
       )}
+
+      <AuditLogDetailModal log={selectedDetailLog} />
     </div>
   );
 };

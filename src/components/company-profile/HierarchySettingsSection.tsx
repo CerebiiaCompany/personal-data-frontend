@@ -13,6 +13,12 @@ import { updateCompanySettings } from "@/lib/company.api";
 import { useOwnCompanyStore } from "@/store/useOwnCompanyStore";
 import { CompanyProfile } from "@/types/company.types";
 import { parseApiError } from "@/utils/parseApiError";
+import { useHashSectionFocus } from "@/hooks/useHashSectionFocus";
+
+// Item OBS-176 (AREA-01): ancla para el link "Ir a configuración de empresa"
+// de AreaHierarchyGate.tsx — mismo patrón que
+// DATA_PROTECTION_OFFICER_SECTION_ID (DataProtectionOfficerSection.tsx).
+export const HIERARCHY_SETTINGS_SECTION_ID = "jerarquias-organizacionales";
 
 const schema = z.object({
   usesAreaHierarchy: z.boolean().optional(),
@@ -30,11 +36,18 @@ interface Props {
 // las jerarquías de Área y Sede para la empresa. Cuando están apagados (valor
 // por defecto), CreateCompanyUserForm.tsx oculta los campos correspondientes.
 const HierarchySettingsSection = ({ companyId, profile }: Props) => {
+  useHashSectionFocus(HIERARCHY_SETTINGS_SECTION_ID);
   const [loading, setLoading] = React.useState(false);
   const setCompany = useOwnCompanyStore((store) => store.setCompany);
   const company = useOwnCompanyStore((store) => store.company);
 
-  const { control, handleSubmit, reset, watch } = useForm<FormValues>({
+  const {
+    control,
+    handleSubmit,
+    reset,
+    watch,
+    formState: { isDirty },
+  } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { usesAreaHierarchy: false, usesSiteHierarchy: false },
   });
@@ -67,10 +80,22 @@ const HierarchySettingsSection = ({ companyId, profile }: Props) => {
         usesSiteHierarchy: res.data?.usesSiteHierarchy,
       });
     }
+
+    // Item OBS-177 (31 ago 2026): sin este reset, isDirty quedaba en true
+    // para siempre después de un guardado exitoso (RHF compara contra el
+    // último valor pasado a reset()/defaultValues, no contra "lo guardado
+    // recién"), así que la advertencia de "cambios sin guardar" de abajo
+    // nunca se apagaría tras guardar.
+    reset({
+      usesAreaHierarchy: res.data?.usesAreaHierarchy ?? values.usesAreaHierarchy,
+      usesSiteHierarchy: res.data?.usesSiteHierarchy ?? values.usesSiteHierarchy,
+    });
+
     toast.success("Configuración de jerarquías actualizada");
   }
 
   return (
+    <div id={HIERARCHY_SETTINGS_SECTION_ID} className="scroll-mt-6">
     <ProfileSectionCard
       icon="tabler:sitemap"
       title="Jerarquías organizacionales"
@@ -79,6 +104,27 @@ const HierarchySettingsSection = ({ companyId, profile }: Props) => {
       loading={loading}
     >
       <div className="flex flex-col gap-4">
+        {/* Item OBS-177 (31 ago 2026): el cliente reportó que activar el
+            switch sin guardar es confuso — el toggle se ve "encendido" pero
+            nada cambió todavía en el servidor (por diseño: "Crear Área"
+            sigue oculto hasta guardar, porque se controla por el valor
+            guardado en useOwnCompanyStore, no por este form local). Esta
+            advertencia hace explícito ese estado intermedio en vez de dejar
+            que el usuario asuma que ya quedó activo. */}
+        {isDirty && (
+          <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+            <Icon
+              icon="tabler:alert-triangle"
+              className="mt-0.5 shrink-0 text-xl text-amber-600"
+            />
+            <p className="text-sm text-amber-900">
+              Tienes cambios sin guardar. Hasta que hagas clic en{" "}
+              <strong>&quot;Guardar cambios&quot;</strong>, la configuración
+              seguirá como estaba antes (por ejemplo, &quot;Crear Área&quot;
+              no aparecerá si el interruptor todavía no se ha guardado).
+            </p>
+          </div>
+        )}
         <Controller
           name="usesAreaHierarchy"
           control={control}
@@ -128,6 +174,7 @@ const HierarchySettingsSection = ({ companyId, profile }: Props) => {
         )}
       </div>
     </ProfileSectionCard>
+    </div>
   );
 };
 

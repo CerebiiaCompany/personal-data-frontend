@@ -1,6 +1,7 @@
 "use client";
 
 import CompanyAreasTable from "@/components/administration/CompanyAreasTable";
+import AreaHierarchyGate from "@/components/administration/AreaHierarchyGate";
 import Button from "@/components/base/Button";
 import Pagination from "@/components/base/Pagination";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
@@ -40,6 +41,7 @@ export default function AdministrationAreasPage() {
   };
 
   return (
+    <AreaHierarchyGate>
     <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col bg-[#F8FAFC]">
       <div className="w-full shrink-0 px-5 pt-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
         <section className={clsx(topCardClass, "px-5 py-5 sm:px-6 sm:py-6")}>
@@ -118,5 +120,6 @@ export default function AdministrationAreasPage() {
         </section>
       </div>
     </div>
+    </AreaHierarchyGate>
   );
 }

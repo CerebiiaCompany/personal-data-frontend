@@ -12,6 +12,7 @@ import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import { downloadUsersImportTemplate } from "@/lib/user.api";
 import { parseApiError } from "@/utils/parseApiError";
 import { showDialog } from "@/utils/dialogs.utils";
+import { useOwnCompanyStore } from "@/store/useOwnCompanyStore";
 import { Icon } from "@iconify/react";
 import Link from "next/link";
 import clsx from "clsx";
@@ -25,6 +26,10 @@ const NAVY = "#1A2B5B";
 
 export default function AdministrationUsersPage() {
   const companyId = useActiveCompanyId();
+  // Feedback de usuario (28 ago 2026): la columna Área confunde cuando el
+  // switch "Mi empresa usa áreas o equipos funcionales" está apagado —
+  // ningún usuario puede tener una asignada en ese caso.
+  const usesAreaHierarchy = useOwnCompanyStore((store) => store.company?.usesAreaHierarchy);
   const { debouncedValue, search, setSearch } = useDebouncedSearch();
   const [page, setPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
@@ -162,6 +167,7 @@ export default function AdministrationUsersPage() {
               items={data}
               loading={loading}
               error={error}
+              showAreaColumn={usesAreaHierarchy === true}
             />
           </div>
           {meta ? (

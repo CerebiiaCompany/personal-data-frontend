@@ -15,6 +15,12 @@ interface Props {
   error: string | null;
   refresh: () => void;
   editActions?: boolean;
+  /** Feedback de usuario (28 ago 2026): si el switch "Mi empresa usa áreas o
+   * equipos funcionales" está apagado, la columna Área confunde porque
+   * ningún usuario podrá tener una asignada — se oculta. Default true para
+   * no cambiar el comportamiento de superadmin/administradores (lista
+   * COMPANY_ADMIN de múltiples empresas, sin un único switch aplicable). */
+  showAreaColumn?: boolean;
 }
 
 const CompanyUsersTable = ({
@@ -23,6 +29,7 @@ const CompanyUsersTable = ({
   error,
   refresh,
   editActions = true,
+  showAreaColumn = true,
 }: Props) => {
   const user = useSessionStore((store) => store.user);
   const companyId = useActiveCompanyId();
@@ -58,12 +65,14 @@ const CompanyUsersTable = ({
                 >
                   Nombre
                 </th>
-                <th
-                  scope="col"
-                  className="text-center font-medium text-stone-600 text-xs py-2 px-2 sm:px-3 whitespace-nowrap min-w-[100px]"
-                >
-                  Área
-                </th>
+                {showAreaColumn && (
+                  <th
+                    scope="col"
+                    className="text-center font-medium text-stone-600 text-xs py-2 px-2 sm:px-3 whitespace-nowrap min-w-[100px]"
+                  >
+                    Área
+                  </th>
+                )}
                 <th
                   scope="col"
                   className="text-center font-medium text-stone-600 text-xs py-2 px-2 sm:px-3 whitespace-nowrap min-w-[100px]"
@@ -98,11 +107,13 @@ const CompanyUsersTable = ({
                   <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm rounded-l-xl whitespace-nowrap">
                     {item.name} {item.lastName}
                   </td>
-                  <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm truncate max-w-[120px]">
-                    {item.companyUserData?.companyArea
-                      ? item.companyUserData?.companyArea.name
-                      : "Ninguna"}
-                  </td>
+                  {showAreaColumn && (
+                    <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm truncate max-w-[120px]">
+                      {item.companyUserData?.companyArea
+                        ? item.companyUserData?.companyArea.name
+                        : "Ninguna"}
+                    </td>
+                  )}
                   <td className="py-2 sm:py-3 px-2 sm:px-4 bg-primary-50 font-medium text-xs sm:text-sm truncate max-w-[120px]">
                     {item.companyUserData?.companyRole
                       ? item.companyUserData?.companyRole.position

@@ -1,8 +1,10 @@
 "use client";
 import { useEffect, useRef } from "react";
 import { useSessionStore } from "@/store/useSessionStore";
+import { useOwnCompanyStore } from "@/store/useOwnCompanyStore";
 import { parseApiError } from "@/utils/parseApiError";
 import { getSession, getPermissions, resolveSessionUser } from "@/lib/auth.api";
+import { fetchOwnCompany } from "@/lib/company.api";
 import { UserPermissionsResponse } from "@/types/user.types";
 
 // Función auxiliar para validar si un error es válido y no vacío
@@ -18,6 +20,8 @@ export function AuthHydrator() {
   const setPermissions = useSessionStore((store) => store.setPermissions);
   const setError = useSessionStore((store) => store.setError);
   const setLoading = useSessionStore((store) => store.setLoading);
+  const setCompany = useOwnCompanyStore((store) => store.setCompany);
+  const setCompanyError = useOwnCompanyStore((store) => store.setError);
   const isLoadingRef = useRef(false);
   const hasLoadedRef = useRef(false);
   const retryCountRef = useRef(0);
@@ -139,6 +143,31 @@ export function AuthHydrator() {
           sessionUser.companyUserData?.personalEmail
         );
         setUser(sessionUser);
+
+        // Item OBS-176 (AREA-01): useOwnCompanyStore antes solo se poblaba
+        // desde CheckActiveSession.tsx, cuyo fetch únicamente se dispara
+        // cuando cambia el pathname DESPUÉS del primer render — en una
+        // carga fría (F5 directo en cualquier página, o abrir un link
+        // guardado) `pathnameChanged` empieza en false, así que
+        // useOwnCompanyStore.company quedaba undefined indefinidamente
+        // hasta la primera navegación interna. Cualquier gate que dependa
+        // de un campo de Company (ej. AreaHierarchyGate.tsx,
+        // usesAreaHierarchy) veía undefined y bloqueaba a un usuario
+        // legítimo. Se puebla acá también, en el mismo bootstrap que ya
+        // carga sesión+permisos, para que esté disponible desde la
+        // primera carga sin depender de una navegación posterior.
+        if (sessionUser.companyUserData) {
+          try {
+            const companyData = await fetchOwnCompany();
+            if (companyData.error) {
+              setCompanyError(parseApiError(companyData.error));
+            } else {
+              setCompany(companyData.data);
+            }
+          } catch (companyErr) {
+            console.error("[AuthHydrator] ⚠️ Error al obtener la empresa (no crítico):", companyErr);
+          }
+        }
 
         // 2. Obtener permisos del usuario (no crítico, puede fallar)
         console.log("[AuthHydrator] Obteniendo permisos del usuario...");

@@ -5,8 +5,9 @@ import clsx from "clsx";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import React from "react";
+import { useOwnCompanyStore } from "@/store/useOwnCompanyStore";
 
-const tabs = [
+const allTabs = [
   {
     href: "/admin/administracion/usuarios",
     icon: "tabler:users",
@@ -16,6 +17,10 @@ const tabs = [
     href: "/admin/administracion/areas",
     icon: "tabler:building-community",
     label: "Áreas",
+    // Item OBS-176 (AREA-01): el switch es la única fuente de verdad — si
+    // está apagado, la pestaña ni siquiera se muestra (AreaHierarchyGate.tsx
+    // es la aplicación real por si se llega por otra vía, ej. URL directa).
+    requiresAreaHierarchy: true,
   },
   {
     href: "/admin/administracion/roles",
@@ -26,6 +31,8 @@ const tabs = [
 
 const AdministrationPageSelector = () => {
   const pathname = usePathname();
+  const usesAreaHierarchy = useOwnCompanyStore((store) => store.company?.usesAreaHierarchy);
+  const tabs = allTabs.filter((tab) => !tab.requiresAreaHierarchy || usesAreaHierarchy === true);
 
   return (
     <nav
