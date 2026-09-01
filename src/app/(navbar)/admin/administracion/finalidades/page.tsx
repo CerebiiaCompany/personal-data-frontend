@@ -253,7 +253,7 @@ export default function TreatmentPurposesAbmPage() {
 
         <section className="overflow-hidden rounded-2xl border border-[#E8EDF7] bg-white shadow-[0_2px_12px_rgba(15,35,70,0.04)]">
           <h2 className="border-b border-[#EEF2F8] px-5 py-4 text-sm font-semibold text-[#1A2B5B]">
-            Finalidades base del sistema (REQ v2.1)
+            Finalidades base del sistema
           </h2>
           {global.length === 0 ? (
             <p className="px-5 py-6 text-sm text-[#64748B]">Sin finalidades base.</p>
