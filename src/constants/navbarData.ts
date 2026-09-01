@@ -14,6 +14,8 @@ export type NavbarItem = {
 
 export type NavbarData = NavbarItem[];
 
+export const DASHBOARD_MODULE_TITLE = "Dashboard";
+
 export const NAVBAR_DATA: NavbarData = [
   { title: "Perfil", path: "/perfil", minRole: "USER" },
   { title: "Editar Perfil", path: "/perfil/editar", minRole: "USER" },
@@ -21,18 +23,18 @@ export const NAVBAR_DATA: NavbarData = [
   { title: "Historial de pagos", path: "/perfil/pagos", minRole: "USER" },
   { title: "Planes", path: "/perfil/planes", minRole: "USER" },
   {
-    title: "Inicio",
+    title: DASHBOARD_MODULE_TITLE,
     path: "/admin",
     icon: "heroicons:home",
     minRole: "USER",
     requiredPermission: "dashboard.view",
   },
   {
-    // Fusionado con "Inicio" en el menú visible (Pre-Go-Live GRUPO C):
+    // Fusionado con "Dashboard" en el menú visible (Pre-Go-Live GRUPO C):
     // ambas páginas exigen el mismo permiso y siguen existiendo por
     // separado (fusionar el CONTENIDO de ambas páginas en una sola es un
     // trabajo de UI más grande, fuera de alcance de este cambio) — se
-    // accede desde una tarjeta dentro de "Inicio" (ver admin/page.tsx).
+    // accede desde una tarjeta dentro de "Dashboard" (ver admin/page.tsx).
     // Sin `icon`: DashboardNavbar.tsx filtra por `route.icon` para decidir
     // qué aparece en el sidebar, mismo mecanismo ya usado para ocultar
     // sub-rutas como "Crear formulario nuevo".

@@ -214,7 +214,7 @@ export default function Home() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-[#0A1633]">
               <h4 className="mb-1 text-[38px] font-bold leading-none">
-                Panel de inicio
+                Dashboard
               </h4>
               <div className="flex flex-wrap items-center gap-1.5">
                 <p className="text-base text-[#60749C]">
@@ -274,7 +274,7 @@ export default function Home() {
         </header>
       </section>
 
-      {/* Secciones de Cumplimiento (Fusión Inicio + Cumplimiento) */}
+      {/* Secciones de Cumplimiento (fusión Dashboard + Cumplimiento) */}
       <section className="rounded-2xl border border-[#E8EDF7] bg-white p-5 shadow-[0_2px_12px_rgba(15,35,70,0.04)] sm:p-6">
         <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>

@@ -76,7 +76,7 @@ export default function AsistenteIAPage() {
       <section className="flex min-h-0 flex-1 flex-col px-5 py-5 md:px-8">
         <div className="mx-auto w-full max-w-[980px]">
           <nav className="mb-1 flex flex-wrap items-center gap-2 text-xs text-[#94A3B8]">
-            <span>Inicio</span>
+            <span>Dashboard</span>
             <Icon icon="tabler:chevron-right" className="text-sm" />
             <span className="font-semibold text-[#64748B]">Asistente IA</span>
           </nav>

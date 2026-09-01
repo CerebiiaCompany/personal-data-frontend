@@ -12,7 +12,7 @@ interface Props {
 
 /** Nombres de módulo visibles para el usuario final (sin iconos ambiguos). */
 const MODULE_NAMES: Record<keyof CompanyRolePermissions, string> = {
-  dashboard: "Inicio / Dashboard",
+  dashboard: "Dashboard",
   collect: "Recolección",
   templates: "Políticas de tratamiento",
   classification: "Clasificación",
@@ -24,7 +24,7 @@ const MODULE_NAMES: Record<keyof CompanyRolePermissions, string> = {
 
 /** Etiquetas cortas para listados en tabla (densidad sin perder sentido). */
 const MODULE_SHORT: Record<keyof CompanyRolePermissions, string> = {
-  dashboard: "Inicio",
+  dashboard: "Dashboard",
   collect: "Recolección",
   templates: "Políticas",
   classification: "Clasif.",

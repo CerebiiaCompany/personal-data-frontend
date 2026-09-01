@@ -76,7 +76,7 @@ export default function Home() {
         <div className="flex items-center justify-between pl-3">
           {/* Title info */}
           <div className="text-primary-900">
-            <h4 className="text-2xl">Panel de inicio</h4>
+            <h4 className="text-2xl">Dashboard</h4>
             <div className="flex gap-1 items-center">
               <Icon icon={"tabler:calendar-week"} className="" />
               <p className="text-sm">

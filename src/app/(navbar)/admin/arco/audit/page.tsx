@@ -74,7 +74,7 @@ export default function ArcoAuditPage() {
             <div className="space-y-2">
               <nav className="flex flex-wrap items-center gap-2 text-sm text-[#64748B]">
                 <Link href="/admin" className="hover:underline">
-                  Inicio
+                  Dashboard
                 </Link>
                 <Icon icon="tabler:chevron-right" className="text-base" />
                 <Link href="/admin/arco" className="hover:underline">

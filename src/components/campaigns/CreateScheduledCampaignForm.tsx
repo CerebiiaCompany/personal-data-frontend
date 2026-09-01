@@ -524,7 +524,7 @@ const CreateScheduledCampaignForm = () => {
               <div className="min-w-0 flex-1 space-y-2.5">
                 <nav className="flex flex-wrap items-center gap-2 text-sm text-[#7384A6]">
                   <Link href="/admin" className="hover:underline">
-                    Inicio
+                    Dashboard
                   </Link>
                   <Icon
                     icon="tabler:chevron-right"

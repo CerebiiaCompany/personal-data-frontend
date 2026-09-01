@@ -82,7 +82,7 @@ export default function TreatmentsPage() {
               <div className="flex items-start justify-between gap-3">
                 <nav className="flex flex-wrap items-center gap-2 text-sm text-[#64748B]">
                   <Link href="/admin" className="hover:underline">
-                    Inicio
+                    Dashboard
                   </Link>
                   <Icon
                     icon="tabler:chevron-right"

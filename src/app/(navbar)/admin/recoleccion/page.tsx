@@ -74,7 +74,7 @@ export default function CollectPage() {
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 text-sm text-[#7384A6]">
                 <Link href="/admin" className="hover:underline">
-                  Inicio
+                  Dashboard
                 </Link>
                 <Icon icon="tabler:chevron-right" className="text-base" />
                 <span className="font-semibold text-[#1D2E56]">Recolección</span>

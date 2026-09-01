@@ -35,7 +35,7 @@ export default function CreateTreatmentPage() {
       <div className="w-full px-5 pt-5 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
         <nav className="mb-4 flex flex-wrap items-center gap-2 text-sm text-[#64748B]">
           <Link href="/admin" className="hover:underline">
-            Inicio
+            Dashboard
           </Link>
           <Icon icon="tabler:chevron-right" className="text-base text-[#94A3B8]" />
           <Link href="/admin/tratamientos" className="hover:underline">

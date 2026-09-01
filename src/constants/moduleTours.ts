@@ -6,11 +6,11 @@ import {
 export const MODULE_TOURS: Record<ModuleTourId, ModuleTourDefinition> = {
   dashboard: {
     id: "dashboard",
-    title: "Tutorial del panel de inicio",
+    title: "Tutorial del dashboard",
     steps: [
       {
         target: "dashboard-header",
-        title: "Panel de inicio",
+        title: "Dashboard",
         description:
           "Aquí ves un resumen del estado de cumplimiento de tu empresa: métricas, alertas y actividad reciente.",
       },

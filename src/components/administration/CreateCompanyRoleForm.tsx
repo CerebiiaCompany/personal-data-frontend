@@ -61,7 +61,7 @@ const definePermissionGroup = <K extends PermissionGroupName>(
 
 const permissionsGroup = [
   definePermissionGroup({
-    title: "Inicio o Dashboard",
+    title: "Dashboard",
     groupName: "dashboard",
     permissions: [{ title: "Ver Dashboard", name: "view" }],
   }),

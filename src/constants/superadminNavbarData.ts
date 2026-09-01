@@ -2,7 +2,7 @@ import { NavbarData } from "./navbarData";
 
 export const SUPERADMIN_NAVBAR_DATA: NavbarData = [
   {
-    title: "Inicio",
+    title: "Dashboard",
     path: "/superadmin",
     icon: "heroicons:home",
     minRole: "SUPERADMIN",

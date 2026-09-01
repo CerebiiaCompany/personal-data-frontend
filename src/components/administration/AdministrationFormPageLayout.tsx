@@ -33,7 +33,7 @@ export default function AdministrationFormPageLayout({
         <section className={clsx(topCardClass, "px-5 py-5 sm:px-6 sm:py-6")}>
           <nav className="flex flex-wrap items-center gap-2 text-sm text-[#64748B]">
             <Link href="/admin" className="hover:underline">
-              Inicio
+              Dashboard
             </Link>
             <Icon
               icon="tabler:chevron-right"

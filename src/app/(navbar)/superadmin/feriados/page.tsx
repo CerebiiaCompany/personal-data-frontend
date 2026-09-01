@@ -122,7 +122,7 @@ export default function PublicHolidaysPage() {
         <header className="rounded-2xl border border-[#E8EDF7] bg-white px-5 py-5 shadow-[0_2px_12px_rgba(15,35,70,0.04)] sm:px-6 sm:py-6">
           <nav className="mb-3 flex flex-wrap items-center gap-2 text-sm text-[#64748B]">
             <Link href="/superadmin" className="hover:underline">
-              Inicio
+              Dashboard
             </Link>
             <Icon icon="tabler:chevron-right" className="text-base text-[#94A3B8]" />
             <span className="font-semibold" style={{ color: NAVY }}>

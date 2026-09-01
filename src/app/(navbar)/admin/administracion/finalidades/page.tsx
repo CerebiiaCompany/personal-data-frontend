@@ -106,7 +106,7 @@ export default function TreatmentPurposesAbmPage() {
             <div className="min-w-0 flex-1 space-y-2">
               <nav className="flex flex-wrap items-center gap-2 text-sm text-[#64748B]">
                 <Link href="/admin" className="hover:underline">
-                  Inicio
+                  Dashboard
                 </Link>
                 <Icon icon="tabler:chevron-right" className="shrink-0 text-base text-[#94A3B8]" />
                 <Link href="/admin/administracion" className="hover:underline">
