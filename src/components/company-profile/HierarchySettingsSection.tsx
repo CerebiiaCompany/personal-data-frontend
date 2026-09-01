@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { Icon } from "@iconify/react";
 import CustomToggle from "@/components/forms/CustomToggle";
 import ProfileSectionCard from "./ProfileSectionCard";
-import { updateCompanySettings } from "@/lib/company.api";
+import { fetchOwnCompany, updateCompanySettings } from "@/lib/company.api";
 import { useOwnCompanyStore } from "@/store/useOwnCompanyStore";
 import { CompanyProfile } from "@/types/company.types";
 import { parseApiError } from "@/utils/parseApiError";
@@ -39,7 +39,6 @@ const HierarchySettingsSection = ({ companyId, profile }: Props) => {
   useHashSectionFocus(HIERARCHY_SETTINGS_SECTION_ID);
   const [loading, setLoading] = React.useState(false);
   const setCompany = useOwnCompanyStore((store) => store.setCompany);
-  const company = useOwnCompanyStore((store) => store.company);
 
   const {
     control,
@@ -71,14 +70,30 @@ const HierarchySettingsSection = ({ companyId, profile }: Props) => {
 
     if (res.error) return toast.error(parseApiError(res.error));
 
-    // Refleja el cambio de inmediato en useOwnCompanyStore, que es lo que
-    // CreateCompanyUserForm.tsx lee para decidir si mostrar Área/Sede.
-    if (company) {
+    // Item "botón Áreas requiere reiniciar la página" (1 sep 2026): esto reflejaba el cambio en
+    // useOwnCompanyStore (lo que AdministrationPageSelector.tsx y
+    // administracion/page.tsx leen para mostrar/ocultar "Áreas") — pero
+    // leía `company` de un useOwnCompanyStore((s) => s.company) capturado
+    // en el render, y si el store todavía no se había poblado en esa
+    // sesión (ej. esta página lee su propio `profile` vía
+    // useCompanyProfile(), NO desde el store), el "if (company)" se
+    // saltaba en silencio: el guardado funcionaba en el servidor, pero
+    // "Crear Área" seguía sin aparecer hasta recargar toda la página
+    // (recién ahí AuthHydrator repuebla el store desde cero). Se usa
+    // getState() para leer el valor más fresco posible en vez del
+    // capturado en el render, y si aun así no hay nada en el store, se
+    // trae la empresa completa del servidor en vez de saltarse la
+    // actualización.
+    const latestCompany = useOwnCompanyStore.getState().company;
+    if (latestCompany) {
       setCompany({
-        ...company,
+        ...latestCompany,
         usesAreaHierarchy: res.data?.usesAreaHierarchy,
         usesSiteHierarchy: res.data?.usesSiteHierarchy,
       });
+    } else {
+      const fresh = await fetchOwnCompany();
+      if (!fresh.error) setCompany(fresh.data);
     }
 
     // Item OBS-177 (31 ago 2026): sin este reset, isDirty quedaba en true
