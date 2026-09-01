@@ -44,9 +44,17 @@ export function useJurisdictionLegalBases(countryCode: string = "CL") {
 
   const options = useMemo<CustomSelectOption<LegalBasis>[]>(() => {
     if (legalBases.length > 0) {
+      // Item "bases legales sin el artículo de la ley" (1 sep 2026): antes
+      // se descartaba b.description (que ya trae el artículo específico,
+      // ej. "...(Art. 13 a) Ley 21.719)."  — sembrado por país en
+      // jurisdiction.seed.ts / jurisdictionColombia.seed.ts) y se mostraba
+      // siempre el label genérico de LEGAL_BASIS_LABELS, sin cita legal.
+      // El cliente pidió explícitamente que cada opción muestre el
+      // artículo específico entre paréntesis al final del texto — eso es
+      // exactamente lo que description ya trae, por país.
       return legalBases.map((b) => ({
         value: b.baseCode as LegalBasis,
-        title: LEGAL_BASIS_LABELS[b.baseCode as LegalBasis] ?? b.baseCode,
+        title: b.description || LEGAL_BASIS_LABELS[b.baseCode as LegalBasis] || b.baseCode,
       }));
     }
     // Fallback: país sin jurisdiction_legal_bases poblada (ej. CO).
