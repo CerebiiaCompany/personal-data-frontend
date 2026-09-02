@@ -11,10 +11,6 @@ export const LEGAL_BASIS_HINTS: Partial<Record<LegalBasis, string>> = {
     "Necesitas los datos para cumplir un contrato o medidas precontractuales con la persona.",
   LEGAL_OBLIGATION:
     "Una ley o norma te obliga a tratar esos datos (debes poder indicar cuál).",
-  VITAL_INTEREST:
-    "Proteges un interés vital de la persona (situaciones excepcionales, p. ej. emergencias).",
-  PUBLIC_INTEREST:
-    "El tratamiento responde a un interés público o el ejercicio de poderes públicos.",
   LEGITIMATE_INTEREST:
     "Tienes un interés legítimo y no hay otra forma menos invasiva de lograrlo.",
   ECONOMIC_FINANCIAL_DATA:

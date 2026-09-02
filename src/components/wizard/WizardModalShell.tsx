@@ -8,7 +8,7 @@ type MaxWidth = "md" | "lg" | "xl";
 type Accent = "default" | "amber";
 
 interface Props {
-  children: ReactNode;
+  children?: ReactNode;
   loading?: boolean;
   loadingMessage?: string;
   mode?: "required" | "voluntary";

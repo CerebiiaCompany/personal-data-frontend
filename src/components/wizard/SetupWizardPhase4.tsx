@@ -55,7 +55,7 @@ export default function SetupWizardPhase4({
   const roleOptions = useMemo(
     () => [
       { value: "", title: "— Seleccionar rol —" },
-      ...(companyRoles ?? []).map((r) => ({ value: r._id, title: r.name })),
+      ...(companyRoles ?? []).map((r) => ({ value: r._id, title: r.position })),
     ],
     [companyRoles]
   );

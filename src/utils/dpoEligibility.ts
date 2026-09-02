@@ -7,13 +7,16 @@ type DpoCandidate = {
     companyRole?: {
       permissions?: CompanyRolePermissions;
     };
+    position?: string;
+    phone?: string;
+    personalEmail?: string;
   };
   companyRole?: {
     permissions?: CompanyRolePermissions;
   };
 };
 
-export function isEligibleDpoCandidate(user: DpoCandidate | Record<string, unknown> | null | undefined): boolean {
+export function isEligibleDpoCandidate(user: DpoCandidate | null | undefined): boolean {
   if (!user || typeof user !== "object") return false;
   const u = user as DpoCandidate;
   if (u.role === "SUPERADMIN" || u.role === "COMPANY_ADMIN") return true;
