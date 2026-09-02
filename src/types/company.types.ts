@@ -12,6 +12,11 @@ export const COMPANY_COUNTRY_CODE_OPTIONS: { value: CompanyCountryCode; title: s
   { value: "CL", title: "Chile" },
 ];
 
+export function getCompanyCountryLabel(code?: string | null): string {
+  if (!code) return "—";
+  return COMPANY_COUNTRY_CODE_OPTIONS.find((o) => o.value === code)?.title ?? code;
+}
+
 export interface CreateCompany {
   name: string;
   nit: string;

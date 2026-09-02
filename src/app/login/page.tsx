@@ -158,11 +158,8 @@ function LoginForm() {
     await performLogin(data.username, data.password);
   }
 
-  // Item CHK-127: tras completar la activación (email + password ya
-  // definidos por el propio usuario en ese formulario), inicia sesión
-  // automáticamente y lo lleva a /admin — InitialSetupGate.tsx (montado en
-  // (navbar)/layout.tsx) ya intercepta ahí y muestra ONB-01 si
-  // initialSetupCompletedAt es null (CHK-128, ya implementado).
+  // Tras activar la cuenta, inicia sesión y redirige a /admin. El asistente
+  // (SetupWizardContext) muestra el tour de bienvenida y luego las fases del wizard.
   async function handleActivationLogin(username: string, password: string) {
     return performLogin(username, password, {
       successMessage: () => "Cuenta activada. Iniciando sesión...",

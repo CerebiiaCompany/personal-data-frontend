@@ -11,7 +11,7 @@ import CustomInput from "@/components/forms/CustomInput";
 import CustomSelect from "@/components/forms/CustomSelect";
 import Button from "@/components/base/Button";
 import { completeInitialSetup, InitialSetupCompany } from "@/lib/initialSetup.api";
-import { COMPANY_COUNTRY_CODE_OPTIONS } from "@/types/company.types";
+import { COMPANY_COUNTRY_CODE_OPTIONS, getCompanyCountryLabel } from "@/types/company.types";
 import {
   formatRutDisplay,
   isValidRut,
@@ -79,7 +79,8 @@ interface Props {
 
 export default function InitialSetupForm({ companyId, initialCompany, onCompleted }: Props) {
   const [loading, setLoading] = React.useState(false);
-  const [countryCode, setCountryCode] = React.useState(initialCompany.countryCode || "CO");
+  // País fijado al crear la empresa (superadmin); no editable en ONB-01.
+  const countryCode = initialCompany.countryCode || "CO";
   const isChile = countryCode === "CL";
 
   const schema = React.useMemo(() => buildInitialSetupSchema(isChile), [isChile]);
@@ -155,12 +156,22 @@ export default function InitialSetupForm({ companyId, initialCompany, onComplete
         <div className="mb-6 flex items-start gap-3">
           <Icon icon="tabler:building-skyscraper" className="mt-0.5 text-2xl text-[#1A2B5B]" />
           <div>
-            <h2 className="text-lg font-bold text-[#1A2B5B]">Configuración inicial requerida</h2>
-            <p className="mt-1 text-sm text-stone-500">
-              Antes de continuar, confirma los datos de tu empresa. Esta información es
-              indispensable para generar tu Política de Privacidad.
+            <h2 className="text-lg font-bold text-[#1A2B5B]">Datos base de tu empresa</h2>
+            <p className="mt-1 text-sm leading-relaxed text-stone-500">
+              Para usar la plataforma con total claridad y cumplimiento legal, confirma la
+              información de tu organización. Estos datos identifican al responsable del
+              tratamiento ante titulares y autoridades, y son la base de documentos como tu
+              política de privacidad.
             </p>
           </div>
+        </div>
+
+        <div className="mb-5 flex gap-2 rounded-xl border border-[#C7D7F5] bg-[#F0F5FF] px-3 py-2.5 text-sm text-[#334155]">
+          <Icon icon="tabler:info-circle" className="mt-0.5 shrink-0 text-lg text-[#3357A5]" />
+          <p className="text-[13px] leading-relaxed">
+            Este paso es obligatorio la primera vez. Una vez guardado, podrás continuar con la
+            configuración de tratamientos, políticas y formularios de recolección.
+          </p>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -170,22 +181,14 @@ export default function InitialSetupForm({ companyId, initialCompany, onComplete
             {...register("name")}
             error={errors.name}
           />
-          <div className="flex flex-col gap-1">
-            <CustomSelect
-              label="País de operación"
-              options={COMPANY_COUNTRY_CODE_OPTIONS}
-              value={watch("countryCode")}
-              onChange={(value) => {
-                setValue("countryCode", value, { shouldValidate: true, shouldDirty: true });
-                setCountryCode(value);
-              }}
-            />
-            {errors.countryCode && (
-              <span className="text-sm font-semibold text-red-400">
-                {errors.countryCode.message}
-              </span>
-            )}
-          </div>
+          <CustomInput
+            label="País de operación"
+            value={getCompanyCountryLabel(countryCode)}
+            readOnly
+            disabled
+            className="opacity-90"
+          />
+          <input type="hidden" {...register("countryCode")} value={countryCode} />
           <div className="flex flex-col gap-1">
             <CustomInput
               label={isChile ? "RUT de la empresa" : "NIT de la empresa"}

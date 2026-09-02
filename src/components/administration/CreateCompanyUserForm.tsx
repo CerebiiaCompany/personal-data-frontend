@@ -176,6 +176,7 @@ const CreateCompanyUserForm = ({
     handleSubmit,
     formState: { errors },
     setValue,
+    setError,
     watch,
   } = useForm({
     mode: "onChange",
@@ -362,7 +363,12 @@ const CreateCompanyUserForm = ({
     setLoading(false);
 
     if (res.error) {
-      return toast.error(parseApiError(res.error));
+      const message = parseApiError(res.error);
+      if (res.error.code === "db/duplicate-key") {
+        setError("username", { type: "server", message });
+      }
+      toast.error(message);
+      return;
     }
     if (res.data.id && res.data._id === user?._id) {
       // user updated its own document
@@ -763,13 +769,24 @@ const CreateCompanyUserForm = ({
               className="absolute h-0 w-0 opacity-0 pointer-events-none"
             />
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-              <CustomInput
-                label={initialValues ? "Nuevo Usuario (opcional)" : "Usuario"}
-                {...register("username")}
-                placeholder={initialValues ? "Dejar vacío para mantener el actual" : "j_doe1"}
-                error={errors.username}
-                autoComplete="new-username"
-              />
+              <div>
+                <CustomInput
+                  label={initialValues ? "Nuevo Usuario (opcional)" : "Usuario de acceso"}
+                  {...register("username")}
+                  placeholder={
+                    initialValues ? "Dejar vacío para mantener el actual" : "correo@empresa.com"
+                  }
+                  error={errors.username}
+                  autoComplete="new-username"
+                />
+                {!initialValues && (
+                  <p className="mt-1.5 pl-2 text-xs leading-relaxed text-stone-500">
+                    Correo o nombre con el que iniciará sesión. Debe ser{" "}
+                    <strong className="font-medium text-stone-600">único en toda la plataforma</strong>
+                    , aunque la persona ya exista en otra empresa.
+                  </p>
+                )}
+              </div>
               {initialValues ? (
                 <div className="flex flex-col items-start gap-1 text-left flex-1">
                   <label

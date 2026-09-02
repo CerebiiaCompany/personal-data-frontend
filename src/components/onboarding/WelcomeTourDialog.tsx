@@ -1,23 +1,41 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import Button from "@/components/base/Button";
-import { WELCOME_TOUR_SLIDES } from "@/constants/welcomeTour";
+import { WELCOME_TOUR_SLIDES, WelcomeTourIllustrationKind } from "@/constants/welcomeTour";
 
 interface Props {
   open: boolean;
   userName?: string;
+  /** Ajusta el cierre del tour según el momento del onboarding. */
+  context?: "dashboard" | "initial-setup";
   onComplete: () => void;
 }
 
 export default function WelcomeTourDialog({
   open,
   userName,
+  context = "dashboard",
   onComplete,
 }: Props) {
   const [index, setIndex] = useState(0);
+
+  const slides = useMemo(() => {
+    if (context !== "initial-setup") return WELCOME_TOUR_SLIDES;
+    return WELCOME_TOUR_SLIDES.map((slide, slideIndex) => {
+      if (slideIndex !== WELCOME_TOUR_SLIDES.length - 1) return slide;
+      return {
+        ...slide,
+        title: "Un paso más antes de empezar",
+        description:
+          "A continuación completarás la Fase 1 del asistente: datos de tu empresa, DPO y contactos ARCO. Son necesarios para operar con claridad y cumplimiento legal.",
+        illustrationKind: "company-setup" as const,
+        imageAlt: "Ilustración de datos base de la empresa",
+      };
+    });
+  }, [context]);
 
   useEffect(() => {
     if (open) setIndex(0);
@@ -34,10 +52,14 @@ export default function WelcomeTourDialog({
 
   if (!open) return null;
 
-  const slide = WELCOME_TOUR_SLIDES[index];
+  const slide = slides[index];
   const isFirst = index === 0;
-  const isLast = index === WELCOME_TOUR_SLIDES.length - 1;
+  const isLast = index === slides.length - 1;
   const greetingName = userName?.trim() || "administrador";
+  const symbolicKind =
+    slide.illustrationKind === "company-setup" || slide.illustrationKind === "checklist"
+      ? slide.illustrationKind
+      : null;
 
   return (
     <div
@@ -49,15 +71,20 @@ export default function WelcomeTourDialog({
       <div className="auth-shell-card flex max-h-[min(92dvh,720px)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-[#E4EAF6] bg-white shadow-[0_24px_70px_rgba(15,35,70,0.22)] max-[480px]:max-h-[min(96dvh,100%)] sm:rounded-3xl">
         {/* Ilustración: altura acotada al viewport para no empujar el contenido fuera */}
         <div className="relative h-[min(28dvh,200px)] w-full shrink-0 overflow-hidden bg-gradient-to-br from-[#EEF3FF] to-[#F8FAFC] sm:h-[min(32dvh,240px)] [@media(max-height:700px)]:h-[min(22dvh,160px)] [@media(max-height:560px)]:h-[min(18dvh,120px)]">
-          <Image
-            key={slide.id}
-            src={slide.imageSrc}
-            alt={slide.imageAlt}
-            fill
-            className="object-cover object-center"
-            sizes="(max-width: 512px) 100vw, 512px"
-            priority
-          />
+          {symbolicKind ? (
+            <WelcomeTourSymbolicIllustration kind={symbolicKind} />
+          ) : (
+            <Image
+              key={`${slide.id}-${index}`}
+              src={slide.imageSrc}
+              alt={slide.imageAlt}
+              fill
+              unoptimized
+              className="object-cover object-center"
+              sizes="(max-width: 512px) 100vw, 512px"
+              priority={index === 0}
+            />
+          )}
           <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-white to-transparent sm:h-14" />
         </div>
 
@@ -81,7 +108,7 @@ export default function WelcomeTourDialog({
             </div>
 
             <div className="mt-4 flex items-center justify-center gap-1.5 sm:mt-5">
-              {WELCOME_TOUR_SLIDES.map((item, i) => (
+              {slides.map((item, i) => (
                 <button
                   key={item.id}
                   type="button"
@@ -132,7 +159,11 @@ export default function WelcomeTourDialog({
                 }}
               >
                 <span className="inline-flex items-center justify-center gap-2 leading-none">
-                  {isLast ? "Comenzar" : "Siguiente"}
+                  {isLast
+                    ? context === "initial-setup"
+                      ? "Continuar"
+                      : "Comenzar"
+                    : "Siguiente"}
                   {!isLast && (
                     <Icon
                       icon="tabler:arrow-right"
@@ -144,9 +175,40 @@ export default function WelcomeTourDialog({
             </div>
 
             <p className="text-center text-[11px] text-[#94A3B8]">
-              {index + 1} de {WELCOME_TOUR_SLIDES.length}
+              {index + 1} de {slides.length}
             </p>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function WelcomeTourSymbolicIllustration({
+  kind,
+}: {
+  kind: Exclude<WelcomeTourIllustrationKind, "image">;
+}) {
+  const isCompanySetup = kind === "company-setup";
+
+  return (
+    <div className="flex h-full items-center justify-center px-6" aria-hidden>
+      <div className="relative flex size-36 items-center justify-center rounded-[2rem] border border-[#C7D7F5] bg-white shadow-[0_18px_40px_rgba(26,43,91,0.12)] sm:size-40">
+        <Icon
+          icon={isCompanySetup ? "tabler:building-skyscraper" : "tabler:list-check"}
+          className="text-6xl text-[#1A2B5B] sm:text-7xl"
+        />
+        <div
+          className={`absolute -right-3 -bottom-3 grid size-12 place-content-center rounded-2xl border shadow-sm ${
+            isCompanySetup
+              ? "border-[#BBF7D0] bg-[#ECFDF5]"
+              : "border-[#C7D7F5] bg-[#EEF3FF]"
+          }`}
+        >
+          <Icon
+            icon={isCompanySetup ? "tabler:shield-check" : "tabler:arrow-right"}
+            className={`text-2xl ${isCompanySetup ? "text-emerald-700" : "text-[#1A2B5B]"}`}
+          />
         </div>
       </div>
     </div>

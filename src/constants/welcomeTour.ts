@@ -1,9 +1,13 @@
+export type WelcomeTourIllustrationKind = "image" | "company-setup" | "checklist";
+
 export interface WelcomeTourSlide {
   id: string;
   title: string;
   description: string;
   imageSrc: string;
   imageAlt: string;
+  /** Ilustración alternativa cuando no hay arte dedicado o el paso es distinto. */
+  illustrationKind?: WelcomeTourIllustrationKind;
 }
 
 export const WELCOME_TOUR_SLIDES: WelcomeTourSlide[] = [
@@ -44,7 +48,8 @@ export const WELCOME_TOUR_SLIDES: WelcomeTourSlide[] = [
     title: "Empieza por lo esencial",
     description:
       "Al cerrar esta guía verás tus primeros pasos. Completarlos te ayuda a dejar la plataforma lista para operar.",
-    imageSrc: "/onboarding/welcome-slide-01-welcome.png",
+    imageSrc: "",
     imageAlt: "Ilustración de primeros pasos",
+    illustrationKind: "checklist",
   },
 ];

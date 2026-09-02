@@ -1,11 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { Suspense } from "react";
 import { Icon } from "@iconify/react";
 
 import { useSessionStore } from "@/store/useSessionStore";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import { getDataProtectionLegalNotice } from "@/utils/legalNotices.utils";
+import OpenSetupWizardButton from "@/components/wizard/OpenSetupWizardButton";
+import SetupWizardUrlOpener from "@/components/wizard/SetupWizardUrlOpener";
 
 import IdentificationSection from "@/components/company-profile/IdentificationSection";
 import EmailBrandingSection from "@/components/company-profile/EmailBrandingSection";
@@ -59,10 +62,14 @@ export default function CompanyProfilePage() {
 
   return (
     <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col bg-[#F8FAFC]">
+      <Suspense fallback={null}>
+        <SetupWizardUrlOpener />
+      </Suspense>
       {/* Header */}
       <div className="w-full px-5 pt-5 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
         <section className={`${topCardClass} px-5 py-5 sm:px-6 sm:py-6`}>
-          <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0 flex-1 space-y-2">
             <nav className="flex flex-wrap items-center gap-2 text-sm text-[#64748B]">
               <Link href="/admin" className="hover:underline">
                 Dashboard
@@ -91,6 +98,13 @@ export default function CompanyProfilePage() {
               {getDataProtectionLegalNotice(profile?.countryCode).lawReference} de
               Protección de Datos.
             </p>
+            </div>
+            {user?.role === "COMPANY_ADMIN" && (
+              <OpenSetupWizardButton
+                hierarchy="primary"
+                className="shrink-0"
+              />
+            )}
           </div>
         </section>
       </div>

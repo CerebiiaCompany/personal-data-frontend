@@ -21,6 +21,7 @@ import {
   RUT_INVALID_MESSAGE,
 } from "@/utils/rutValidator";
 import { useJurisdictionGeographicDivisions } from "@/hooks/useJurisdictionGeographicDivisions";
+import { getArcoPortalUrl } from "@/utils/arcoPortalUrl.utils";
 
 function buildIdentificationSchema(isChile: boolean) {
   return z
@@ -34,7 +35,6 @@ function buildIdentificationSchema(isChile: boolean) {
       phone_numbers: z.array(z.object({ value: z.string() })).optional(),
       website: z.string().optional(),
       public_contact_email: z.string().optional(),
-      arco_portal_contact: z.string().optional(),
     })
     .superRefine((data, ctx) => {
       if (isChile && data.nit && data.nit.trim().length > 0) {
@@ -121,7 +121,6 @@ const IdentificationSection = ({ companyId, profile }: Props) => {
       public_contact_email:
         profile.publicContactEmail ??
         (profile.regionName ? profile.email ?? "" : ""),
-      arco_portal_contact: profile.arcoPortalContact ?? "",
     });
   }, [profile, reset]);
 
@@ -138,7 +137,6 @@ const IdentificationSection = ({ companyId, profile }: Props) => {
       phone_numbers: values.phone_numbers?.map((p) => p.value).filter(Boolean),
       website: values.website,
       public_contact_email: values.public_contact_email,
-      arco_portal_contact: values.arco_portal_contact,
     });
     setLoading(false);
 
@@ -267,10 +265,14 @@ const IdentificationSection = ({ companyId, profile }: Props) => {
         </div>
         <CustomInput
           label="URL Portal ARCO"
-          placeholder="Ej. https://empresa.com/arco"
-          {...register("arco_portal_contact")}
-          error={errors.arco_portal_contact}
+          value={getArcoPortalUrl()}
+          readOnly
+          disabled
+          className="opacity-90"
         />
+        <p className="col-span-full -mt-2 text-xs text-stone-400 pl-2">
+          Enlace fijo de la plataforma Cerebiia donde los titulares ejercen sus derechos ARCO.
+        </p>
         <CustomInput
           label="Sitio web"
           placeholder="Ej. https://empresa.com"

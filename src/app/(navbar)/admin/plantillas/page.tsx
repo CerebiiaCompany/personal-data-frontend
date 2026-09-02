@@ -22,6 +22,7 @@ import Link from "next/link";
 import clsx from "clsx";
 import { useState } from "react";
 import type { PolicyTemplate } from "@/types/policyTemplate.types";
+import RatPolicySyncBanner from "@/components/treatments/RatPolicySyncBanner";
 
 function formatTemplateFileMeta(file: PolicyTemplate["file"]): string {
   if (!file) return "Generada desde el RAT";
@@ -208,6 +209,12 @@ export default function TemplatesPage() {
               </CheckPermission>
             </header>
           </section>
+        </div>
+      </div>
+
+      <div className="px-5 md:px-6 pt-3 shrink-0">
+        <div className="max-w-[1200px] mx-auto w-full">
+          <RatPolicySyncBanner companyId={companyId} />
         </div>
       </div>
 

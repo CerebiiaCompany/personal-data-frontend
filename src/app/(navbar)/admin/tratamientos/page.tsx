@@ -7,6 +7,7 @@ import ModuleHelpButton from "@/components/tour/ModuleHelpButton";
 import TreatmentsFilters, {
   emptyTreatmentsFilters,
 } from "@/components/treatments/TreatmentsFilters";
+import RatPolicySyncBanner from "@/components/treatments/RatPolicySyncBanner";
 import TreatmentsTable from "@/components/treatments/TreatmentsTable";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
@@ -148,6 +149,10 @@ export default function TreatmentsPage() {
       </div>
 
       <div className="w-full px-5 pt-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
+        <RatPolicySyncBanner companyId={companyId} className="mb-4" />
+      </div>
+
+      <div className="w-full px-5 pt-0 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
         <section
           data-tour="tratamientos-filters"
           className="rounded-2xl border border-[#E8EDF7] bg-white px-5 py-4 shadow-[0_2px_12px_rgba(15,35,70,0.04)] sm:px-6"

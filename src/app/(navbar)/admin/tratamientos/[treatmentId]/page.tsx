@@ -6,6 +6,7 @@ import ArchiveTreatmentDialog from "@/components/treatments/ArchiveTreatmentDial
 import TreatmentStatusBadge from "@/components/treatments/TreatmentStatusBadge";
 import TreatmentSystemsSection from "@/components/treatments/TreatmentSystemsSection";
 import TreatmentVersionHistory from "@/components/treatments/TreatmentVersionHistory";
+import RatPolicySyncBanner from "@/components/treatments/RatPolicySyncBanner";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useCompanyDataOfficer } from "@/hooks/useCompanyDataOfficer";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -13,6 +14,7 @@ import { useTreatment } from "@/hooks/useTreatment";
 import { useTreatmentPurposes } from "@/hooks/useTreatmentPurposes";
 import { activateTreatment } from "@/lib/treatment.api";
 import { useSessionStore } from "@/store/useSessionStore";
+import { canApproveRatActivation } from "@/utils/dpoEligibility";
 import {
   DATA_CATEGORY_LABELS,
   DATA_SUBJECT_CATEGORY_LABELS,
@@ -125,10 +127,7 @@ export default function TreatmentDetailPage() {
   // SUPERADMIN) puede aprobar — se decide en el cliente para no mostrar un
   // botón que el backend va a rechazar con 403, pero el backend re-verifica
   // igual (nunca confiar solo en el frontend).
-  const isDesignatedDataOfficer = Boolean(
-    dataOfficer.data?._id && user?._id && dataOfficer.data._id === user._id
-  );
-  const canApprove = isDesignatedDataOfficer || user?.role === "SUPERADMIN";
+  const canApprove = canApproveRatActivation(user, dataOfficer.data);
 
   async function handleActivate() {
     if (!companyId || !data) return;
@@ -196,6 +195,7 @@ export default function TreatmentDetailPage() {
   return (
     <div className="flex min-h-full w-full flex-col bg-[#F8FAFC]">
       <div className="w-full px-5 pt-5 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
+        <RatPolicySyncBanner companyId={companyId} className="mb-4" />
         <header className={cardClass}>
           <nav className="mb-3 flex flex-wrap items-center gap-2 text-sm text-[#64748B]">
             <Link href="/admin" className="hover:underline">

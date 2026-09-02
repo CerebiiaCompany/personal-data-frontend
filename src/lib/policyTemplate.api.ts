@@ -74,9 +74,13 @@ export async function restorePolicyTemplate(
 // Item 7: preview de la política generada desde el RAT (sin necesidad de
 // tener aún creada una PolicyTemplate RAT_GENERATED).
 export async function getGeneratedPolicyPreview(
-  companyId: string
+  companyId: string,
+  options?: { includeDraftTreatmentId?: string }
 ): Promise<APIResponse> {
-  return customFetch(`/companies/${companyId}/policy/generated`);
+  const query = options?.includeDraftTreatmentId
+    ? `?includeDraftTreatmentId=${encodeURIComponent(options.includeDraftTreatmentId)}`
+    : "";
+  return customFetch(`/companies/${companyId}/policy/generated${query}`);
 }
 
 /**
@@ -86,11 +90,15 @@ export async function getGeneratedPolicyPreview(
  * pública.
  */
 export async function downloadGeneratedPolicyPreviewPdf(
-  companyId: string
+  companyId: string,
+  options?: { includeDraftTreatmentId?: string }
 ): Promise<APIResponse<void>> {
   try {
+    const query = options?.includeDraftTreatmentId
+      ? `?includeDraftTreatmentId=${encodeURIComponent(options.includeDraftTreatmentId)}`
+      : "";
     const response = await fetch(
-      `${API_BASE_URL}/companies/${companyId}/policy/generated/pdf`,
+      `${API_BASE_URL}/companies/${companyId}/policy/generated/pdf${query}`,
       { method: "GET", credentials: "include", cache: "no-store" }
     );
 

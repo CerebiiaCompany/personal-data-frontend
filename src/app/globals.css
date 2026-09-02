@@ -799,3 +799,93 @@ input:focus {
     background: rgba(15, 23, 42, 0.6);
   }
 }
+
+/* ─── Setup Wizard (WIZ-01) ─────────────────────────────────────────────── */
+@keyframes wizardBackdropIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes wizardPanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes wizardContentIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes wizardStepIn {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes wizardSpinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.wizard-backdrop {
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  animation: wizardBackdropIn 0.28s ease-out forwards;
+}
+
+.wizard-panel-in {
+  animation: wizardPanelIn 0.38s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.wizard-content-in {
+  animation: wizardContentIn 0.32s ease-out 0.06s both;
+}
+
+.wizard-step-in {
+  animation: wizardStepIn 0.28s ease-out both;
+}
+
+.wizard-spinner {
+  animation: wizardSpinner 0.75s linear infinite;
+}
+
+@supports not (
+  (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+) {
+  .wizard-backdrop {
+    background: rgba(15, 23, 42, 0.72);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wizard-backdrop,
+  .wizard-panel-in,
+  .wizard-content-in,
+  .wizard-step-in,
+  .wizard-spinner {
+    animation: none !important;
+  }
+}
