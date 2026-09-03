@@ -1,5 +1,10 @@
 import { APIResponse } from "@/types/api.types";
-import { WizardAnswers, WizardSessionResponse } from "@/types/wizardRisk.types";
+import {
+  SystemRecord,
+  WizardAnswers,
+  WizardConfirmResult,
+  WizardSessionResponse,
+} from "@/types/wizardRisk.types";
 import { customFetch } from "@/utils/customFetch";
 
 /**
@@ -53,5 +58,33 @@ export async function saveWizardAnswer(
   return customFetch(`/companies/${companyId}/wizard-risk/sessions/${sessionId}/answers`, {
     method: "POST",
     body: JSON.stringify({ questionKey, answerValue }),
+  });
+}
+
+export interface SaveWizardSystemsResult {
+  saved: true;
+}
+
+/** Batch 7 — guarda la tabla de sistemas completa (Bloque 4) y avanza currentQuestion. */
+export async function saveWizardSystems(
+  companyId: string,
+  sessionId: string,
+  systems: SystemRecord[]
+): Promise<APIResponse<SaveWizardSystemsResult>> {
+  return customFetch(`/companies/${companyId}/wizard-risk/sessions/${sessionId}/systems`, {
+    method: "PATCH",
+    body: JSON.stringify({ systems }),
+  });
+}
+
+/** Batch 9 — confirma y activa el plan de cumplimiento (transición final a COMPLETED). */
+export async function confirmWizardSession(
+  companyId: string,
+  sessionId: string,
+  payload: { dpoAssigned: string; acknowledge: boolean; compliancePlan: WizardConfirmResult["compliancePlan"] }
+): Promise<APIResponse<WizardConfirmResult>> {
+  return customFetch(`/companies/${companyId}/wizard-risk/sessions/${sessionId}/confirm`, {
+    method: "POST",
+    body: JSON.stringify(payload),
   });
 }

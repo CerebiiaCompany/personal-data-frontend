@@ -27,8 +27,15 @@ interface UseWizardSessionResult {
  * hasta 3 veces con backoff exponencial (1s, 2s, 4s) antes de rendirse.
  */
 export function useWizardSession(): UseWizardSessionResult {
-  const { state, initializeSession, setCurrentBlock, setCurrentQuestion, updateAnswer, setError: setContextError } =
-    useWizardContext();
+  const {
+    state,
+    initializeSession,
+    setCurrentBlock,
+    setCurrentQuestion,
+    updateAnswer,
+    setSystems,
+    setError: setContextError,
+  } = useWizardContext();
   const userId = useSessionStore((store) => store.user?._id);
   const companyId = useActiveCompanyId();
 
@@ -55,7 +62,7 @@ export function useWizardSession(): UseWizardSessionResult {
 
         if (res.data) {
           if (cancelled) return;
-          const { sessionId, currentQuestion, resume: didResume, answersSoFar } = res.data;
+          const { sessionId, currentQuestion, resume: didResume, answersSoFar, systemsSoFar } = res.data;
 
           initializeSession(sessionId, companyId!, userId!);
           // El backend no rastrea límites de bloque (ver wizardBlocks.ts) —
@@ -65,6 +72,9 @@ export function useWizardSession(): UseWizardSessionResult {
           setCurrentQuestion(currentQuestion);
           if (answersSoFar) {
             hydrateAnswers(answersSoFar, updateAnswer);
+          }
+          if (systemsSoFar) {
+            setSystems(systemsSoFar);
           }
           setResume(didResume);
           setIsLoading(false);

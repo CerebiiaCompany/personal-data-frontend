@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer } from "react";
 import {
+  SystemRecord,
   WIZARD_TOTAL_QUESTIONS,
   WizardAnswers,
   WizardSessionState,
@@ -23,6 +24,7 @@ const initialState: WizardSessionState = {
   currentQuestion: 1,
   progressPercent: 0,
   answers: {},
+  systems: [],
   isLoading: false,
   error: null,
   createdAt: null,
@@ -48,6 +50,7 @@ type WizardAction =
   | { type: "SET_CURRENT_BLOCK"; blockNum: number }
   | { type: "SET_CURRENT_QUESTION"; questionNum: number }
   | { type: "UPDATE_ANSWER"; questionKey: string; answerValue: string[] }
+  | { type: "SET_SYSTEMS"; systems: SystemRecord[] }
   | { type: "SET_STATUS"; status: WizardStatusValue }
   | { type: "SET_LOADING"; isLoading: boolean }
   | { type: "SET_ERROR"; code: string; message: string }
@@ -90,6 +93,8 @@ function reducer(state: WizardSessionState, action: WizardAction): WizardSession
       const answers: WizardAnswers = { ...state.answers, [action.questionKey]: action.answerValue };
       return { ...state, answers, ...touch() };
     }
+    case "SET_SYSTEMS":
+      return { ...state, systems: action.systems, ...touch() };
     case "SET_STATUS": {
       if (!isValidWizardTransition(state.status, action.status)) {
         throw new Error(
@@ -119,6 +124,7 @@ interface WizardContextValue {
   setCurrentBlock: (blockNum: number) => void;
   setCurrentQuestion: (questionNum: number) => void;
   updateAnswer: (questionKey: string, answerValue: string[]) => void;
+  setSystems: (systems: SystemRecord[]) => void;
   setStatus: (status: WizardStatusValue) => void;
   setLoading: (isLoading: boolean) => void;
   setError: (code: string, message: string) => void;
@@ -182,6 +188,10 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: "UPDATE_ANSWER", questionKey, answerValue });
   }, []);
 
+  const setSystems = useCallback((systems: SystemRecord[]) => {
+    dispatch({ type: "SET_SYSTEMS", systems });
+  }, []);
+
   const setStatus = useCallback((status: WizardStatusValue) => {
     dispatch({ type: "SET_STATUS", status });
   }, []);
@@ -214,6 +224,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
       setCurrentBlock,
       setCurrentQuestion,
       updateAnswer,
+      setSystems,
       setStatus,
       setLoading,
       setError,
@@ -226,6 +237,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
       setCurrentBlock,
       setCurrentQuestion,
       updateAnswer,
+      setSystems,
       setStatus,
       setLoading,
       setError,

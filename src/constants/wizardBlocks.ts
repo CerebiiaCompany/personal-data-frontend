@@ -32,18 +32,23 @@ export function getWizardBlockName(blockNum: number): string {
 // `currentBlock` que devuelve el backend ni en el segmento de la URL tal
 // cual.
 //
-// Batch 6 — Bloques 1-3 cubren las 30 preguntas del wizard (1-5, 6-15,
-// 16-30 respectivamente); Bloque 3 puede mostrar MENOS de 15 según
-// condicionales (ver block3Questions.ts / useWizardBlockQuestions), pero
-// el límite GLOBAL de pregunta sigue siendo 30 — las preguntas ocultas
-// simplemente nunca se guardan, no "corren" la numeración de las demás.
-// Bloques 4-5 (Inventario de Sistemas, Revisión y Activación) no son
-// pantallas de pregunta/respuesta como esta y quedan fuera de este mapa
-// hasta que se definan (ver nota en el resumen de Batch 6).
+// Batch 6 — Bloques 1-3 cubren preguntas 1-30 (1-5, 6-15, 16-30); Bloque 3
+// puede mostrar MENOS de 15 según condicionales, pero el límite GLOBAL de
+// pregunta no se mueve por eso — las ocultas simplemente nunca se guardan.
+//
+// Batch 7-9 — Bloque 4 resultó ser 5 preguntas (31-35) + 1 slot para la
+// tabla de sistemas (36, ver WizardBlock4.tsx/SystemsTable.tsx — no es una
+// QuestionCard pero consume un `currentQuestion` igual al guardarse).
+// Bloque 5 es hasta 10 tarjetas de tratamiento condicionales (37-46) + el
+// selector de DPO (47). El total real del wizard es 47, no 30 — ver
+// WIZARD_TOTAL_QUESTIONS. La pantalla de confirmación no tiene número de
+// pregunta propio: es el destino tras terminar la 47.
 const KNOWN_BLOCK_LAST_QUESTION: Record<number, number> = {
   1: 5,
   2: 15,
-  3: WIZARD_TOTAL_QUESTIONS,
+  3: 30,
+  4: 36,
+  5: WIZARD_TOTAL_QUESTIONS,
 };
 
 export function resolveWizardBlockForQuestion(questionNum: number): number {

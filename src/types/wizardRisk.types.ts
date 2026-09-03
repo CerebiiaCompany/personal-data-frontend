@@ -14,7 +14,15 @@ export type WizardStatusValue =
   | "ABANDONED";
 
 export const WIZARD_TOTAL_BLOCKS = 5;
-export const WIZARD_TOTAL_QUESTIONS = 30;
+// Batch 7-9 — el total real resultó ser 47, no 30: Bloque 4 agrega 5
+// preguntas (P31-P35) + 1 paso de tabla de sistemas (no es una pregunta de
+// QuestionCard, pero consume un slot de `currentQuestion` igual que las
+// demás al guardarse — ver WizardBlock4.tsx), y Bloque 5 agrega hasta 10
+// tarjetas de tratamiento (P36-P45, condicionales) + el selector de DPO
+// (P46). La pantalla de confirmación (antes "P47" en el prompt) no
+// consume un número de pregunta — es el destino real de /wizard/finalizacion,
+// alcanzado después de P46, igual que cualquier otro "fin de bloque".
+export const WIZARD_TOTAL_QUESTIONS = 47;
 export const WIZARD_ABANDON_AFTER_DAYS = 30;
 
 export interface WizardRiskError {
@@ -35,6 +43,7 @@ export interface WizardSessionState {
   progressPercent: number;
 
   answers: WizardAnswers;
+  systems: SystemRecord[];
 
   isLoading: boolean;
   error: WizardRiskError | null;
@@ -52,6 +61,7 @@ export interface WizardSessionResponse {
   currentQuestion: number;
   resume: boolean;
   answersSoFar?: WizardAnswers;
+  systemsSoFar?: SystemRecord[];
 }
 
 // Batch 3 — componente pregunta reutilizable (QuestionCard).
@@ -105,4 +115,54 @@ export interface WizardQuestionDefinition {
   // si ninguna está definida, la pregunta siempre es visible.
   showIf?: (answers: WizardAnswers) => boolean;
   hideIf?: (answers: WizardAnswers) => boolean;
+}
+
+// Batch 7 — Bloque 4 (Inventario de Sistemas): tabla editable de sistemas,
+// guardada como su propio campo en la sesión (no como una respuesta de
+// pregunta más) vía PATCH /wizard-risk/sessions/:id/systems.
+export type SystemDeployment = "cloud" | "onprem" | "hybrid";
+
+export interface SystemRecord {
+  id: string;
+  name: string;
+  provider: string;
+  deployment: SystemDeployment;
+  hasSensitiveData: boolean;
+  /** El proveedor actúa como encargado de tratamiento (firma DPA). */
+  dpoProvidesServices: boolean;
+}
+
+// Batch 8 — Bloque 5 Parte 1: tarjetas de tratamiento (variante visual de
+// QuestionCard). El nivel de riesgo es puramente informativo para el
+// usuario; no afecta el cálculo de cumplimiento (ver Batch 9).
+export type RiskLevel = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+
+export interface TreatmentCardDefinition {
+  questionKey: string;
+  title: string;
+  description?: string;
+  riskLevel: RiskLevel;
+  recommendedTreatments: string[];
+  questionText: string;
+  options: QuestionOption[];
+  showIf?: (answers: WizardAnswers) => boolean;
+  hideIf?: (answers: WizardAnswers) => boolean;
+}
+
+// Batch 9 — Bloque 5 Parte 2: selector de DPO + confirmación final.
+export interface WizardConfirmPayload {
+  dpoAssigned: string;
+  acknowledge: boolean;
+}
+
+export interface WizardCompliancePlan {
+  score: number; // 0-100
+  riskCounts: Record<RiskLevel, number>;
+  recommendedTreatments: string[];
+}
+
+export interface WizardConfirmResult {
+  status: string;
+  compliancePlan: WizardCompliancePlan;
+  nextSteps: string[];
 }

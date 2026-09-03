@@ -9,6 +9,9 @@ import WizardWelcome from "./WizardWelcome";
 import WizardBlock1 from "./WizardBlock1";
 import WizardBlock2 from "./WizardBlock2";
 import WizardBlock3 from "./WizardBlock3";
+import WizardBlock4 from "./WizardBlock4";
+import WizardBlock5 from "./WizardBlock5";
+import ConfirmationSummary from "./ConfirmationSummary";
 
 type WizardRouteSegment = "bienvenida" | "block" | "finalizacion";
 
@@ -98,7 +101,7 @@ function WizardBody({
   }
 
   if (segment === "finalizacion") {
-    return <p className="text-sm text-stone-500">Finalización — pantalla en construcción.</p>;
+    return <ConfirmationSummary />;
   }
 
   // segment === "block"
@@ -122,7 +125,9 @@ function WizardBody({
     return <WizardBlock3 />;
   }
 
-  return (
-    <p className="text-sm text-stone-500">Bloque {currentBlock} — pantalla en construcción.</p>
-  );
+  if (currentBlock === 4) {
+    return <WizardBlock4 />;
+  }
+
+  return <WizardBlock5 />;
 }
