@@ -53,3 +53,35 @@ export interface WizardSessionResponse {
   resume: boolean;
   answersSoFar?: WizardAnswers;
 }
+
+// Batch 3 — componente pregunta reutilizable (QuestionCard).
+export type QuestionAnswerType = "SINGLE_CHOICE" | "MULTIPLE_CHOICE";
+
+export interface QuestionOption {
+  value: string;
+  label: string;
+  helpText?: string;
+}
+
+export interface QuestionCardProps {
+  questionKey: string;
+  questionText: string;
+  helpText?: string;
+  tooltipWhy?: string;
+
+  type: QuestionAnswerType;
+  options: QuestionOption[];
+
+  currentAnswer?: string[];
+  isLoading?: boolean;
+
+  /** Se llama con la selección actual cada vez que cambia (antes de enviar). */
+  onAnswer: (answerValue: string[]) => void;
+  onPrevious?: () => void;
+  /** Se llama al hacer clic en "Siguiente" una vez pasada la validación local. */
+  onNext: () => void;
+
+  showPreviousButton?: boolean;
+  /** Override externo del gating de "Siguiente"; por defecto se deriva de la selección. */
+  canGoNext?: boolean;
+}
