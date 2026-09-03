@@ -1,3 +1,5 @@
+import { WIZARD_TOTAL_QUESTIONS } from "@/types/wizardRisk.types";
+
 export interface WizardBlockInfo {
   number: 1 | 2 | 3 | 4 | 5;
   name: string;
@@ -28,12 +30,20 @@ export function getWizardBlockName(blockNum: number): string {
 // una decisión puramente del cliente — así que el bloque "real" de una
 // sesión se deriva siempre de `currentQuestion`, nunca se confía en el
 // `currentBlock` que devuelve el backend ni en el segmento de la URL tal
-// cual. Solo el límite del Bloque 1 (única pantalla de bloque real, Batch
-// 4) se conoce con certeza; cualquier pregunta más allá cae en el
-// siguiente bloque como mejor aproximación mientras esos bloques sigan
-// siendo placeholder.
+// cual.
+//
+// Batch 6 — Bloques 1-3 cubren las 30 preguntas del wizard (1-5, 6-15,
+// 16-30 respectivamente); Bloque 3 puede mostrar MENOS de 15 según
+// condicionales (ver block3Questions.ts / useWizardBlockQuestions), pero
+// el límite GLOBAL de pregunta sigue siendo 30 — las preguntas ocultas
+// simplemente nunca se guardan, no "corren" la numeración de las demás.
+// Bloques 4-5 (Inventario de Sistemas, Revisión y Activación) no son
+// pantallas de pregunta/respuesta como esta y quedan fuera de este mapa
+// hasta que se definan (ver nota en el resumen de Batch 6).
 const KNOWN_BLOCK_LAST_QUESTION: Record<number, number> = {
   1: 5,
+  2: 15,
+  3: WIZARD_TOTAL_QUESTIONS,
 };
 
 export function resolveWizardBlockForQuestion(questionNum: number): number {

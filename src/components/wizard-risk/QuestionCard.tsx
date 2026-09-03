@@ -72,7 +72,7 @@ export default function QuestionCard({
   }
 
   function handleNext() {
-    if (!hasSelection) {
+    if (!nextEnabled) {
       setShowValidationError(true);
       return;
     }

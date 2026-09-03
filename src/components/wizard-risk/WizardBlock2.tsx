@@ -1,27 +1,28 @@
 "use client";
 
 import { useWizardBlockQuestions } from "@/hooks/useWizardBlockQuestions";
-import { BLOCK1_QUESTIONS } from "@/constants/wizard-blocks/block1Questions";
+import { BLOCK2_QUESTIONS } from "@/constants/wizard-blocks/block2Questions";
+import { isOptionalSingleCheckbox } from "@/utils/wizardQuestionHelpers";
 import QuestionCard from "./QuestionCard";
 
-const BLOCK_NUM = 1;
-const BLOCK_START_QUESTION = 1; // preguntas globales 1-5 de 30
+const BLOCK_NUM = 2;
+const BLOCK_START_QUESTION = 6; // preguntas globales 6-15 de 30
 
 /**
- * Bloque 1 — Perfil de la Organización. Ver useWizardBlockQuestions para
- * la lógica compartida de navegación/guardado entre bloques.
+ * Bloque 2 — Diagnóstico Inicial de Riesgo. Todas sus preguntas son
+ * checkboxes booleanos opcionales (ver isOptionalSingleCheckbox): no
+ * marcarlas es una respuesta válida ("No"), así que se fuerza
+ * `canGoNext=true` en vez de dejar que QuestionCard exija selección.
  */
-export default function WizardBlock1() {
+export default function WizardBlock2() {
   const { question, isFirstQuestion, currentAnswer, isLoading, handleAnswer, handleNext, handlePrevious } =
     useWizardBlockQuestions({
       blockNum: BLOCK_NUM,
       blockStartQuestion: BLOCK_START_QUESTION,
-      questions: BLOCK1_QUESTIONS,
+      questions: BLOCK2_QUESTIONS,
     });
 
   if (!question) {
-    // state.currentQuestion fuera del rango de este bloque (estado
-    // inconsistente, p. ej. URL editada a mano) — nada seguro que renderizar.
     return null;
   }
 
@@ -40,6 +41,7 @@ export default function WizardBlock1() {
       onPrevious={isFirstQuestion ? undefined : handlePrevious}
       onNext={handleNext}
       showPreviousButton={!isFirstQuestion}
+      canGoNext={isOptionalSingleCheckbox(question) ? true : undefined}
     />
   );
 }

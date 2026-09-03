@@ -96,4 +96,13 @@ export interface WizardQuestionDefinition {
   tooltipWhy?: string;
   type: QuestionAnswerType;
   options: QuestionOption[];
+  // Batch 5 — metadata semántica para lógica de bloques futuros (Bloque 4-5).
+  // Puramente informativa por ahora: no se envía al backend ni se consume
+  // todavía en ningún lado (ver constants/wizard-blocks/block2Questions.ts).
+  mark?: string;
+  // Batch 6 — condicionales de visibilidad (gestionadas 100% en cliente, ver
+  // hooks/useWizardBlockQuestions.ts). A lo sumo una de las dos por pregunta;
+  // si ninguna está definida, la pregunta siempre es visible.
+  showIf?: (answers: WizardAnswers) => boolean;
+  hideIf?: (answers: WizardAnswers) => boolean;
 }
