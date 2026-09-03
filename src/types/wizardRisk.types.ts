@@ -43,11 +43,13 @@ export interface WizardSessionState {
   lastActivityAt: string | null;
 }
 
+// Contrato del backend (personal-data-backend, wizardRiskSession.controller.ts) —
+// camelCase, consistente con el resto del API (ver APIResponse<T>).
 export interface WizardSessionResponse {
-  session_id: string;
+  sessionId: string;
   status: string;
-  current_block: number;
-  current_question: number;
+  currentBlock: number;
+  currentQuestion: number;
   resume: boolean;
-  answers_so_far?: WizardAnswers;
+  answersSoFar?: WizardAnswers;
 }

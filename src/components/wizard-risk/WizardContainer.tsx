@@ -2,7 +2,6 @@
 
 import { useWizardContext } from "@/contexts/WizardContext";
 import { useWizardSession } from "@/hooks/useWizardSession";
-import { useWizardAbandonDetector } from "@/hooks/useWizardAbandonDetector";
 import { getWizardBlockName } from "@/constants/wizardBlocks";
 import WizardHeader from "./WizardHeader";
 import ErrorHandler from "./ErrorHandler";
@@ -14,11 +13,15 @@ import ErrorHandler from "./ErrorHandler";
  * Las pantallas de cada bloque (WizardWelcome, WizardBlock1..5,
  * WizardCompletion) se incorporan en batches posteriores; por ahora se
  * renderiza un placeholder para cada estado.
+ *
+ * La detección de abandono es responsabilidad exclusiva del backend (cron
+ * horario, ver wizardRiskAbandonDetector.job.ts) — el cliente no la
+ * replica: al retomar, si el backend ya marcó la sesión ABANDONED,
+ * simplemente no la encuentra IN_PROGRESS y crea una nueva.
  */
 export default function WizardContainer() {
   const { state } = useWizardContext();
   const { isLoading: sessionLoading, error: sessionError } = useWizardSession();
-  useWizardAbandonDetector();
 
   const showHeader = state.status === "IN_PROGRESS" || state.status === "VALIDATING";
 

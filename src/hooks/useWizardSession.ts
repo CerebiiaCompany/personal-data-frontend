@@ -54,14 +54,14 @@ export function useWizardSession(): UseWizardSessionResult {
 
         if (res.data) {
           if (cancelled) return;
-          const { session_id, current_block, current_question, resume: didResume, answers_so_far } =
+          const { sessionId, currentBlock, currentQuestion, resume: didResume, answersSoFar } =
             res.data;
 
-          initializeSession(session_id, companyId!, userId!);
-          setCurrentBlock(current_block);
-          setCurrentQuestion(current_question);
-          if (answers_so_far) {
-            hydrateAnswers(answers_so_far, updateAnswer);
+          initializeSession(sessionId, companyId!, userId!);
+          setCurrentBlock(currentBlock);
+          setCurrentQuestion(currentQuestion);
+          if (answersSoFar) {
+            hydrateAnswers(answersSoFar, updateAnswer);
           }
           setResume(didResume);
           setIsLoading(false);
@@ -70,7 +70,7 @@ export function useWizardSession(): UseWizardSessionResult {
 
         const code = res.error?.code;
         lastMessage = res.error?.message ?? lastMessage;
-        const isAuthOrPermission = code === "auth/unauthenticated" || res.error?.status === 403;
+        const isAuthOrPermission = code === "auth/unauthenticated" || code === "auth/unauthorized";
         if (isAuthOrPermission) break;
 
         const isRetryable =
