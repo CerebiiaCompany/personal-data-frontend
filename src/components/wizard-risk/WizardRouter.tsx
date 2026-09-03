@@ -37,5 +37,5 @@ export default function WizardRouter({ segment, blockNum, questionNum }: WizardR
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [segment, blockNum, questionNum]);
 
-  return <WizardContainer />;
+  return <WizardContainer segment={segment} />;
 }

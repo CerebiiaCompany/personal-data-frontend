@@ -5,25 +5,34 @@ import { useWizardSession } from "@/hooks/useWizardSession";
 import { getWizardBlockName } from "@/constants/wizardBlocks";
 import WizardHeader from "./WizardHeader";
 import ErrorHandler from "./ErrorHandler";
+import WizardWelcome from "./WizardWelcome";
+
+type WizardRouteSegment = "bienvenida" | "block" | "finalizacion";
+
+interface WizardContainerProps {
+  segment: WizardRouteSegment;
+}
 
 /**
  * Componente raíz del Wizard de Diagnóstico de Riesgo. Orquesta la carga de
- * sesión, el estado de error, la barra de progreso y el bloque activo.
+ * sesión, el estado de error, la barra de progreso y la pantalla activa.
  *
- * Las pantallas de cada bloque (WizardWelcome, WizardBlock1..5,
- * WizardCompletion) se incorporan en batches posteriores; por ahora se
- * renderiza un placeholder para cada estado.
+ * La pantalla a mostrar se decide por `segment` (viene de la URL, ver
+ * WizardRouter), NO por `state.status` — el backend pone `status` en
+ * IN_PROGRESS apenas se crea/retoma la sesión (batch 1), incluso estando
+ * todavía en /wizard/bienvenida, así que status por sí solo no distingue
+ * "en la bienvenida" de "respondiendo un bloque".
  *
  * La detección de abandono es responsabilidad exclusiva del backend (cron
  * horario, ver wizardRiskAbandonDetector.job.ts) — el cliente no la
  * replica: al retomar, si el backend ya marcó la sesión ABANDONED,
  * simplemente no la encuentra IN_PROGRESS y crea una nueva.
  */
-export default function WizardContainer() {
+export default function WizardContainer({ segment }: WizardContainerProps) {
   const { state } = useWizardContext();
-  const { isLoading: sessionLoading, error: sessionError } = useWizardSession();
+  const { isLoading: sessionLoading, error: sessionError, resume } = useWizardSession();
 
-  const showHeader = state.status === "IN_PROGRESS" || state.status === "VALIDATING";
+  const showHeader = segment === "block" && (state.status === "IN_PROGRESS" || state.status === "VALIDATING");
 
   if (!state.sessionId && sessionLoading) {
     return (
@@ -54,7 +63,13 @@ export default function WizardContainer() {
       )}
 
       <div className="flex-1 p-4 sm:p-6">
-        <WizardBody status={state.status} currentBlock={state.currentBlock} />
+        <WizardBody
+          segment={segment}
+          status={state.status}
+          currentBlock={state.currentBlock}
+          currentQuestion={state.currentQuestion}
+          resume={resume}
+        />
       </div>
 
       <ErrorHandler />
@@ -62,27 +77,37 @@ export default function WizardContainer() {
   );
 }
 
-function WizardBody({ status, currentBlock }: { status: string; currentBlock: number }) {
-  switch (status) {
-    case "NOT_STARTED":
-      return <p className="text-sm text-stone-500">Bienvenida — pantalla en construcción (Batch 2).</p>;
-    case "IN_PROGRESS":
-      return (
-        <p className="text-sm text-stone-500">
-          Bloque {currentBlock} — pantalla en construcción (Batch 3+).
-        </p>
-      );
-    case "VALIDATING":
-      return <p className="text-sm text-stone-500">Bloque 5 (validación) — pantalla en construcción.</p>;
-    case "COMPLETED":
-      return <p className="text-sm text-stone-500">Finalización — pantalla en construcción.</p>;
-    case "ABANDONED":
-      return (
-        <p className="text-sm text-stone-500">
-          Esta sesión fue marcada como abandonada. Puedes retomarla como una nueva sesión.
-        </p>
-      );
-    default:
-      return null;
+function WizardBody({
+  segment,
+  status,
+  currentBlock,
+  currentQuestion,
+  resume,
+}: {
+  segment: WizardRouteSegment;
+  status: string;
+  currentBlock: number;
+  currentQuestion: number;
+  resume: boolean;
+}) {
+  if (segment === "bienvenida") {
+    return <WizardWelcome resume={resume} currentBlock={currentBlock} currentQuestion={currentQuestion} />;
   }
+
+  if (segment === "finalizacion") {
+    return <p className="text-sm text-stone-500">Finalización — pantalla en construcción.</p>;
+  }
+
+  // segment === "block"
+  if (status === "ABANDONED") {
+    return (
+      <p className="text-sm text-stone-500">
+        Esta sesión fue marcada como abandonada. Puedes retomarla como una nueva sesión.
+      </p>
+    );
+  }
+
+  return (
+    <p className="text-sm text-stone-500">Bloque {currentBlock} — pantalla en construcción (Batch 3+).</p>
+  );
 }
