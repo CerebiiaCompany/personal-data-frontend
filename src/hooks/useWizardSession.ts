@@ -1,0 +1,115 @@
+import { useEffect, useRef, useState } from "react";
+import { useSessionStore } from "@/store/useSessionStore";
+import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
+import { useWizardContext } from "@/contexts/WizardContext";
+import { createOrResumeWizardSession } from "@/lib/wizardSession.api";
+import { WizardAnswers } from "@/types/wizardRisk.types";
+
+const MAX_RETRIES = 3;
+const BASE_DELAY_MS = 1000; // 1s, 2s, 4s
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+interface UseWizardSessionResult {
+  sessionId: string | null;
+  resume: boolean;
+  currentBlock: number;
+  currentQuestion: number;
+  isLoading: boolean;
+  error: Error | null;
+}
+
+/**
+ * Crea o retoma la sesión del wizard al montar. Reintenta ante error de red
+ * hasta 3 veces con backoff exponencial (1s, 2s, 4s) antes de rendirse.
+ */
+export function useWizardSession(): UseWizardSessionResult {
+  const { state, initializeSession, setCurrentBlock, setCurrentQuestion, updateAnswer, setError: setContextError } =
+    useWizardContext();
+  const userId = useSessionStore((store) => store.user?._id);
+  const companyId = useActiveCompanyId();
+
+  const [resume, setResume] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const startedRef = useRef(false);
+
+  useEffect(() => {
+    if (!companyId || !userId) return;
+    if (startedRef.current) return;
+    startedRef.current = true;
+
+    let cancelled = false;
+
+    async function run() {
+      setIsLoading(true);
+      setError(null);
+
+      let lastMessage = "No se pudo iniciar la sesión del wizard.";
+
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        const res = await createOrResumeWizardSession(companyId!);
+
+        if (res.data) {
+          if (cancelled) return;
+          const { session_id, current_block, current_question, resume: didResume, answers_so_far } =
+            res.data;
+
+          initializeSession(session_id, companyId!, userId!);
+          setCurrentBlock(current_block);
+          setCurrentQuestion(current_question);
+          if (answers_so_far) {
+            hydrateAnswers(answers_so_far, updateAnswer);
+          }
+          setResume(didResume);
+          setIsLoading(false);
+          return;
+        }
+
+        const code = res.error?.code;
+        lastMessage = res.error?.message ?? lastMessage;
+        const isAuthOrPermission = code === "auth/unauthenticated" || res.error?.status === 403;
+        if (isAuthOrPermission) break;
+
+        const isRetryable =
+          code === "http/network-error" || code === "http/unavailable" || code === "http/timeout";
+        if (!isRetryable || attempt === MAX_RETRIES) break;
+
+        await delay(BASE_DELAY_MS * 2 ** attempt);
+      }
+
+      if (cancelled) return;
+      const err = new Error(lastMessage);
+      setError(err);
+      setContextError("ERR-05", lastMessage);
+      setIsLoading(false);
+    }
+
+    void run();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyId, userId]);
+
+  return {
+    sessionId: state.sessionId,
+    resume,
+    currentBlock: state.currentBlock,
+    currentQuestion: state.currentQuestion,
+    isLoading,
+    error,
+  };
+}
+
+function hydrateAnswers(
+  answers: WizardAnswers,
+  updateAnswer: (questionKey: string, answerValue: string[]) => void
+) {
+  for (const [questionKey, value] of Object.entries(answers)) {
+    updateAnswer(questionKey, value);
+  }
+}
