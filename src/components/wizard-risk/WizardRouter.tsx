@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useWizardContext } from "@/contexts/WizardContext";
 import { isValidWizardBlock, isValidWizardQuestion, getWizardBlockQuestionPath } from "@/utils/wizardRoutes";
+import { resolveWizardBlockForQuestion } from "@/constants/wizardBlocks";
 import WizardContainer from "./WizardContainer";
 
 type WizardRouteSegment = "bienvenida" | "block" | "finalizacion";
@@ -32,7 +33,17 @@ export default function WizardRouter({ segment, blockNum, questionNum }: WizardR
       return;
     }
 
-    if (blockNum !== state.currentBlock) setCurrentBlock(blockNum);
+    // El bloque de la URL nunca se toma como verdad por sí solo — se deriva
+    // de questionNum (ver wizardBlocks.ts) para no quedar en un bloque sin
+    // preguntas propias (p. ej. tras cruzar de bloque, ver useWizardSession).
+    // Una URL con el bloque "equivocado" para su pregunta se autocorrige.
+    const correctBlock = resolveWizardBlockForQuestion(questionNum);
+    if (blockNum !== correctBlock) {
+      router.replace(getWizardBlockQuestionPath(correctBlock, questionNum));
+      return;
+    }
+
+    if (correctBlock !== state.currentBlock) setCurrentBlock(correctBlock);
     if (questionNum !== state.currentQuestion) setCurrentQuestion(questionNum);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [segment, blockNum, questionNum]);

@@ -85,3 +85,15 @@ export interface QuestionCardProps {
   /** Override externo del gating de "Siguiente"; por defecto se deriva de la selección. */
   canGoNext?: boolean;
 }
+
+// Batch 4 — definición estática de una pregunta (sin estado/callbacks),
+// usada por los catálogos por bloque (constants/wizard-blocks/blockNQuestions.ts)
+// para alimentar <QuestionCard>.
+export interface WizardQuestionDefinition {
+  questionKey: string;
+  questionText: string;
+  helpText?: string;
+  tooltipWhy?: string;
+  type: QuestionAnswerType;
+  options: QuestionOption[];
+}

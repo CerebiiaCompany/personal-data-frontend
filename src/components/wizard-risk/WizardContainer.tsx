@@ -6,6 +6,7 @@ import { getWizardBlockName } from "@/constants/wizardBlocks";
 import WizardHeader from "./WizardHeader";
 import ErrorHandler from "./ErrorHandler";
 import WizardWelcome from "./WizardWelcome";
+import WizardBlock1 from "./WizardBlock1";
 
 type WizardRouteSegment = "bienvenida" | "block" | "finalizacion";
 
@@ -107,7 +108,11 @@ function WizardBody({
     );
   }
 
+  if (currentBlock === 1) {
+    return <WizardBlock1 />;
+  }
+
   return (
-    <p className="text-sm text-stone-500">Bloque {currentBlock} — pantalla en construcción (Batch 3+).</p>
+    <p className="text-sm text-stone-500">Bloque {currentBlock} — pantalla en construcción (Batch 5+).</p>
   );
 }

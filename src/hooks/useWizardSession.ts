@@ -4,6 +4,7 @@ import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useWizardContext } from "@/contexts/WizardContext";
 import { createOrResumeWizardSession } from "@/lib/wizardSession.api";
 import { WizardAnswers } from "@/types/wizardRisk.types";
+import { resolveWizardBlockForQuestion } from "@/constants/wizardBlocks";
 
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 1000; // 1s, 2s, 4s
@@ -54,11 +55,13 @@ export function useWizardSession(): UseWizardSessionResult {
 
         if (res.data) {
           if (cancelled) return;
-          const { sessionId, currentBlock, currentQuestion, resume: didResume, answersSoFar } =
-            res.data;
+          const { sessionId, currentQuestion, resume: didResume, answersSoFar } = res.data;
 
           initializeSession(sessionId, companyId!, userId!);
-          setCurrentBlock(currentBlock);
+          // El backend no rastrea límites de bloque (ver wizardBlocks.ts) —
+          // el bloque real siempre se deriva de currentQuestion, nunca del
+          // currentBlock que devuelve la sesión.
+          setCurrentBlock(resolveWizardBlockForQuestion(currentQuestion));
           setCurrentQuestion(currentQuestion);
           if (answersSoFar) {
             hydrateAnswers(answersSoFar, updateAnswer);
