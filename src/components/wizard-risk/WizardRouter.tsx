@@ -43,10 +43,31 @@ export default function WizardRouter({ segment, blockNum, questionNum }: WizardR
       return;
     }
 
+    // CE-05 (Batch 11) — bypass por URL: no dejar saltar a una pregunta
+    // más allá del progreso real ya guardado (p. ej. ir directo a
+    // /bloque/5/pregunta/46 sin haber respondido las anteriores).
+    // `state.sessionId` sigue null hasta que la sesión termina de
+    // hidratarse (ver useWizardSession) — sin ese guard, esta validación
+    // se ejecutaría contra el currentQuestion=1 por defecto de
+    // initialState en cada carga y mandaría a cualquiera de vuelta a la
+    // pregunta 1, incluso reabriendo su propia posición ya avanzada.
+    //
+    // No se valida clave por clave contra `answers` (como sugería el
+    // pseudocódigo original) porque varias preguntas de Bloque 3 y 5 son
+    // condicionales (showIf/hideIf) y legítimamente nunca se responden —
+    // useWizardBlockQuestions ya colapsa esos huecos indexando sobre
+    // `visibleQuestions`, así que el único avance real por click de
+    // "Siguiente" es siempre exactamente currentQuestion+1 (ver ese hook).
+    // Cualquier salto mayor a ese +1 es, por definición, un bypass.
+    if (state.sessionId && questionNum > state.currentQuestion + 1) {
+      router.replace(getWizardBlockQuestionPath(state.currentBlock, state.currentQuestion));
+      return;
+    }
+
     if (correctBlock !== state.currentBlock) setCurrentBlock(correctBlock);
     if (questionNum !== state.currentQuestion) setCurrentQuestion(questionNum);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [segment, blockNum, questionNum]);
+  }, [segment, blockNum, questionNum, state.sessionId, state.currentQuestion]);
 
   return <WizardContainer segment={segment} />;
 }
