@@ -6,6 +6,8 @@ import {
   WizardSessionResponse,
 } from "@/types/wizardRisk.types";
 import { customFetch } from "@/utils/customFetch";
+import { API_BASE_URL } from "@/utils/env.utils";
+import { filenameFromContentDisposition, triggerBrowserDownload } from "@/utils/downloadFile";
 
 /**
  * Crea o retoma la sesión del Wizard de Diagnóstico de Riesgo para la empresa
@@ -87,4 +89,44 @@ export async function confirmWizardSession(
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+/**
+ * Batch 10 — descarga el PDF del plan de cumplimiento. No usa customFetch
+ * (no maneja bien respuestas binarias): mismo patrón raw-fetch + blob que
+ * downloadTreatmentsExport en treatment.api.ts.
+ */
+export async function downloadWizardCompliancePdf(
+  companyId: string,
+  sessionId: string
+): Promise<APIResponse<void>> {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/companies/${companyId}/wizard-risk/sessions/${sessionId}/compliance-pdf`,
+      { method: "GET", credentials: "include", cache: "no-store" }
+    );
+    if (!response.ok) {
+      let body: APIResponse<void> | null = null;
+      try {
+        body = (await response.json()) as APIResponse<void>;
+      } catch {}
+      return {
+        error: body?.error
+          ? { ...body.error, status: response.status }
+          : { code: "http/unknown-error", message: "No se pudo descargar el plan de cumplimiento.", status: response.status },
+      };
+    }
+    const blob = await response.blob();
+    const filename =
+      filenameFromContentDisposition(response.headers.get("content-disposition")) ??
+      "plan-cumplimiento.pdf";
+    triggerBrowserDownload(blob, filename);
+    return {};
+  } catch (error) {
+    const message = (error as Error).message;
+    if (message.includes("Failed to fetch")) {
+      return { error: { code: "http/network-error", message: "Error de conexión. Verifica tu red e intenta de nuevo." } };
+    }
+    return { error: { code: "http/unknown-error", message: "Error inesperado al descargar el plan de cumplimiento." } };
+  }
 }

@@ -11,11 +11,13 @@ import BlockMap from "./BlockMap";
 
 interface WizardWelcomeProps {
   resume: boolean;
+  /** Batch 10 — status real del backend; distingue una sesión ya activada de una simplemente en progreso (ambas llegan con resume=true). */
+  sessionStatus: string;
   currentBlock: number;
   currentQuestion: number;
 }
 
-export default function WizardWelcome({ resume, currentBlock, currentQuestion }: WizardWelcomeProps) {
+export default function WizardWelcome({ resume, sessionStatus, currentBlock, currentQuestion }: WizardWelcomeProps) {
   const router = useRouter();
   const userName = useSessionStore((store) => store.user?.name);
   const companyName = useSessionStore((store) => store.user?.company?.name);
@@ -49,7 +51,14 @@ export default function WizardWelcome({ resume, currentBlock, currentQuestion }:
       <div className="border-t border-stone-200" />
 
       <div className="flex flex-col items-center gap-3">
-        {resume ? (
+        {sessionStatus === "COMPLETED" ? (
+          <>
+            <p className="text-sm text-stone-600">Ya activaste tu plan de cumplimiento.</p>
+            <Button className="w-full sm:w-auto" onClick={() => router.push("/wizard/finalizacion")}>
+              Ver mi plan de cumplimiento
+            </Button>
+          </>
+        ) : resume ? (
           <>
             <p className="text-sm text-stone-600">Tienes una configuración en progreso.</p>
             <Button className="w-full sm:w-auto" onClick={() => goTo(currentBlock, currentQuestion)}>

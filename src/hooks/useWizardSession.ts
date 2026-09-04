@@ -16,6 +16,8 @@ function delay(ms: number): Promise<void> {
 interface UseWizardSessionResult {
   sessionId: string | null;
   resume: boolean;
+  /** Batch 10 — status crudo del backend (createOrResumeWizardSession), no el `state.status` del contexto (ver WizardContext, nunca actualizado tras confirmar). */
+  status: string;
   currentBlock: number;
   currentQuestion: number;
   isLoading: boolean;
@@ -40,6 +42,7 @@ export function useWizardSession(): UseWizardSessionResult {
   const companyId = useActiveCompanyId();
 
   const [resume, setResume] = useState(false);
+  const [status, setStatus] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const startedRef = useRef(false);
@@ -62,7 +65,7 @@ export function useWizardSession(): UseWizardSessionResult {
 
         if (res.data) {
           if (cancelled) return;
-          const { sessionId, currentQuestion, resume: didResume, answersSoFar, systemsSoFar } = res.data;
+          const { sessionId, status: sessionStatus, currentQuestion, resume: didResume, answersSoFar, systemsSoFar } = res.data;
 
           initializeSession(sessionId, companyId!, userId!);
           // El backend no rastrea límites de bloque (ver wizardBlocks.ts) —
@@ -77,6 +80,7 @@ export function useWizardSession(): UseWizardSessionResult {
             setSystems(systemsSoFar);
           }
           setResume(didResume);
+          setStatus(sessionStatus);
           setIsLoading(false);
           return;
         }
@@ -104,6 +108,16 @@ export function useWizardSession(): UseWizardSessionResult {
 
     return () => {
       cancelled = true;
+      // Batch 10 — si este efecto se limpia (Strict Mode en desarrollo lo
+      // hace sintéticamente en cada montaje, y WizardContainer se
+      // desmonta/remonta en cada transición entre /wizard/bloque,
+      // /wizard/bienvenida y /wizard/finalizacion), se libera el guard para
+      // que el remontaje real dispare su propio fetch sin `cancelled`
+      // heredado. Sin esto, el resultado del fetch en vuelo se descarta
+      // silenciosamente (por `cancelled`) y el remontaje no lo reintenta
+      // (por `startedRef`), dejando sessionStatus/resume atascados en su
+      // valor inicial para siempre.
+      startedRef.current = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [companyId, userId]);
@@ -111,6 +125,7 @@ export function useWizardSession(): UseWizardSessionResult {
   return {
     sessionId: state.sessionId,
     resume,
+    status,
     currentBlock: state.currentBlock,
     currentQuestion: state.currentQuestion,
     isLoading,

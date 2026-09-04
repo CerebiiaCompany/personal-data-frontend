@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useWizardContext } from "@/contexts/WizardContext";
 import { useWizardSession } from "@/hooks/useWizardSession";
 import { getWizardBlockName } from "@/constants/wizardBlocks";
@@ -35,10 +37,22 @@ interface WizardContainerProps {
  * simplemente no la encuentra IN_PROGRESS y crea una nueva.
  */
 export default function WizardContainer({ segment }: WizardContainerProps) {
+  const router = useRouter();
   const { state } = useWizardContext();
-  const { isLoading: sessionLoading, error: sessionError, resume } = useWizardSession();
+  const { isLoading: sessionLoading, error: sessionError, resume, status: sessionStatus } = useWizardSession();
 
   const showHeader = segment === "block" && (state.status === "IN_PROGRESS" || state.status === "VALIDATING");
+
+  // Batch 10 — una sesión COMPLETED puede volver como `resume: true` desde
+  // createOrResumeWizardSession (ver wizardRiskSession.service.ts, fallback
+  // a la última sesión COMPLETED). Si el usuario cae en /wizard/block/* con
+  // esa sesión (deep-link viejo, back del navegador), se redirige al resumen
+  // en vez de mostrarle preguntas ya respondidas de un diagnóstico cerrado.
+  useEffect(() => {
+    if (segment === "block" && sessionStatus === "COMPLETED") {
+      router.replace("/wizard/finalizacion");
+    }
+  }, [segment, sessionStatus, router]);
 
   if (!state.sessionId && sessionLoading) {
     return (
@@ -72,6 +86,7 @@ export default function WizardContainer({ segment }: WizardContainerProps) {
         <WizardBody
           segment={segment}
           status={state.status}
+          sessionStatus={sessionStatus}
           currentBlock={state.currentBlock}
           currentQuestion={state.currentQuestion}
           resume={resume}
@@ -86,25 +101,40 @@ export default function WizardContainer({ segment }: WizardContainerProps) {
 function WizardBody({
   segment,
   status,
+  sessionStatus,
   currentBlock,
   currentQuestion,
   resume,
 }: {
   segment: WizardRouteSegment;
   status: string;
+  sessionStatus: string;
   currentBlock: number;
   currentQuestion: number;
   resume: boolean;
 }) {
   if (segment === "bienvenida") {
-    return <WizardWelcome resume={resume} currentBlock={currentBlock} currentQuestion={currentQuestion} />;
+    return (
+      <WizardWelcome
+        resume={resume}
+        sessionStatus={sessionStatus}
+        currentBlock={currentBlock}
+        currentQuestion={currentQuestion}
+      />
+    );
   }
 
   if (segment === "finalizacion") {
-    return <ConfirmationSummary />;
+    return <ConfirmationSummary sessionStatus={sessionStatus} />;
   }
 
-  // segment === "block"
+  // segment === "block" — si sessionStatus es COMPLETED, el useEffect de
+  // arriba ya está redirigiendo a /wizard/finalizacion; no renderizar un
+  // bloque de preguntas mientras tanto.
+  if (sessionStatus === "COMPLETED") {
+    return null;
+  }
+
   if (status === "ABANDONED") {
     return (
       <p className="text-sm text-stone-500">

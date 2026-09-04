@@ -6,7 +6,7 @@ import { Icon } from "@iconify/react/dist/iconify.js";
 import { useWizardContext } from "@/contexts/WizardContext";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useWizardError } from "@/hooks/useWizardError";
-import { confirmWizardSession } from "@/lib/wizardSession.api";
+import { confirmWizardSession, downloadWizardCompliancePdf } from "@/lib/wizardSession.api";
 import { computeWizardCompliancePlan } from "@/utils/wizardCompliance";
 import { BLOCK1_QUESTIONS } from "@/constants/wizard-blocks/block1Questions";
 import { BLOCK4_QUESTIONS } from "@/constants/wizard-blocks/block4Questions";
@@ -16,8 +16,24 @@ import Button from "@/components/base/Button";
 
 const RISK_LABELS: Record<RiskLevel, string> = { LOW: "Bajo", MEDIUM: "Medio", HIGH: "Alto", CRITICAL: "Crítico" };
 
+// Batch 10 — duplicado a propósito del WIZARD_RISK_NEXT_STEPS del backend
+// (wizardRiskSession.controller.ts): se usa como fallback cuando se llega a
+// esta pantalla por resumir una sesión ya COMPLETED (sin pasar por
+// /confirm en esta visita, así que no hay respuesta de API de la cual
+// tomarlo). Mismo criterio de duplicación que las etiquetas del PDF.
+const WIZARD_RISK_NEXT_STEPS_FALLBACK = [
+  "Comparte este plan de cumplimiento con tu equipo y tu Responsable de Protección de Datos.",
+  "Prioriza las medidas recomendadas según el nivel de riesgo de cada tarjeta.",
+  "Agenda una revisión de este diagnóstico en los próximos 6 meses o ante cambios relevantes en tus tratamientos.",
+];
+
 function findLabel(options: QuestionOption[], value: string | undefined): string {
   return options.find((o) => o.value === value)?.label ?? "—";
+}
+
+interface ConfirmationSummaryProps {
+  /** Estado real de la sesión según el backend (createOrResumeWizardSession), no el `state.status` del contexto (ver WizardContainer). */
+  sessionStatus: string;
 }
 
 /**
@@ -25,14 +41,22 @@ function findLabel(options: QuestionOption[], value: string | undefined): string
  * /wizard/finalizacion. Calcula el plan de cumplimiento en el cliente
  * (ver utils/wizardCompliance.ts) y lo envía al confirmar; el backend solo
  * valida, persiste y marca la sesión COMPLETED.
+ *
+ * Batch 10 — si se llega acá con una sesión que el backend ya devolvió
+ * como COMPLETED (revisitando /wizard/finalizacion, o vía el enlace del
+ * correo de confirmación), se muestra la vista de éxito directamente sin
+ * volver a llamar /confirm — el plan se recalcula en el cliente a partir
+ * de las respuestas ya hidratadas (mismo cálculo, determinístico).
  */
-export default function ConfirmationSummary() {
+export default function ConfirmationSummary({ sessionStatus }: ConfirmationSummaryProps) {
   const router = useRouter();
   const { state } = useWizardContext();
   const companyId = useActiveCompanyId();
   const { showBlockingError } = useWizardError();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState<WizardConfirmResult | null>(null);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
 
   const sector = findLabel(BLOCK1_QUESTIONS[0].options, state.answers["B1-P1"]?.[0]);
   const employees = findLabel(BLOCK1_QUESTIONS[1].options, state.answers["B1-P2"]?.[0]);
@@ -58,25 +82,43 @@ export default function ConfirmationSummary() {
     setResult(res.data);
   }
 
-  if (result) {
+  async function handleDownloadPdf() {
+    if (!companyId || !state.sessionId) return;
+    setPdfError(null);
+    setIsDownloadingPdf(true);
+    const res = await downloadWizardCompliancePdf(companyId, state.sessionId);
+    setIsDownloadingPdf(false);
+    if (res.error) {
+      setPdfError(res.error.message ?? "No se pudo descargar el plan de cumplimiento.");
+    }
+  }
+
+  const isAlreadyCompleted = sessionStatus === "COMPLETED";
+
+  if (result || isAlreadyCompleted) {
+    const score = result?.compliancePlan.score ?? plan.score;
+    const nextSteps = result?.nextSteps ?? WIZARD_RISK_NEXT_STEPS_FALLBACK;
+
     return (
       <div className="mx-auto w-full max-w-[700px] px-4 py-10 text-center sm:px-6">
         <Icon icon="tabler:circle-check" className="mx-auto text-5xl text-green-600" />
         <h2 className="mt-4 text-xl font-semibold text-primary-900">¡Plan de cumplimiento activado!</h2>
-        <p className="mt-2 text-sm text-stone-600">
-          Score de cumplimiento: {result.compliancePlan.score}%
-        </p>
+        <p className="mt-2 text-sm text-stone-600">Score de cumplimiento: {score}%</p>
         <ul className="mt-6 flex flex-col gap-2 text-left text-sm text-stone-700">
-          {result.nextSteps.map((step) => (
+          {nextSteps.map((step) => (
             <li key={step} className="flex items-start gap-2">
               <Icon icon="tabler:arrow-right" className="mt-0.5 shrink-0 text-primary-700" />
               {step}
             </li>
           ))}
         </ul>
-        <Button className="mt-8" onClick={() => router.push("/admin")}>
-          Ir al panel
-        </Button>
+        <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+          <Button onClick={() => router.push("/admin")}>Ir al panel</Button>
+          <Button hierarchy="secondary" onClick={handleDownloadPdf} loading={isDownloadingPdf}>
+            Descargar PDF
+          </Button>
+        </div>
+        {pdfError && <p className="mt-3 text-xs text-red-600">{pdfError}</p>}
       </div>
     );
   }
