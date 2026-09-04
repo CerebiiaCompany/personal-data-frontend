@@ -9,8 +9,10 @@ import {
   useRef,
   useState,
 } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useSessionStore } from "@/store/useSessionStore";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
+import { useWizardRiskStatus } from "@/hooks/useWizardRiskStatus";
 import { fetchWizardStatus } from "@/lib/wizard.api";
 import { WizardStatus } from "@/types/wizard.types";
 import {
@@ -65,11 +67,25 @@ export function useSetupWizardOptional() {
 }
 
 export function SetupWizardProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const pathname = usePathname();
   const role = useSessionStore((store) => store.user?.role);
   const userId = useSessionStore((store) => store.user?._id);
   const userName = useSessionStore((store) => store.user?.name);
   const companyId = useActiveCompanyId();
   const canOpen = role === "COMPANY_ADMIN" && Boolean(companyId);
+
+  // Batch 14 (swap) — el wizard de diagnóstico de riesgo (/wizard/bienvenida)
+  // reemplaza a este asistente como onboarding OBLIGATORIO. Se consulta acá
+  // (una sola vez por sesión de navegación, igual que refreshStatus abajo)
+  // para decidir si redirigir en vez de abrir el modal viejo — ver el efecto
+  // más abajo. El asistente viejo sigue existiendo y sigue siendo abrible
+  // voluntariamente (OpenSetupWizardButton, /onboarding/wizard-legacy); lo
+  // único que cambia es que ya no se auto-abre como bloqueante.
+  const { status: wizardRiskStatus, loading: wizardRiskLoading } = useWizardRiskStatus(
+    canOpen ? companyId : undefined
+  );
+  const wizardRiskCompleted = wizardRiskStatus === "COMPLETED";
 
   const [status, setStatus] = useState<WizardStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -137,8 +153,13 @@ export function SetupWizardProvider({ children }: { children: React.ReactNode })
                 : null
       : null;
 
-  const shouldOfferWelcome =
-    canOpen && !loading && !errored && Boolean(blockingPhase) && !hasSeenWelcomeTour(userId);
+  // Batch 14 (swap) — este tour introducía específicamente el auto-abrir
+  // "required" del asistente viejo (ver el efecto más abajo), que ya no
+  // ocurre. Mostrarlo ahora dejaría al usuario frente a un "empecemos" que
+  // no lleva a ningún flujo obligatorio. Se deja `false` en vez de borrar
+  // el componente: sigue disponible si /onboarding/wizard-legacy quisiera
+  // reutilizarlo más adelante.
+  const shouldOfferWelcome = false;
   const showWelcomeTour = shouldOfferWelcome && !welcomeReady;
 
   function openFlow(phase: 1 | 2 | 3 | 4 | 5, mode: "required" | "voluntary") {
@@ -149,6 +170,20 @@ export function SetupWizardProvider({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (loading || manualOpen || errored) return;
+
+    // Batch 14 (swap) — reemplaza el auto-abrir "required" del asistente
+    // viejo: mientras la empresa no tenga el wizard de riesgo COMPLETED,
+    // se redirige a /wizard/bienvenida en vez de abrir el modal viejo. No
+    // aplica a SUPERADMIN/USER (canOpen ya los excluye), mientras el
+    // estado todavía no se conoce (wizardRiskLoading), ni dentro del
+    // archivo del asistente viejo (si no, nunca se podría llegar a verlo).
+    const onLegacyArchive = pathname?.startsWith("/onboarding/wizard-legacy") ?? false;
+    if (canOpen && !wizardRiskLoading && !wizardRiskCompleted && !onLegacyArchive) {
+      setFlowOpen(false);
+      router.replace("/wizard/bienvenida");
+      return;
+    }
+
     if (shouldOfferWelcome && !welcomeReady) {
       setFlowOpen(false);
       return;
@@ -157,9 +192,21 @@ export function SetupWizardProvider({ children }: { children: React.ReactNode })
       openFlow(holdingPhaseRef.current, "required");
       return;
     }
-    if (blockingPhase) openFlow(blockingPhase, "required");
-    else if (!manualOpen) setFlowOpen(false);
-  }, [blockingPhase, loading, manualOpen, errored, shouldOfferWelcome, welcomeReady]);
+    // blockingPhase ya no fuerza apertura automática (ver arriba) — el
+    // asistente viejo queda solo como reapertura voluntaria.
+    if (!manualOpen) setFlowOpen(false);
+  }, [
+    canOpen,
+    wizardRiskLoading,
+    wizardRiskCompleted,
+    pathname,
+    loading,
+    manualOpen,
+    errored,
+    shouldOfferWelcome,
+    welcomeReady,
+    router,
+  ]);
 
   const handleWelcomeComplete = useCallback(() => {
     markWelcomeTourSeen(userId);
