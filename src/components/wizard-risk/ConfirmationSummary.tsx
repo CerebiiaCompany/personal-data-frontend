@@ -7,12 +7,19 @@ import { useWizardContext } from "@/contexts/WizardContext";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useWizardError } from "@/hooks/useWizardError";
 import { confirmWizardSession, downloadWizardCompliancePdf } from "@/lib/wizardSession.api";
+import { assignCompanyDataOfficer } from "@/lib/company.api";
 import { computeWizardCompliancePlan } from "@/utils/wizardCompliance";
 import { BLOCK1_QUESTIONS } from "@/constants/wizard-blocks/block1Questions";
 import { BLOCK4_QUESTIONS } from "@/constants/wizard-blocks/block4Questions";
 import { BLOCK5_DPO_QUESTION } from "@/constants/wizard-blocks/block5Questions";
 import { QuestionOption, RiskLevel, WizardConfirmResult } from "@/types/wizardRisk.types";
 import Button from "@/components/base/Button";
+import WizardDpoStep from "@/components/wizard/WizardDpoStep";
+
+// Batch 12 — categorías de B5-P46 que corresponden a una persona DENTRO de
+// la empresa (a diferencia de "external-consulting"/"no-assigned", donde no
+// hay un usuario real que designar). Solo para estas se ofrece el selector.
+const INTERNAL_DPO_CATEGORIES = ["internal-cto", "internal-legal", "internal-compliance", "internal-other"];
 
 const RISK_LABELS: Record<RiskLevel, string> = { LOW: "Bajo", MEDIUM: "Medio", HIGH: "Alto", CRITICAL: "Crítico" };
 
@@ -57,22 +64,45 @@ export default function ConfirmationSummary({ sessionStatus }: ConfirmationSumma
   const [result, setResult] = useState<WizardConfirmResult | null>(null);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
+  const [dataOfficerUserId, setDataOfficerUserId] = useState<string | undefined>(undefined);
+  const [dpoAssignError, setDpoAssignError] = useState<string | null>(null);
 
   const sector = findLabel(BLOCK1_QUESTIONS[0].options, state.answers["B1-P1"]?.[0]);
   const employees = findLabel(BLOCK1_QUESTIONS[1].options, state.answers["B1-P2"]?.[0]);
   const systemsDocumented = findLabel(BLOCK4_QUESTIONS[1].options, state.answers["B4-P32"]?.[0]);
-  const dpoLabel = findLabel(BLOCK5_DPO_QUESTION.options, state.answers["B5-P46"]?.[0]);
+  const dpoCategory = state.answers["B5-P46"]?.[0];
+  const dpoLabel = findLabel(BLOCK5_DPO_QUESTION.options, dpoCategory);
   const plan = computeWizardCompliancePlan(state.answers);
+  const showDpoPicker = Boolean(companyId) && INTERNAL_DPO_CATEGORIES.includes(dpoCategory ?? "");
 
   async function handleConfirm() {
     if (!companyId || !state.sessionId) return;
 
     setIsSubmitting(true);
     const res = await confirmWizardSession(companyId, state.sessionId, {
-      dpoAssigned: state.answers["B5-P46"]?.[0] ?? "no-assigned",
+      dpoAssigned: dpoCategory ?? "no-assigned",
       acknowledge: true,
       compliancePlan: plan,
     });
+
+    // Batch 12 — la categoría de B5-P46 ("internal-cto", etc.) no es un
+    // usuario real: Company.dataOfficerId es un FK a User, y el wizard no
+    // preguntaba antes por una persona concreta. Cuando corresponde
+    // (ver INTERNAL_DPO_CATEGORIES) y se eligió alguien en el selector, se
+    // asigna acá contra el endpoint ya existente y validado
+    // (PATCH /companies/:id/data-officer — misma lógica de elegibilidad
+    // que usa WizardDpoStep en el asistente viejo), NO dentro de /confirm:
+    // un fallo de elegibilidad (rol sin permiso) no debe revertir ni
+    // bloquear el plan ya activado, solo avisarse aparte.
+    if (dataOfficerUserId) {
+      const dpoRes = await assignCompanyDataOfficer(companyId, dataOfficerUserId);
+      if (dpoRes.error) {
+        setDpoAssignError(
+          dpoRes.error.message ?? "No se pudo asignar el responsable de datos."
+        );
+      }
+    }
+
     setIsSubmitting(false);
 
     if (res.error || !res.data) {
@@ -119,6 +149,12 @@ export default function ConfirmationSummary({ sessionStatus }: ConfirmationSumma
           </Button>
         </div>
         {pdfError && <p className="mt-3 text-xs text-red-600">{pdfError}</p>}
+        {dpoAssignError && (
+          <p className="mt-3 text-xs text-amber-600">
+            El plan se activó, pero no pudimos asignar al responsable de datos: {dpoAssignError} Podés
+            hacerlo desde Perfil de Empresa.
+          </p>
+        )}
       </div>
     );
   }
@@ -163,6 +199,26 @@ export default function ConfirmationSummary({ sessionStatus }: ConfirmationSumma
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {showDpoPicker && companyId && (
+        <div className="mt-6">
+          <h2 className="text-sm font-semibold text-primary-900">¿Quién será el responsable de datos?</h2>
+          <p className="mt-1 text-xs text-stone-500">
+            Elegiste &quot;{dpoLabel}&quot; — seleccioná qué usuario de tu equipo cumple ese rol para
+            dejarlo asignado de verdad en la empresa. Es opcional: podés hacerlo después desde Perfil
+            de Empresa.
+          </p>
+          <div className="mt-3">
+            <WizardDpoStep
+              companyId={companyId}
+              dataOfficerUserId={dataOfficerUserId}
+              onChange={(patch) => {
+                if (patch.dataOfficerUserId !== undefined) setDataOfficerUserId(patch.dataOfficerUserId);
+              }}
+            />
+          </div>
         </div>
       )}
 
