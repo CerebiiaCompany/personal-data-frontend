@@ -134,6 +134,12 @@ export default function ConfirmationSummary({ sessionStatus }: ConfirmationSumma
         <Icon icon="tabler:circle-check" className="mx-auto text-5xl text-green-600" />
         <h2 className="mt-4 text-xl font-semibold text-primary-900">¡Plan de cumplimiento activado!</h2>
         <p className="mt-2 text-sm text-stone-600">Score de cumplimiento: {score}%</p>
+        {typeof result?.treatmentsGenerated === "number" && result.treatmentsGenerated > 0 && (
+          <p className="mt-1 text-sm text-primary-700">
+            Se crearon {result.treatmentsGenerated} tratamiento
+            {result.treatmentsGenerated === 1 ? "" : "s"} en borrador a partir de tu diagnóstico.
+          </p>
+        )}
         <ul className="mt-6 flex flex-col gap-2 text-left text-sm text-stone-700">
           {nextSteps.map((step) => (
             <li key={step} className="flex items-start gap-2">
@@ -144,6 +150,11 @@ export default function ConfirmationSummary({ sessionStatus }: ConfirmationSumma
         </ul>
         <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           <Button onClick={() => router.push("/admin")}>Ir al panel</Button>
+          {typeof result?.treatmentsGenerated === "number" && result.treatmentsGenerated > 0 && (
+            <Button hierarchy="secondary" onClick={() => router.push("/admin/tratamientos")}>
+              Ver Tratamientos
+            </Button>
+          )}
           <Button hierarchy="secondary" onClick={handleDownloadPdf} loading={isDownloadingPdf}>
             Descargar PDF
           </Button>

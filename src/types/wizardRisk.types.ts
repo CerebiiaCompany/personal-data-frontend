@@ -165,4 +165,7 @@ export interface WizardConfirmResult {
   status: string;
   compliancePlan: WizardCompliancePlan;
   nextSteps: string[];
+  // Batch 13 — cantidad de Treatments reales (RAT) creados en DRAFT a
+  // partir de las actividades de tratamiento detectadas en Bloque 3.
+  treatmentsGenerated: number;
 }
