@@ -4,6 +4,7 @@ const PUBLIC_ROUTE_PREFIXES = [
   "/formularios/",
   "/consentimiento/",
   "/consentimiento-confirmado",
+  "/consentimiento-biometrico/",
   "/personas",
 ] as const;
 

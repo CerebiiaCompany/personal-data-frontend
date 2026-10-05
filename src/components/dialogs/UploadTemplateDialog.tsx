@@ -286,9 +286,11 @@ const UploadTemplateDialog = ({ refresh }: Props) => {
               <div className="flex flex-col gap-3 rounded-lg border border-disabled bg-stone-50 p-4">
                 <p className="text-sm text-stone-600">
                   Esta política de tratamiento de datos personales se generará
-                  automáticamente a partir de los tratamientos activos del RAT
-                  de tu empresa — se actualiza sola cuando el RAT cambia, no es
-                  un archivo fijo.
+                  automáticamente a partir de <strong>todos</strong> los
+                  tratamientos del RAT de tu empresa (borradores, pendientes de
+                  aprobación y activos) — se actualiza sola cuando el RAT
+                  cambia, no es un archivo fijo. Los tratamientos archivados no
+                  se incluyen.
                 </p>
                 <Button
                   type="button"

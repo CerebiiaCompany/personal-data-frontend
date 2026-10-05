@@ -1,7 +1,7 @@
 import { showApiErrorToast } from "@/components/feedback/ApiErrorToast";
 import { fetchTreatments } from "@/lib/treatment.api";
 import { APIResponse } from "@/types/api.types";
-import { LegalBasis, Treatment, TreatmentStatus } from "@/types/treatment.types";
+import { LegalBasis, Treatment, TreatmentStatus, VerificationStatus } from "@/types/treatment.types";
 import { useCallback, useEffect, useState } from "react";
 
 interface Params {
@@ -12,6 +12,7 @@ interface Params {
   status?: TreatmentStatus;
   legalBasis?: LegalBasis;
   containsSensitiveData?: boolean;
+  verificationStatus?: VerificationStatus;
   search?: string;
   /** Si es false, no dispara el fetch (útil para gate por permisos). */
   enabled?: boolean;
@@ -24,6 +25,7 @@ export function useTreatments({
   status,
   legalBasis,
   containsSensitiveData,
+  verificationStatus,
   search,
   enabled = true,
 }: Params) {
@@ -42,6 +44,7 @@ export function useTreatments({
       status,
       legalBasis,
       containsSensitiveData,
+      verificationStatus,
       search,
     });
     setLoading(false);
@@ -55,7 +58,7 @@ export function useTreatments({
     }
     setData(res.data ?? []);
     setMeta(res.meta ?? null);
-  }, [companyId, page, pageSize, status, legalBasis, containsSensitiveData, search]);
+  }, [companyId, page, pageSize, status, legalBasis, containsSensitiveData, verificationStatus, search]);
 
   useEffect(() => {
     if (!enabled || !companyId) return;

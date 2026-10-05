@@ -14,6 +14,22 @@ import { CustomSelectOption } from "./forms.types";
 
 export type TreatmentStatus = "DRAFT" | "PENDING_APPROVAL" | "ACTIVE" | "ARCHIVED";
 
+/**
+ * Item C-04/N-15 (mecanismo de "Incertidumbre") — un Treatment generado por
+ * el wizard a partir de una respuesta heurística puede estar equivocado.
+ * PENDING_VERIFICATION: un humano todavía no confirmó que los datos
+ * inferidos son correctos. PENDING_DEACTIVATION: algo indica que el
+ * tratamiento ya no aplica, pero no se archiva automáticamente. CONFIRMED es
+ * el estado normal, sin incertidumbre pendiente.
+ */
+export type VerificationStatus = "CONFIRMED" | "PENDING_VERIFICATION" | "PENDING_DEACTIVATION";
+
+export const VERIFICATION_STATUS_LABELS: Record<VerificationStatus, string> = {
+  CONFIRMED: "Confirmado",
+  PENDING_VERIFICATION: "Verificación pendiente",
+  PENDING_DEACTIVATION: "Desactivación pendiente",
+};
+
 // Corregido (auditoría CHK-009/016/062/063/064, 2026-08-27): las 6 bases
 // reales del Art. 13 Ley 21.719 para CL. VITAL_INTEREST,
 // PUBLIC_INTEREST_OR_AUTHORITY y PUBLIC_SOURCE se eliminaron (no tienen
@@ -136,6 +152,10 @@ export interface Treatment {
   status: TreatmentStatus;
   version: number;
 
+  /** Item C-04/N-15 — ver VerificationStatus. `pendingNotes` solo viene poblado en el detalle (GET /:treatmentId), con la nota abierta más reciente (si existe). */
+  verificationStatus: VerificationStatus;
+  pendingNotes?: TreatmentPendingNote[];
+
   purposeId: string | null;
   purposeDetail: string | null;
   legalBasis: LegalBasis | null;
@@ -252,6 +272,37 @@ export interface CreateTreatmentPayload extends TreatmentInput {
 export interface ArchiveTreatmentPayload {
   archivedReason: string;
 }
+
+// --- Item C-04 (mecanismo de "Incertidumbre") ---
+
+export type TreatmentPendingNoteType = "VERIFICATION" | "DEACTIVATION";
+
+export interface TreatmentPendingNote {
+  id: string;
+  treatmentId: string;
+  noteType: TreatmentPendingNoteType;
+  reasonText: string;
+  sourceQuestionKey: string | null;
+  resolvedById: string | null;
+  resolvedAt: string | null;
+  resolutionNote: string | null;
+  createdAt: string;
+}
+
+/**
+ * Payload de PATCH .../resolve-pending. `treatmentUpdates` acepta el mismo
+ * subconjunto de campos que TreatmentInput (ver RESOLVE_PENDING_EDITABLE_FIELDS
+ * en treatment.controller.ts) — se reusa el tipo tal cual en vez de duplicarlo.
+ */
+export interface ResolvePendingPayload {
+  resolutionNote?: string;
+  treatmentUpdates?: TreatmentInput;
+}
+
+export const TREATMENT_PENDING_NOTE_TYPE_LABELS: Record<TreatmentPendingNoteType, string> = {
+  VERIFICATION: "Verificación pendiente",
+  DEACTIVATION: "Desactivación pendiente",
+};
 
 // --- Opciones con etiqueta en español para los formularios ---
 

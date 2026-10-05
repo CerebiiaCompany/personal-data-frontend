@@ -3,6 +3,7 @@ import {
   ArchiveTreatmentPayload,
   CreateTreatmentPayload,
   LegalBasis,
+  ResolvePendingPayload,
   Treatment,
   TreatmentInput,
   TreatmentPurpose,
@@ -10,6 +11,7 @@ import {
   TreatmentSystem,
   TreatmentSystemInput,
   TreatmentVersionEntry,
+  VerificationStatus,
 } from "@/types/treatment.types";
 import { customFetch } from "@/utils/customFetch";
 import { API_BASE_URL } from "@/utils/env.utils";
@@ -35,6 +37,8 @@ interface FetchTreatmentsParams {
   status?: TreatmentStatus;
   legalBasis?: LegalBasis;
   containsSensitiveData?: boolean;
+  /** Item C-04/N-15 — filtra por incertidumbre pendiente (ver VerificationStatus). */
+  verificationStatus?: VerificationStatus;
   /** Substring case-insensitive sobre el nombre del tratamiento. */
   search?: string;
 }
@@ -50,6 +54,9 @@ function buildTreatmentsQuery(params: FetchTreatmentsParams): string {
   if (params.legalBasis) parts.push(`legalBasis=${encodeURIComponent(params.legalBasis)}`);
   if (params.containsSensitiveData !== undefined) {
     parts.push(`containsSensitiveData=${params.containsSensitiveData}`);
+  }
+  if (params.verificationStatus) {
+    parts.push(`verificationStatus=${encodeURIComponent(params.verificationStatus)}`);
   }
   if (params.search) parts.push(`search=${encodeURIComponent(params.search)}`);
   if (params.page !== undefined) parts.push(`page=${params.page}`);
@@ -129,6 +136,24 @@ export async function archiveTreatment(
       method: "PATCH",
       body: JSON.stringify(payload),
     }
+  );
+}
+
+/**
+ * Item C-04 (mecanismo de "Incertidumbre") — resuelve la TreatmentPendingNote
+ * abierta de un tratamiento: vuelve verificationStatus a CONFIRMED y,
+ * opcionalmente, corrige los campos que el wizard infirió mal
+ * (`treatmentUpdates`, mismo subconjunto que RESOLVE_PENDING_EDITABLE_FIELDS
+ * en el backend). Nunca dispara TreatmentVersion (ver comentario del backend).
+ */
+export async function resolvePendingTreatment(
+  companyId: string,
+  treatmentId: string,
+  payload: ResolvePendingPayload = {}
+): Promise<APIResponse<Treatment>> {
+  return customFetch<Treatment>(
+    `/companies/${companyId}/treatments/${treatmentId}/resolve-pending`,
+    { method: "PATCH", body: JSON.stringify(payload) }
   );
 }
 

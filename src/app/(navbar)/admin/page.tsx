@@ -274,6 +274,32 @@ export default function Home() {
         </header>
       </section>
 
+      {/* Item C-04/N-15 — sin esto, un admin no tenía forma de saber, desde
+          el dashboard, que el score de abajo excluye tratamientos con
+          incertidumbre pendiente (ver compliance.controller.ts). Este
+          widget es la fusión real Dashboard+Cumplimiento (/admin/cumplimiento
+          redirige acá — ver middleware.ts). */}
+      {compliance.data?.alerts.pendingTreatmentVerification && (
+        <div
+          className="flex flex-col gap-3 rounded-xl border border-orange-200/90 bg-orange-50/95 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between"
+          role="status"
+        >
+          <div className="flex min-w-0 items-start gap-3">
+            <Icon icon="tabler:help-circle" className="mt-0.5 shrink-0 text-xl text-orange-700" />
+            <p className="text-sm font-semibold text-orange-950">
+              {compliance.data.alerts.pendingTreatmentVerification.message}
+            </p>
+          </div>
+          <Link
+            href="/admin/tratamientos"
+            className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold text-orange-900 underline-offset-2 hover:underline"
+          >
+            Revisar tratamientos
+            <Icon icon="tabler:arrow-right" className="text-sm" />
+          </Link>
+        </div>
+      )}
+
       {/* Secciones de Cumplimiento (fusión Dashboard + Cumplimiento) */}
       <section className="rounded-2xl border border-[#E8EDF7] bg-white p-5 shadow-[0_2px_12px_rgba(15,35,70,0.04)] sm:p-6">
         <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">

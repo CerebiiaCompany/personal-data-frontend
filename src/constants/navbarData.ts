@@ -111,6 +111,22 @@ export const NAVBAR_DATA: NavbarData = [
     requiredPermission: "treatments.create",
   },
   {
+    // Documento 5 — Inventario de Sistemas. Reusa "treatments.view", mismo
+    // criterio que las rutas del backend (systemInventory.routes.ts): "el
+    // inventario es parte del formulario de tratamiento, sin permiso nuevo".
+    title: "Inventario de Sistemas",
+    path: "/admin/inventario-sistemas",
+    icon: "tabler:server-2",
+    minRole: "USER",
+    requiredPermission: "treatments.view",
+  },
+  {
+    title: "Nuevo sistema",
+    path: "/admin/inventario-sistemas/crear",
+    minRole: "USER",
+    requiredPermission: "treatments.edit",
+  },
+  {
     title: "Crear Campaña",
     path: "/admin/campanas/crear",
     minRole: "USER",
