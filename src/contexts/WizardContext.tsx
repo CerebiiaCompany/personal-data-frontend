@@ -5,8 +5,10 @@ import {
   SystemRecord,
   WIZARD_TOTAL_QUESTIONS,
   WizardAnswers,
+  WizardDpoForm,
   WizardSessionState,
   WizardStatusValue,
+  WizardTreatment,
 } from "@/types/wizardRisk.types";
 
 const STORAGE_KEY_PREFIX = "wizard_session_";
@@ -25,6 +27,8 @@ const initialState: WizardSessionState = {
   progressPercent: 0,
   answers: {},
   systems: [],
+  treatments: [],
+  dpoForm: null,
   isLoading: false,
   error: null,
   createdAt: null,
@@ -36,8 +40,12 @@ const VALID_TRANSITIONS: Record<WizardStatusValue, WizardStatusValue[]> = {
   NOT_STARTED: ["IN_PROGRESS"],
   IN_PROGRESS: ["VALIDATING", "ABANDONED"],
   VALIDATING: ["IN_PROGRESS", "COMPLETED"],
-  COMPLETED: [],
+  // Item N-15 — COMPLETED -> EDITING -> COMPLETED (ver reopenWizardSession).
+  // state.status en sí nunca llega a EDITING (queda fijo en IN_PROGRESS, ver
+  // comentario de WizardStatusValue) — esto solo completa el tipo.
+  COMPLETED: ["EDITING"],
   ABANDONED: [],
+  EDITING: ["COMPLETED"],
 };
 
 export function isValidWizardTransition(from: WizardStatusValue, to: WizardStatusValue): boolean {
@@ -51,6 +59,8 @@ type WizardAction =
   | { type: "SET_CURRENT_QUESTION"; questionNum: number }
   | { type: "UPDATE_ANSWER"; questionKey: string; answerValue: string[] }
   | { type: "SET_SYSTEMS"; systems: SystemRecord[] }
+  | { type: "SET_TREATMENTS"; treatments: WizardTreatment[] }
+  | { type: "SET_DPO_FORM"; dpoForm: WizardDpoForm }
   | { type: "SET_STATUS"; status: WizardStatusValue }
   | { type: "SET_LOADING"; isLoading: boolean }
   | { type: "SET_ERROR"; code: string; message: string }
@@ -95,6 +105,10 @@ function reducer(state: WizardSessionState, action: WizardAction): WizardSession
     }
     case "SET_SYSTEMS":
       return { ...state, systems: action.systems, ...touch() };
+    case "SET_TREATMENTS":
+      return { ...state, treatments: action.treatments, ...touch() };
+    case "SET_DPO_FORM":
+      return { ...state, dpoForm: action.dpoForm, ...touch() };
     case "SET_STATUS": {
       if (!isValidWizardTransition(state.status, action.status)) {
         throw new Error(
@@ -125,6 +139,8 @@ interface WizardContextValue {
   setCurrentQuestion: (questionNum: number) => void;
   updateAnswer: (questionKey: string, answerValue: string[]) => void;
   setSystems: (systems: SystemRecord[]) => void;
+  setTreatments: (treatments: WizardTreatment[]) => void;
+  setDpoForm: (dpoForm: WizardDpoForm) => void;
   setStatus: (status: WizardStatusValue) => void;
   setLoading: (isLoading: boolean) => void;
   setError: (code: string, message: string) => void;
@@ -162,7 +178,16 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
           const raw = window.localStorage.getItem(storageKey(sessionId));
           if (raw) {
             const persisted = JSON.parse(raw) as WizardSessionState;
-            dispatch({ type: "HYDRATE", state: { ...persisted, isLoading: false, error: null } });
+            dispatch({
+              type: "HYDRATE",
+              state: {
+                ...persisted,
+                treatments: persisted.treatments ?? [],
+                systems: persisted.systems ?? [],
+                isLoading: false,
+                error: null,
+              },
+            });
             return;
           }
         } catch (e) {
@@ -190,6 +215,14 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
 
   const setSystems = useCallback((systems: SystemRecord[]) => {
     dispatch({ type: "SET_SYSTEMS", systems });
+  }, []);
+
+  const setTreatments = useCallback((treatments: WizardTreatment[]) => {
+    dispatch({ type: "SET_TREATMENTS", treatments });
+  }, []);
+
+  const setDpoForm = useCallback((dpoForm: WizardDpoForm) => {
+    dispatch({ type: "SET_DPO_FORM", dpoForm });
   }, []);
 
   const setStatus = useCallback((status: WizardStatusValue) => {
@@ -225,6 +258,8 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
       setCurrentQuestion,
       updateAnswer,
       setSystems,
+      setTreatments,
+      setDpoForm,
       setStatus,
       setLoading,
       setError,
@@ -238,6 +273,8 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
       setCurrentQuestion,
       updateAnswer,
       setSystems,
+      setTreatments,
+      setDpoForm,
       setStatus,
       setLoading,
       setError,

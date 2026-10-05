@@ -1,148 +1,285 @@
 import { WizardQuestionDefinition } from "@/types/wizardRisk.types";
+import { hasEmployees, hasYesSelection } from "@/utils/wizardQuestionHelpers";
 
 /**
- * Bloque 3 — Inventario de Tratamientos (preguntas globales 16-30 de 30).
- *
- * Con condicionales: algunas preguntas se ocultan u ofrecen según
- * respuestas ya dadas en Bloque 1-2 (`showIf`/`hideIf`, evaluadas por
- * hooks/useWizardBlockQuestions contra el `state.answers` ya cargado en
- * contexto). El ORDEN de este arreglo es el orden real en que se navega
- * — B3-P26..P30 quedan últimas siempre, así que la "última pregunta del
- * bloque" es predecible sin importar qué condicionales se activen.
- *
- * B3-P16/P24/P25/P26/P29 son checkboxes booleanos opcionales de una sola
- * opción (ver isOptionalSingleCheckbox) — el resto tiene varias opciones
- * reales y sí exige selección.
+ * Bloque 3 — Inventario de Tratamientos / RAT Wizard (13 preguntas).
+ * Condicionales del spec:
+ * - B3-P16, P17, P18, P19: solo si B1-P2 es mayor que 0 empleados.
+ * - B3-P23: solo si B2-P9 incluyó alguna opción "Sí".
  */
 export const BLOCK3_QUESTIONS: WizardQuestionDefinition[] = [
   {
     questionKey: "B3-P16",
-    questionText: "¿Tratas datos de empleados (nómina, currículos)?",
-    type: "MULTIPLE_CHOICE",
-    options: [{ value: "yes", label: "Sí" }],
-    hideIf: (answers) => answers["B1-P2"]?.[0] === "1-5",
-    mark: "has_hr_data",
+    questionText: "¿Su empresa paga sueldos o remuneraciones a empleados?",
+    type: "SINGLE_CHOICE",
+    options: [
+      { value: "si", label: "Sí" },
+      { value: "no", label: "No (sin empleados remunerados)" },
+    ],
+    showIf: hasEmployees,
+    mark: "gestion_nomina",
   },
   {
     questionKey: "B3-P17",
-    questionText: "¿Tratas datos de clientes (contactos, emails)?",
-    type: "MULTIPLE_CHOICE",
-    options: [{ value: "yes", label: "Sí" }],
-    mark: "has_customer_data",
+    questionText: "¿Su empresa recibe o gestiona currículos de trabajo?",
+    type: "SINGLE_CHOICE",
+    options: [
+      { value: "activamente", label: "Sí, activamente — proceso formal" },
+      { value: "ocasionalmente", label: "Sí, ocasionalmente" },
+      { value: "no", label: "No gestionamos postulaciones." },
+    ],
+    showIf: hasEmployees,
+    mark: "reclutamiento",
   },
   {
     questionKey: "B3-P18",
-    questionText: "¿Almacenas datos financieros?",
+    questionText: "¿Su empresa registra la asistencia o el horario de empleados?",
     type: "MULTIPLE_CHOICE",
-    options: [{ value: "yes", label: "Sí, datos bancarios/tarjetas" }],
-    mark: "has_financial_data",
+    options: [
+      { value: "huella_digital", label: "Sí, con huella digital" },
+      { value: "reloj_tarjeta", label: "Sí, con reloj control o tarjeta" },
+      { value: "app_manual", label: "Sí, con app móvil o registro manual" },
+      { value: "no", label: "No registramos asistencia formalmente.", exclusive: true },
+    ],
+    showIf: hasEmployees,
+    mark: "control_asistencia",
   },
   {
     questionKey: "B3-P19",
-    questionText: "¿Tratas datos de proveedores?",
-    type: "MULTIPLE_CHOICE",
-    options: [{ value: "yes", label: "Sí" }],
-    mark: "has_vendor_data",
+    questionText: "¿Su empresa gestiona licencias médicas o beneficios de salud de empleados?",
+    type: "SINGLE_CHOICE",
+    options: [
+      { value: "licencias", label: "Sí, licencias médicas" },
+      { value: "beneficios", label: "Sí, beneficios de salud (Isapre, Fonasa, seguros)" },
+      { value: "ambas", label: "Sí, ambos" },
+      { value: "no", label: "No." },
+    ],
+    showIf: hasEmployees,
+    mark: "gestion_salud_empleados",
   },
   {
     questionKey: "B3-P20",
-    questionText: "¿Almacenas comunicaciones (emails, chats)?",
-    type: "MULTIPLE_CHOICE",
-    options: [{ value: "yes", label: "Sí" }],
-    mark: "has_communication_data",
+    questionText: "¿Su empresa tiene una base de datos de clientes?",
+    type: "SINGLE_CHOICE",
+    options: [
+      { value: "si", label: "Sí (cantidad aproximada: _______________)" },
+      { value: "no", label: "No — sin base de datos formal de clientes." },
+    ],
+    conditionalFieldsByOption: {
+      si: { label: "Cantidad aproximada", fieldType: "number", required: true, placeholder: "Ej. 250" },
+    },
+    mark: "base_clientes",
   },
   {
     questionKey: "B3-P21",
-    questionText: "¿Tienes datos de usuarios/visitantes web?",
-    type: "MULTIPLE_CHOICE",
-    options: [{ value: "yes", label: "Sí" }],
-    mark: "has_user_data",
+    questionText: "¿Su empresa emite facturas o boletas electrónicas?",
+    type: "SINGLE_CHOICE",
+    options: [
+      { value: "si", label: "Sí" },
+      { value: "no", label: "No emitimos documentos tributarios directamente." },
+    ],
+    mark: "facturacion",
   },
   {
     questionKey: "B3-P22",
-    questionText: "¿Para marketing usas segmentación de datos?",
-    type: "MULTIPLE_CHOICE",
-    options: [{ value: "yes", label: "Sí" }],
-    showIf: (answers) => answers["B2-P9"]?.includes("yes") ?? false,
-    mark: "marketing_segmentation",
+    questionText: "¿Su empresa realiza cobranza — contacta a personas con deudas?",
+    type: "SINGLE_CHOICE",
+    options: [
+      { value: "internamente", label: "Sí, internamente" },
+      { value: "tercerizada", label: "Sí, tercerizada" },
+      { value: "no", label: "No tenemos cobranza." },
+    ],
+    mark: "cobranza",
   },
   {
     questionKey: "B3-P23",
-    questionText: "¿Los datos de salud incluyen diagnósticos sensibles?",
-    type: "MULTIPLE_CHOICE",
+    questionText: "¿Su empresa envía newsletters o comunicaciones comerciales?",
+    type: "SINGLE_CHOICE",
     options: [
-      { value: "mental", label: "Información psiquiátrica/salud mental" },
-      { value: "hiv", label: "VIH u otras infecciones" },
-      { value: "genetic", label: "Información genética" },
+      { value: "newsletters", label: "Sí, newsletters periódicos (frecuencia: _______________)" },
+      { value: "promociones", label: "Sí, promociones o campañas especiales" },
+      { value: "ambas", label: "Sí, ambos." },
     ],
-    showIf: (answers) => answers["B2-P6"]?.includes("yes") ?? false,
-    mark: "sensitive_health_category",
+    conditionalFieldsByOption: {
+      newsletters: {
+        label: "Frecuencia",
+        fieldType: "text",
+        required: true,
+        placeholder: "Ej. semanal, mensual",
+      },
+      ambas: {
+        label: "Frecuencia",
+        fieldType: "text",
+        required: true,
+        placeholder: "Ej. semanal, mensual",
+      },
+    },
+    showIf: (answers) => hasYesSelection(answers["B2-P9"]),
+    mark: "marketing_directo",
   },
   {
     questionKey: "B3-P24",
-    questionText: "¿Tipos de datos de RRHH?",
+    questionText: "¿Su empresa realiza encuestas de satisfacción o estudios de mercado?",
     type: "MULTIPLE_CHOICE",
     options: [
-      { value: "payroll", label: "Nómina y salarios" },
-      { value: "performance", label: "Evaluaciones de desempeño" },
-      { value: "medical", label: "Datos médicos de empleados" },
-      { value: "background", label: "Antecedentes/historial" },
+      { value: "post_servicio", label: "Sí, encuestas post-servicio" },
+      { value: "estudios", label: "Sí, estudios de mercado o focus groups" },
+      { value: "no", label: "No realizamos encuestas.", exclusive: true },
     ],
-    hideIf: (answers) => answers["B1-P2"]?.[0] === "1-5",
+    mark: "investigacion_mercado",
   },
   {
     questionKey: "B3-P25",
-    questionText: "¿Sistema de gestión de RRHH externo?",
+    questionText: "¿Su empresa tiene sistemas de control de acceso a instalaciones?",
     type: "MULTIPLE_CHOICE",
-    options: [{ value: "yes", label: "Sí, usamos software RRHH (SAP, Workday, etc.)" }],
-    hideIf: (answers) => answers["B1-P2"]?.[0] === "1-5",
+    options: [
+      { value: "camaras", label: "Sí, cámaras" },
+      { value: "credenciales_empleados", label: "Sí, tarjetas o credenciales para empleados" },
+      { value: "credenciales_visitantes", label: "Sí, tarjetas o credenciales para clientes o visitantes" },
+      { value: "no", label: "No tenemos control de acceso.", exclusive: true },
+    ],
+    mark: "control_acceso",
   },
   {
     questionKey: "B3-P26",
-    questionText: "¿Guarda logs/auditoría de acceso?",
-    type: "MULTIPLE_CHOICE",
-    options: [{ value: "yes", label: "Sí" }],
-    mark: "has_audit_logs",
+    questionText: "¿Sus sistemas informáticos generan registros de actividad de usuarios?",
+    type: "SINGLE_CHOICE",
+    options: [
+      { value: "si", label: "Sí, registran qué usuarios accedieron a qué datos y cuándo" },
+      { value: "no", label: "No tenemos logs de actividad" },
+      { value: "no_se", label: "No sé si tenemos logs." },
+    ],
+    mark: "logs_seguridad",
   },
   {
     questionKey: "B3-P27",
-    questionText: "¿Tiene política de retención de datos?",
+    questionText: "¿Su empresa gestiona contratos que incluyen datos de personas naturales?",
     type: "MULTIPLE_CHOICE",
     options: [
-      { value: "yes", label: "Sí, tenemos política" },
-      { value: "no", label: "No, los guardamos indefinidamente" },
-      { value: "unsure", label: "No estamos seguros" },
+      { value: "servicio", label: "Sí, contratos de servicio con personas naturales como clientes" },
+      { value: "compraventa", label: "Sí, promesas de compraventa u otros acuerdos con personas naturales" },
+      { value: "no", label: "No — solo contratos con empresas.", exclusive: true },
     ],
-    mark: "has_retention_policy",
+    mark: "gestion_contratos",
   },
   {
     questionKey: "B3-P28",
-    questionText: "¿Realiza copias de seguridad?",
+    questionText: "¿Su empresa procesa pagos de clientes a través de plataforma externa?",
     type: "MULTIPLE_CHOICE",
     options: [
-      { value: "daily", label: "Sí, diarias" },
-      { value: "weekly", label: "Sí, semanales" },
-      { value: "monthly", label: "Sí, mensuales" },
-      { value: "no", label: "No, no tenemos backups" },
+      { value: "transbank", label: "Sí, Transbank / WebPay / POS físico" },
+      { value: "pasarela", label: "Sí, pasarela de pago en línea (especifique: _______________)" },
+      { value: "billeteras", label: "Sí, billeteras digitales o fintech" },
+      { value: "no", label: "No, solo efectivo o transferencias directas.", exclusive: true },
     ],
-    mark: "backup_frequency",
+    conditionalFieldsByOption: {
+      pasarela: { label: "Especifique", fieldType: "text", required: true, placeholder: "Ej. Stripe, Flow, PayPal" },
+    },
+    mark: "procesamiento_pagos",
   },
-  {
-    questionKey: "B3-P29",
-    questionText: "¿Cifra datos en reposo?",
-    type: "MULTIPLE_CHOICE",
-    options: [{ value: "yes", label: "Sí, los datos están cifrados" }],
-    mark: "encrypts_at_rest",
-  },
+  // Item N-10 — B3-P29 y B3-P34 se omiten a propósito: B3-P34
+  // (Accidentes y Enfermedades Laborales) ya está automatizada desde B1-P2
+  // (ver treatmentRules.ts, item N-12), sin pregunta propia; B3-P29 no
+  // corresponde a este batch. Cada pregunta de abajo agrega un disparador
+  // explícito (yes/no) a un tratamiento que hasta ahora solo se inferían
+  // por industria o cantidad de empleados (ver treatmentRules.ts) — ambos
+  // caminos conviven (any/or), no se reemplazan.
   {
     questionKey: "B3-P30",
-    questionText: "¿Cifra datos en tránsito?",
-    type: "MULTIPLE_CHOICE",
+    questionText: "¿Su empresa tiene un programa de fidelización o puntos para clientes?",
+    type: "SINGLE_CHOICE",
     options: [
-      { value: "yes", label: "Sí, HTTPS/SSL" },
-      { value: "partial", label: "Parcialmente" },
+      { value: "si", label: "Sí" },
       { value: "no", label: "No" },
     ],
-    mark: "encrypts_in_transit",
+    mark: "fidelizacion",
+  },
+  {
+    questionKey: "B3-P31",
+    questionText: "¿Su empresa gestiona garantías o reclamos posventa de productos o servicios?",
+    type: "SINGLE_CHOICE",
+    options: [
+      { value: "si", label: "Sí" },
+      { value: "no", label: "No" },
+    ],
+    mark: "garantias_reclamos",
+  },
+  {
+    questionKey: "B3-P32",
+    questionText: "¿Su empresa realiza evaluaciones de desempeño a sus empleados?",
+    type: "SINGLE_CHOICE",
+    options: [
+      { value: "si", label: "Sí" },
+      { value: "no", label: "No" },
+    ],
+    mark: "evaluaciones_desempeno",
+  },
+  {
+    questionKey: "B3-P33",
+    questionText: "¿Su empresa capacita o certifica formalmente a su personal?",
+    type: "SINGLE_CHOICE",
+    options: [
+      { value: "si", label: "Sí" },
+      { value: "no", label: "No" },
+    ],
+    mark: "capacitacion_certificacion",
+  },
+  {
+    questionKey: "B3-P35",
+    questionText: "¿Su empresa realiza encuestas de clima organizacional?",
+    type: "SINGLE_CHOICE",
+    options: [
+      { value: "si", label: "Sí" },
+      { value: "no", label: "No" },
+    ],
+    mark: "clima_organizacional",
+  },
+  {
+    // "No estoy seguro" (no genérico en el spec, agregado siguiendo el
+    // mismo criterio ya usado en B2-P11/B2-P13, item N-14): si la empresa
+    // no sabe si es sujeto obligado UAF, el tratamiento KYC se genera
+    // igual, marcado para revisión manual (ver pendingReview.ts).
+    questionKey: "B3-P36",
+    questionText:
+      "¿Su empresa es un sujeto obligado a reportar ante la UAF — la Unidad de Análisis Financiero, el organismo que previene el lavado de activos — por ejemplo notarías, casinos, corredoras u otras actividades financieras reguladas?",
+    tooltipWhy: "Los sujetos obligados UAF (Ley 19.913) deben identificar y verificar la identidad de sus clientes.",
+    type: "SINGLE_CHOICE",
+    options: [
+      { value: "si", label: "Sí" },
+      { value: "no", label: "No" },
+      { value: "no_seguro", label: "No estoy seguro." },
+    ],
+    mark: "kyc_uaf",
+  },
+  {
+    questionKey: "B3-P37",
+    questionText: "¿Su empresa tiene un área o canal formal de soporte o atención al cliente?",
+    type: "SINGLE_CHOICE",
+    options: [
+      { value: "si", label: "Sí" },
+      { value: "no", label: "No" },
+    ],
+    mark: "soporte_atencion",
+  },
+  {
+    questionKey: "B3-P38",
+    questionText:
+      "¿Su empresa opera una plataforma o software propio que sus clientes usan directamente, más allá de una app móvil?",
+    type: "SINGLE_CHOICE",
+    options: [
+      { value: "si", label: "Sí" },
+      { value: "no", label: "No" },
+    ],
+    mark: "uso_plataforma",
+  },
+  {
+    questionKey: "B3-P39",
+    questionText: "¿Su empresa participa en licitaciones públicas o privadas?",
+    type: "SINGLE_CHOICE",
+    options: [
+      { value: "si", label: "Sí" },
+      { value: "no", label: "No" },
+    ],
+    mark: "licitaciones",
   },
 ];

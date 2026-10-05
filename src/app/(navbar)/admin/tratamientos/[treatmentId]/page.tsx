@@ -3,7 +3,10 @@
 import Button from "@/components/base/Button";
 import { showApiErrorToast } from "@/components/feedback/ApiErrorToast";
 import ArchiveTreatmentDialog from "@/components/treatments/ArchiveTreatmentDialog";
+import BiometricConsentSection from "@/components/treatments/BiometricConsentSection";
+import TreatmentPendingVerificationPanel from "@/components/treatments/TreatmentPendingVerificationPanel";
 import TreatmentStatusBadge from "@/components/treatments/TreatmentStatusBadge";
+import TreatmentVerificationBadge from "@/components/treatments/TreatmentVerificationBadge";
 import TreatmentSystemsSection from "@/components/treatments/TreatmentSystemsSection";
 import TreatmentVersionHistory from "@/components/treatments/TreatmentVersionHistory";
 import RatPolicySyncBanner from "@/components/treatments/RatPolicySyncBanner";
@@ -12,7 +15,7 @@ import { useCompanyDataOfficer } from "@/hooks/useCompanyDataOfficer";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useTreatment } from "@/hooks/useTreatment";
 import { useTreatmentPurposes } from "@/hooks/useTreatmentPurposes";
-import { activateTreatment } from "@/lib/treatment.api";
+import { activateTreatment, resolvePendingTreatment } from "@/lib/treatment.api";
 import { useSessionStore } from "@/store/useSessionStore";
 import { canApproveRatActivation } from "@/utils/dpoEligibility";
 import {
@@ -160,9 +163,17 @@ export default function TreatmentDetailPage() {
     refresh();
   }
 
-  function handleArchived(updated: Treatment) {
+  // Item C-04/N-15 — archivar un PENDING_DEACTIVATION es, en sí mismo, la
+  // confirmación humana de que "ya no aplica" (ver TreatmentPendingVerificationPanel);
+  // sin este paso la nota quedaría abierta para siempre en un tratamiento ya
+  // archivado, invisible en cualquier pantalla.
+  async function handleArchived(updated: Treatment) {
+    if (companyId && data?.verificationStatus === "PENDING_DEACTIVATION") {
+      await resolvePendingTreatment(companyId, updated.id, {
+        resolutionNote: "Confirmado al archivar el tratamiento.",
+      });
+    }
     refresh();
-    void updated;
   }
 
   if (loading && !data) {
@@ -227,6 +238,7 @@ export default function TreatmentDetailPage() {
                   {data.name}
                 </h1>
                 <TreatmentStatusBadge status={data.status} />
+                <TreatmentVerificationBadge status={data.verificationStatus} />
                 <span className="text-xs font-medium text-[#94A3B8]">
                   Versión {data.version}
                 </span>
@@ -314,6 +326,17 @@ export default function TreatmentDetailPage() {
           )}
         </header>
       </div>
+
+      {companyId && data.verificationStatus !== "CONFIRMED" && (
+        <div className="w-full px-5 pt-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
+          <TreatmentPendingVerificationPanel
+            companyId={companyId}
+            treatment={data}
+            onResolved={refresh}
+            onRequestArchive={() => setArchiveOpen(true)}
+          />
+        </div>
+      )}
 
       <div className="w-full px-5 py-6 sm:px-6 sm:py-7 lg:px-8 xl:px-10 2xl:px-12">
         <div className="grid gap-5 lg:grid-cols-2">
@@ -444,6 +467,16 @@ export default function TreatmentDetailPage() {
           {companyId && (
             <div className="lg:col-span-2">
               <TreatmentSystemsSection companyId={companyId} treatmentId={data.id} />
+            </div>
+          )}
+
+          {/* Item D-01/N-02/N-03/N-04/N-09 — solo para tratamientos que
+              incluyen datos biométricos (Art. 16, Ley 21.719). */}
+          {companyId &&
+            (data.dataCategories.includes("BIOMETRIC") ||
+              (data.containsSensitiveData && data.wizardTreatmentKey?.startsWith("B2-P8"))) && (
+            <div className="lg:col-span-2">
+              <BiometricConsentSection companyId={companyId} treatmentId={data.id} />
             </div>
           )}
 

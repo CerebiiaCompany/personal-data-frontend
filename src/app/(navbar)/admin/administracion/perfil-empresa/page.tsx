@@ -7,8 +7,8 @@ import { Icon } from "@iconify/react";
 import { useSessionStore } from "@/store/useSessionStore";
 import { useCompanyProfile } from "@/hooks/useCompanyProfile";
 import { getDataProtectionLegalNotice } from "@/utils/legalNotices.utils";
-import OpenSetupWizardButton from "@/components/wizard/OpenSetupWizardButton";
 import SetupWizardUrlOpener from "@/components/wizard/SetupWizardUrlOpener";
+import ReopenWizardRiskButton from "@/components/wizard-risk/ReopenWizardRiskButton";
 
 import IdentificationSection from "@/components/company-profile/IdentificationSection";
 import EmailBrandingSection from "@/components/company-profile/EmailBrandingSection";
@@ -100,7 +100,7 @@ export default function CompanyProfilePage() {
             </p>
             </div>
             {user?.role === "COMPANY_ADMIN" && (
-              <OpenSetupWizardButton
+              <ReopenWizardRiskButton
                 hierarchy="primary"
                 className="shrink-0"
               />

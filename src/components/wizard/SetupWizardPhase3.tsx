@@ -324,8 +324,9 @@ export default function SetupWizardPhase3({
                   RAT.
                 </li>
                 <li>
-                  <strong>Cómo se ve el documento:</strong> el texto legal se arma en vivo desde tus
-                  tratamientos activos cada vez que un titular lo consulta.
+                  <strong>Cómo se ve el documento:</strong> el texto legal se arma en vivo desde
+                  todos tus tratamientos del RAT (borradores, pendientes y activos) cada vez que
+                  un titular lo consulta.
                 </li>
               </ul>
             </div>

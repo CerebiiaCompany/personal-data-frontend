@@ -3,11 +3,29 @@ import {
   SystemRecord,
   WizardAnswers,
   WizardConfirmResult,
+  WizardDpoForm,
+  WizardReopenConfirmResult,
+  WizardReopenSessionResponse,
   WizardSessionResponse,
 } from "@/types/wizardRisk.types";
+import { WizardTreatmentPersistPayload } from "@/utils/wizardTreatmentPersist";
 import { customFetch } from "@/utils/customFetch";
 import { API_BASE_URL } from "@/utils/env.utils";
 import { filenameFromContentDisposition, triggerBrowserDownload } from "@/utils/downloadFile";
+import { WizardInferenceRulesResponse } from "@/services/wizard-inference";
+
+/**
+ * Item wizard_treatment_rules (auditoría externa, 2026-09-08) — el motor de
+ * inferencia (WizardInferenceService) antes importaba estos catálogos
+ * hardcodeados desde ./services/wizard-inference/catalogs/*.ts (borrados).
+ * Se consulta una sola vez al entrar al Bloque 5 (ver WizardBlock5.tsx), no
+ * por pregunta — mismo criterio que createOrResumeWizardSession.
+ */
+export async function fetchWizardInferenceRules(
+  companyId: string
+): Promise<APIResponse<WizardInferenceRulesResponse>> {
+  return customFetch(`/companies/${companyId}/wizard-risk/rules`);
+}
 
 /**
  * Crea o retoma la sesión del Wizard de Diagnóstico de Riesgo para la empresa
@@ -83,9 +101,49 @@ export async function saveWizardSystems(
 export async function confirmWizardSession(
   companyId: string,
   sessionId: string,
-  payload: { dpoAssigned: string; acknowledge: boolean; compliancePlan: WizardConfirmResult["compliancePlan"] }
+  payload: {
+    dpoAssigned: string;
+    dpoForm: WizardDpoForm;
+    acknowledge: boolean;
+    compliancePlan: WizardConfirmResult["compliancePlan"];
+    treatments?: WizardTreatmentPersistPayload[];
+  }
 ): Promise<APIResponse<WizardConfirmResult>> {
   return customFetch(`/companies/${companyId}/wizard-risk/sessions/${sessionId}/confirm`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * Item N-15 — reabre una sesión COMPLETED para que el admin corrija
+ * Bloques 1 a 4 (el Bloque 5/DPO no se reabre) y actualice sus RATs.
+ * Backend: reopenWizardRiskSession (wizardRiskSession.service.ts).
+ */
+export async function reopenWizardSession(
+  companyId: string,
+  sessionId: string
+): Promise<APIResponse<WizardReopenSessionResponse>> {
+  return customFetch(`/companies/${companyId}/wizard-risk/sessions/${sessionId}/reopen`, {
+    method: "POST",
+  });
+}
+
+/**
+ * Item N-15 — cierra la edición (EDITING -> COMPLETED) y reconcilia los
+ * Treatments contra las respuestas corregidas (crea nuevos, marca
+ * PENDING_DEACTIVATION o deja constancia de conflicto en los que dejaron
+ * de aplicar) — no vuelve a pedir dpoAssigned/dpoForm/acknowledge.
+ */
+export async function confirmReopenedWizardSession(
+  companyId: string,
+  sessionId: string,
+  payload: {
+    treatments?: WizardTreatmentPersistPayload[];
+    compliancePlan?: WizardConfirmResult["compliancePlan"];
+  }
+): Promise<APIResponse<WizardReopenConfirmResult>> {
+  return customFetch(`/companies/${companyId}/wizard-risk/sessions/${sessionId}/reopen/confirm`, {
     method: "POST",
     body: JSON.stringify(payload),
   });

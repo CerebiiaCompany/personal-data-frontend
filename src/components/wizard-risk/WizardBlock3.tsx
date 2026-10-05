@@ -1,26 +1,23 @@
 "use client";
 
 import { useWizardBlockQuestions } from "@/hooks/useWizardBlockQuestions";
+import { useWizardContext } from "@/contexts/WizardContext";
+import { getWizardBlockStartQuestion } from "@/constants/wizardBlocks";
 import { BLOCK3_QUESTIONS } from "@/constants/wizard-blocks/block3Questions";
-import { isOptionalSingleCheckbox } from "@/utils/wizardQuestionHelpers";
 import QuestionCard from "./QuestionCard";
 
 const BLOCK_NUM = 3;
-const BLOCK_START_QUESTION = 16; // preguntas globales 16-30 de 30
 
 /**
- * Bloque 3 — Inventario de Tratamientos. A diferencia de los Bloques 1-2,
- * su cantidad real de preguntas varía según condicionales (Batch 6) — ver
- * block3Questions.ts. useWizardBlockQuestions ya filtra por esos
- * condicionales antes de indexar, así que "Siguiente"/"Anterior" navegan
- * naturalmente solo entre preguntas visibles, sin lógica extra de salto.
+ * Bloque 3 — Inventario de Tratamientos. La cantidad visible depende de
+ * B1-P2 (empleados) y B2-P9 (marketing). useWizardBlockQuestions filtra
+ * por showIf antes de indexar.
  */
 export default function WizardBlock3() {
+  const { state } = useWizardContext();
   const {
     question,
-    isFirstQuestion,
-    localIndex,
-    visibleCount,
+    isFirstOfWizard,
     currentAnswer,
     isLoading,
     handleAnswer,
@@ -28,7 +25,7 @@ export default function WizardBlock3() {
     handlePrevious,
   } = useWizardBlockQuestions({
     blockNum: BLOCK_NUM,
-    blockStartQuestion: BLOCK_START_QUESTION,
+    blockStartQuestion: getWizardBlockStartQuestion(BLOCK_NUM, state.answers),
     questions: BLOCK3_QUESTIONS,
   });
 
@@ -37,26 +34,21 @@ export default function WizardBlock3() {
   }
 
   return (
-    <div>
-      <p className="mx-auto w-full max-w-[700px] px-4 pt-4 text-xs text-stone-400 sm:px-6 md:px-8">
-        Pregunta {localIndex + 1} de {visibleCount} en este bloque
-      </p>
-      <QuestionCard
-        key={question.questionKey}
-        questionKey={question.questionKey}
-        questionText={question.questionText}
-        helpText={question.helpText}
-        tooltipWhy={question.tooltipWhy}
-        type={question.type}
-        options={question.options}
-        currentAnswer={currentAnswer}
-        isLoading={isLoading}
-        onAnswer={handleAnswer}
-        onPrevious={isFirstQuestion ? undefined : handlePrevious}
-        onNext={handleNext}
-        showPreviousButton={!isFirstQuestion}
-        canGoNext={isOptionalSingleCheckbox(question) ? true : undefined}
-      />
-    </div>
+    <QuestionCard
+      key={question.questionKey}
+      questionKey={question.questionKey}
+      questionText={question.questionText}
+      helpText={question.helpText}
+      tooltipWhy={question.tooltipWhy}
+      type={question.type}
+      options={question.options}
+      conditionalFieldsByOption={question.conditionalFieldsByOption}
+      currentAnswer={currentAnswer}
+      isLoading={isLoading}
+      onAnswer={handleAnswer}
+      onPrevious={isFirstOfWizard ? undefined : handlePrevious}
+      onNext={handleNext}
+      showPreviousButton={!isFirstOfWizard}
+    />
   );
 }

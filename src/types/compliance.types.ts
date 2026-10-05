@@ -40,6 +40,8 @@ export interface ComplianceDashboard {
   };
   alerts: {
     noDpoAssigned: { count: number; message: string } | null;
+    /** Item C-04/N-15 — tratamientos con incertidumbre pendiente (ver TreatmentPendingNote), excluidos de complianceScore. */
+    pendingTreatmentVerification: { count: number; message: string } | null;
   };
   consents: {
     active: number;

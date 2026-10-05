@@ -868,6 +868,22 @@ input:focus {
   animation: wizardStepIn 0.28s ease-out both;
 }
 
+/* ─── Wizard de Diagnóstico de Riesgo (wizard-risk) ────────────────────── */
+@keyframes wizardRiskStepIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.wizard-risk-step-in {
+  animation: wizardRiskStepIn 0.32s ease-out both;
+}
+
 .wizard-spinner {
   animation: wizardSpinner 0.75s linear infinite;
 }

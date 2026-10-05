@@ -37,7 +37,7 @@ export default function WizardRouter({ segment, blockNum, questionNum }: WizardR
     // de questionNum (ver wizardBlocks.ts) para no quedar en un bloque sin
     // preguntas propias (p. ej. tras cruzar de bloque, ver useWizardSession).
     // Una URL con el bloque "equivocado" para su pregunta se autocorrige.
-    const correctBlock = resolveWizardBlockForQuestion(questionNum);
+    const correctBlock = resolveWizardBlockForQuestion(questionNum, state.answers);
     if (blockNum !== correctBlock) {
       router.replace(getWizardBlockQuestionPath(correctBlock, questionNum));
       return;
@@ -67,7 +67,7 @@ export default function WizardRouter({ segment, blockNum, questionNum }: WizardR
     if (correctBlock !== state.currentBlock) setCurrentBlock(correctBlock);
     if (questionNum !== state.currentQuestion) setCurrentQuestion(questionNum);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [segment, blockNum, questionNum, state.sessionId, state.currentQuestion]);
+  }, [segment, blockNum, questionNum, state.sessionId, state.currentQuestion, state.answers]);
 
   return <WizardContainer segment={segment} />;
 }

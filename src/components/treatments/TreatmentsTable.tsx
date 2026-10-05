@@ -1,4 +1,5 @@
 import TreatmentStatusBadge from "@/components/treatments/TreatmentStatusBadge";
+import TreatmentVerificationBadge from "@/components/treatments/TreatmentVerificationBadge";
 import { Treatment, LEGAL_BASIS_LABELS } from "@/types/treatment.types";
 import { Icon } from "@iconify/react";
 import Link from "next/link";
@@ -98,7 +99,10 @@ const TreatmentsTable = ({ items, loading, error }: Props) => {
                 )}
               </td>
               <td className="px-4 py-3">
-                <TreatmentStatusBadge status={t.status} />
+                <div className="flex flex-col items-start gap-1">
+                  <TreatmentStatusBadge status={t.status} />
+                  <TreatmentVerificationBadge status={t.verificationStatus} />
+                </div>
               </td>
               <td className="px-4 py-3 text-sm text-[#475569]">
                 {t.legalBasis ? LEGAL_BASIS_LABELS[t.legalBasis] : "—"}

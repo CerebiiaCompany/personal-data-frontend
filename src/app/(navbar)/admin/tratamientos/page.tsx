@@ -7,6 +7,7 @@ import ModuleHelpButton from "@/components/tour/ModuleHelpButton";
 import TreatmentsFilters, {
   emptyTreatmentsFilters,
 } from "@/components/treatments/TreatmentsFilters";
+import PendingVerificationBanner from "@/components/treatments/PendingVerificationBanner";
 import RatPolicySyncBanner from "@/components/treatments/RatPolicySyncBanner";
 import TreatmentsTable from "@/components/treatments/TreatmentsTable";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
@@ -48,7 +49,13 @@ export default function TreatmentsPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [filters.status, filters.legalBasis, filters.containsSensitiveData, searchDebounced]);
+  }, [
+    filters.status,
+    filters.legalBasis,
+    filters.containsSensitiveData,
+    filters.verificationStatus,
+    searchDebounced,
+  ]);
 
   const clearFilters = () => {
     setFilters(emptyTreatmentsFilters);
@@ -57,7 +64,11 @@ export default function TreatmentsPage() {
   };
 
   const hasActiveFilters =
-    filters.status || filters.legalBasis || filters.containsSensitiveData || filters.search;
+    filters.status ||
+    filters.legalBasis ||
+    filters.containsSensitiveData ||
+    filters.verificationStatus ||
+    filters.search;
 
   const { data, meta, loading, error, refresh } = useTreatments({
     companyId,
@@ -67,6 +78,7 @@ export default function TreatmentsPage() {
     legalBasis: filters.legalBasis || undefined,
     containsSensitiveData:
       filters.containsSensitiveData === "" ? undefined : filters.containsSensitiveData === "true",
+    verificationStatus: filters.verificationStatus || undefined,
     search: searchDebounced || undefined,
     enabled: shouldFetch("treatments.view"),
   });
@@ -150,6 +162,14 @@ export default function TreatmentsPage() {
 
       <div className="w-full px-5 pt-4 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">
         <RatPolicySyncBanner companyId={companyId} className="mb-4" />
+        <PendingVerificationBanner
+          companyId={companyId}
+          className="mb-4"
+          onFilter={(patch) => {
+            setFilters((prev) => ({ ...prev, ...patch }));
+            setPage(1);
+          }}
+        />
       </div>
 
       <div className="w-full px-5 pt-0 sm:px-6 lg:px-8 xl:px-10 2xl:px-12">

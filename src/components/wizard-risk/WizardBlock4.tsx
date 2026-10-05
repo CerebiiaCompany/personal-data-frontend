@@ -1,56 +1,56 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useWizardBlockQuestions } from "@/hooks/useWizardBlockQuestions";
 import { useWizardContext } from "@/contexts/WizardContext";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useWizardError } from "@/hooks/useWizardError";
 import { saveWizardSystems } from "@/lib/wizardSession.api";
+import { withMinTransitionDelay } from "@/utils/wizardTransitionDelay";
+import { getWizardBlockStartQuestion } from "@/constants/wizardBlocks";
 import { BLOCK4_QUESTIONS } from "@/constants/wizard-blocks/block4Questions";
-import QuestionCard from "./QuestionCard";
+import { inferSystemsFromAnswers, mergeWizardBlock4Systems, normalizeSystemForApi } from "@/utils/wizardInference";
+import { getWizardBlockQuestionPath } from "@/utils/wizardRoutes";
 import SystemsTable from "./SystemsTable";
 
 const BLOCK_NUM = 4;
-const BLOCK_START_QUESTION = 31; // preguntas globales 31-35 de 47
 
 /**
- * Bloque 4 — Inventario de Sistemas. Las 5 preguntas (B4-P31..P35) usan
- * useWizardBlockQuestions como cualquier otro bloque; al terminarlas se
- * muestra la tabla de sistemas (SystemsTable) en vez de navegar
- * automáticamente al Bloque 5 — es un paso más, pero no una QuestionCard,
- * así que se guarda por separado (PATCH .../systems) y consume su propio
- * número de pregunta global (36) antes de pasar al Bloque 5 (37).
+ * Bloque 4 — tabla de sistemas. Siempre incluye CEREBIIA, el catálogo
+ * predefinido (selector) y lo inferido de los bloques 1-3.
  */
 export default function WizardBlock4() {
-  const [showSystemsTable, setShowSystemsTable] = useState(false);
-  const { state, setSystems, setCurrentQuestion, setLoading } = useWizardContext();
+  const router = useRouter();
+  const { state, setSystems, setLoading } = useWizardContext();
   const companyId = useActiveCompanyId();
   const { showBlockingError } = useWizardError();
+  const blockStartQuestion = getWizardBlockStartQuestion(BLOCK_NUM, state.answers);
+  const seededRef = useRef(false);
 
-  const {
-    question,
-    isFirstQuestion,
-    currentAnswer,
-    isLoading,
-    handleAnswer,
-    handleNext,
-    handlePrevious,
-    advanceBeyondBlock,
-  } = useWizardBlockQuestions({
+  const { handlePrevious, advanceBeyondBlock } = useWizardBlockQuestions({
     blockNum: BLOCK_NUM,
-    blockStartQuestion: BLOCK_START_QUESTION,
+    blockStartQuestion,
     questions: BLOCK4_QUESTIONS,
-    onBlockComplete: (visibleCount) => {
-      setCurrentQuestion(BLOCK_START_QUESTION + visibleCount);
-      setShowSystemsTable(true);
-    },
   });
+
+  useEffect(() => {
+    if (seededRef.current) return;
+    seededRef.current = true;
+    const inferred = inferSystemsFromAnswers(state.answers);
+    setSystems(mergeWizardBlock4Systems(state.systems, inferred));
+    // Solo se siembra al entrar al bloque; no re-inferir en cada tecla.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleSystemsNext() {
     if (!companyId || !state.sessionId) return;
+    const sessionId = state.sessionId;
 
     setLoading(true);
-    const res = await saveWizardSystems(companyId, state.sessionId, state.systems);
+    const res = await withMinTransitionDelay(() =>
+      saveWizardSystems(companyId, sessionId, state.systems.map(normalizeSystemForApi))
+    );
     setLoading(false);
 
     if (res.error) {
@@ -61,37 +61,22 @@ export default function WizardBlock4() {
     advanceBeyondBlock(1);
   }
 
-  // `!question` cubre la retoma en frío (currentQuestion ya en 36, fuera
-  // del rango de las 5 preguntas); `showSystemsTable` cubre la transición
-  // en vivo justo después de guardar B4-P35 (currentQuestion recién se
-  // actualizó arriba, en el mismo tick).
-  if (showSystemsTable || !question) {
-    return (
-      <SystemsTable
-        systems={state.systems}
-        onChange={setSystems}
-        isLoading={state.isLoading}
-        onPrevious={() => setShowSystemsTable(false)}
-        onNext={handleSystemsNext}
-      />
-    );
+  function handlePreviousBlock() {
+    if (blockStartQuestion <= 1) {
+      handlePrevious();
+      return;
+    }
+    router.push(getWizardBlockQuestionPath(3, blockStartQuestion - 1));
   }
 
   return (
-    <QuestionCard
-      key={question.questionKey}
-      questionKey={question.questionKey}
-      questionText={question.questionText}
-      helpText={question.helpText}
-      tooltipWhy={question.tooltipWhy}
-      type={question.type}
-      options={question.options}
-      currentAnswer={currentAnswer}
-      isLoading={isLoading}
-      onAnswer={handleAnswer}
-      onPrevious={isFirstQuestion ? undefined : handlePrevious}
-      onNext={handleNext}
-      showPreviousButton={!isFirstQuestion}
+    <SystemsTable
+      systems={state.systems}
+      onChange={setSystems}
+      isLoading={state.isLoading}
+      onPrevious={handlePreviousBlock}
+      onNext={handleSystemsNext}
+      companyId={companyId}
     />
   );
 }

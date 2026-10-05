@@ -12,6 +12,14 @@ import Link from "next/link";
 // patrón de stat-tiles ya usado en /admin (DashboardStatCard) y colores de
 // estado ya establecidos en este mismo módulo (TreatmentStatusBadge,
 // ArchiveTreatmentDialog) — emerald/amber/rose, no una paleta nueva.
+//
+// RUTA MUERTA (encontrado en vivo 2026-09-08): middleware.ts redirige
+// "/admin/cumplimiento" -> "/admin" incondicionalmente (fusión Dashboard +
+// Cumplimiento, ver comentario en admin/page.tsx). Este archivo nunca se
+// renderiza para un usuario real. Se mantiene igual (no se borra) por si el
+// redirect se retira, pero cualquier cambio a este widget (ej. la alerta
+// C-04/N-15) debe replicarse también en (navbar)/admin/page.tsx, que es el
+// que sí ve el usuario.
 
 const cardClass =
   "rounded-2xl border border-[#E8EDF7] bg-white p-5 shadow-[0_2px_12px_rgba(15,35,70,0.04)] sm:p-6";
@@ -83,6 +91,30 @@ export default function ComplianceDashboardPage() {
           sin caché, calculado en cada carga.
         </p>
       </section>
+
+      {/* Item C-04/N-15 — sin esto, un admin no tenía forma de saber, desde
+          el dashboard, que el score de abajo excluye tratamientos con
+          incertidumbre pendiente (ver compliance.controller.ts). */}
+      {data?.alerts.pendingTreatmentVerification && (
+        <div
+          className="flex flex-col gap-3 rounded-xl border border-orange-200/90 bg-orange-50/95 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between"
+          role="status"
+        >
+          <div className="flex min-w-0 items-start gap-3">
+            <Icon icon="tabler:help-circle" className="mt-0.5 shrink-0 text-xl text-orange-700" />
+            <p className="text-sm font-semibold text-orange-950">
+              {data.alerts.pendingTreatmentVerification.message}
+            </p>
+          </div>
+          <Link
+            href="/admin/tratamientos"
+            className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold text-orange-900 underline-offset-2 hover:underline"
+          >
+            Revisar tratamientos
+            <Icon icon="tabler:arrow-right" className="text-sm" />
+          </Link>
+        </div>
+      )}
 
       {/* Score de cumplimiento — hero number, no un chart. */}
       <section className={cardClass}>

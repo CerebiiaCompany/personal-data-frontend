@@ -5,6 +5,7 @@ import { useWizardContext } from "@/contexts/WizardContext";
 import { createOrResumeWizardSession } from "@/lib/wizardSession.api";
 import { WizardAnswers } from "@/types/wizardRisk.types";
 import { resolveWizardBlockForQuestion } from "@/constants/wizardBlocks";
+import { hydrateSystemRecord } from "@/utils/wizardInference";
 
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 1000; // 1s, 2s, 4s
@@ -70,14 +71,17 @@ export function useWizardSession(): UseWizardSessionResult {
           initializeSession(sessionId, companyId!, userId!);
           // El backend no rastrea límites de bloque (ver wizardBlocks.ts) —
           // el bloque real siempre se deriva de currentQuestion, nunca del
-          // currentBlock que devuelve la sesión.
-          setCurrentBlock(resolveWizardBlockForQuestion(currentQuestion));
+          // currentBlock que devuelve la sesión. Se usa `answersSoFar`
+          // (la respuesta recién llegada), no `state.answers`: todavía no
+          // se hidrató en el contexto en este punto del efecto, así que
+          // leerlo acá daría un objeto vacío/desactualizado.
+          setCurrentBlock(resolveWizardBlockForQuestion(currentQuestion, answersSoFar ?? {}));
           setCurrentQuestion(currentQuestion);
           if (answersSoFar) {
             hydrateAnswers(answersSoFar, updateAnswer);
           }
           if (systemsSoFar) {
-            setSystems(systemsSoFar);
+            setSystems(systemsSoFar.map(hydrateSystemRecord));
           }
           setResume(didResume);
           setStatus(sessionStatus);

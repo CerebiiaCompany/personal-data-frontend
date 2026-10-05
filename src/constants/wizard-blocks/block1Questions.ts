@@ -1,83 +1,85 @@
 import { WizardQuestionDefinition } from "@/types/wizardRisk.types";
 
 /**
- * Bloque 1 — Perfil de la Organización (preguntas globales 1-5 de 30).
- *
- * B1-P3/P4/P5 son "Sí/No" simples por ahora — los campos condicionales
- * (URL del sitio, nombre de la app, selector de países) llegan en un
- * batch posterior; aquí solo se guarda la respuesta.
+ * Bloque 1 — Perfil de la Organización (5 preguntas).
+ * Texto y opciones según spec de configuración inicial. No alterar copy.
  */
 export const BLOCK1_QUESTIONS: WizardQuestionDefinition[] = [
   {
     questionKey: "B1-P1",
-    questionText: "¿Cuál es tu sector de industria?",
-    helpText: "Esto nos ayuda a personalizar las medidas de seguridad.",
-    tooltipWhy: "Diferentes sectores tienen requisitos de protección distintos.",
+    questionText: "¿Cuál es el sector o industria principal de su empresa?",
     type: "SINGLE_CHOICE",
     options: [
-      { value: "technology", label: "Tecnología / Software" },
-      { value: "finance", label: "Finanzas / Banca" },
-      { value: "healthcare", label: "Salud / Farmacéutico" },
-      { value: "education", label: "Educación" },
-      { value: "retail", label: "Retail / E-commerce" },
-      { value: "manufacturing", label: "Manufactura / Industria" },
-      { value: "government", label: "Sector Público / Gobierno" },
-      { value: "legal", label: "Legal / Asesoría" },
-      { value: "media", label: "Medios / Comunicación" },
-      { value: "energy", label: "Energía / Utilities" },
-      { value: "transport", label: "Transporte / Logística" },
-      { value: "other", label: "Otro (especificar)" },
+      { value: "salud", label: "Salud y clínicas" },
+      { value: "educacion", label: "Educación y colegios" },
+      { value: "gimnasios", label: "Gimnasios y bienestar" },
+      { value: "retail", label: "Retail y comercio" },
+      { value: "servicios_profesionales", label: "Servicios profesionales" },
+      { value: "tecnologia", label: "Tecnología y software" },
+      { value: "construccion", label: "Construcción e inmobiliaria" },
+      { value: "rrhh", label: "Recursos humanos" },
+      { value: "finanzas", label: "Finanzas y seguros" },
+      { value: "logistica", label: "Logística y transporte" },
+      { value: "alimentos", label: "Alimentos y restaurantes" },
+      { value: "otra", label: "Otra industria — especifique." },
     ],
+    conditionalFieldsByOption: {
+      otra: { label: "Especifique", fieldType: "text", required: true, placeholder: "Industria" },
+    },
   },
   {
-    // CRÍTICO: esta respuesta habilita/deshabilita las preguntas de RRHH
-    // del Bloque 3 (Batch 6) — "1-5" las oculta, el resto las muestra.
-    // Esa lógica condicional todavía no existe; por ahora solo se guarda.
     questionKey: "B1-P2",
-    questionText: "¿Cuántos empleados tiene tu empresa?",
-    helpText: "Esta información nos ayuda a dimensionar las medidas de seguridad.",
-    tooltipWhy: "El tamaño de la empresa afecta cuáles tratamientos de datos son relevantes.",
+    questionText: "¿Cuántos empleados o colaboradores trabajan en su empresa?",
     type: "SINGLE_CHOICE",
     options: [
-      { value: "1-5", label: "1 a 5 empleados" },
-      { value: "6-50", label: "6 a 50 empleados" },
-      { value: "51-200", label: "51 a 200 empleados" },
-      { value: "200+", label: "Más de 200 empleados" },
+      { value: "1-5", label: "1 a 5 (microempresa)" },
+      { value: "6-50", label: "6 a 50 (empresa pequeña)" },
+      { value: "51-200", label: "51 a 200 (empresa mediana)" },
+      { value: "200+", label: "Más de 200 (empresa grande)" },
     ],
   },
   {
+    // Item C-03 — antes SINGLE_CHOICE (forzaba a elegir entre sitio propio Y
+    // e-commerce, cuando una empresa puede tener ambos). MULTIPLE_CHOICE con
+    // "no" exclusive: mismo patrón que B2-P14 (MULTIPLE_CHOICE + exclusive +
+    // conditionalFieldsByOption conviven sin problema en ese mismo archivo).
     questionKey: "B1-P3",
-    questionText: "¿Tienes un sitio web?",
-    helpText: "Un sitio web donde recolectas datos de usuarios o clientes.",
-    tooltipWhy: "Los sitios web pueden recopilar datos personales (emails, contraseñas, etc.).",
-    type: "SINGLE_CHOICE",
+    questionText: "¿Su empresa tiene sitio web o tienda en línea?",
+    type: "MULTIPLE_CHOICE",
     options: [
-      { value: "yes", label: "Sí, tenemos un sitio web" },
-      { value: "no", label: "No, no tenemos sitio web" },
+      { value: "propio", label: "Sí, sitio web propio (URL: _______________)" },
+      { value: "ecommerce", label: "Sí, tienda en línea o e-commerce (URL: _______________)" },
+      { value: "no", label: "No tenemos sitio web.", exclusive: true },
     ],
+    conditionalFieldsByOption: {
+      propio: { label: "URL", fieldType: "url", required: true, placeholder: "https://miempresa.cl" },
+      ecommerce: { label: "URL", fieldType: "url", required: true, placeholder: "https://tienda.miempresa.cl" },
+    },
   },
   {
     questionKey: "B1-P4",
-    questionText: "¿Tienes una aplicación móvil?",
-    helpText: "Una app en iOS, Android o ambas.",
-    tooltipWhy: "Las aplicaciones móviles pueden recopilar datos de ubicación, contactos, etc.",
+    questionText: "¿Su empresa tiene aplicación móvil propia?",
     type: "SINGLE_CHOICE",
     options: [
-      { value: "yes", label: "Sí, tenemos app móvil" },
-      { value: "no", label: "No, no tenemos app móvil" },
+      { value: "si", label: "Sí (nombre: _______________)" },
+      { value: "no", label: "No." },
     ],
+    conditionalFieldsByOption: {
+      si: { label: "Nombre", fieldType: "text", required: true, placeholder: "Nombre de la aplicación" },
+    },
   },
   {
     questionKey: "B1-P5",
-    questionText: "¿Tu empresa opera en múltiples países?",
-    helpText: "Esto puede afectar las leyes de protección de datos aplicables.",
-    tooltipWhy:
-      "Diferentes países tienen regulaciones diferentes (GDPR en EU, CCPA en California, etc.).",
+    questionText: "¿Su empresa opera solo en Chile o también en otros países?",
     type: "SINGLE_CHOICE",
     options: [
-      { value: "yes", label: "Sí, operamos en múltiples países" },
-      { value: "no", label: "No, solo en Chile" },
-      { value: "unsure", label: "No estoy seguro" },
+      { value: "solo_chile", label: "Solo en Chile" },
+      { value: "latam", label: "En Chile y otros países de Latinoamérica (cuáles: _______________)" },
+      { value: "otros_continentes", label: "En Chile y otros continentes (cuáles: _______________)" },
     ],
+    conditionalFieldsByOption: {
+      latam: { label: "Cuáles", fieldType: "list", required: true, placeholder: "Países de Latinoamérica" },
+      otros_continentes: { label: "Cuáles", fieldType: "list", required: true, placeholder: "Países o continentes" },
+    },
   },
 ];

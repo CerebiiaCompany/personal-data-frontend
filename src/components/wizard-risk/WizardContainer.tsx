@@ -6,6 +6,7 @@ import { useWizardContext } from "@/contexts/WizardContext";
 import { useWizardSession } from "@/hooks/useWizardSession";
 import { getWizardBlockName } from "@/constants/wizardBlocks";
 import WizardHeader from "./WizardHeader";
+import WizardContextRail, { WizardMobileContext } from "./WizardContextRail";
 import ErrorHandler from "./ErrorHandler";
 import WizardWelcome from "./WizardWelcome";
 import WizardBlock1 from "./WizardBlock1";
@@ -56,8 +57,11 @@ export default function WizardContainer({ segment }: WizardContainerProps) {
 
   if (!state.sessionId && sessionLoading) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <p className="text-sm text-stone-500">Cargando sesión...</p>
+      <div className="flex min-h-full flex-1 items-center justify-center bg-[#F4F7FB]">
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-[#E4EAF6] bg-white px-8 py-6 shadow-[0_12px_40px_rgba(15,35,70,0.08)]">
+          <span className="h-8 w-8 rounded-full border-2 border-[#E4EAF6] border-t-[#1A2B5B] animate-spin" />
+          <p className="text-sm font-medium text-[#64748B]">Preparando tu asistente…</p>
+        </div>
       </div>
     );
   }
@@ -72,8 +76,10 @@ export default function WizardContainer({ segment }: WizardContainerProps) {
     );
   }
 
+  const isWelcome = segment === "bienvenida";
+
   return (
-    <div className="flex min-h-[60vh] flex-col">
+    <div className={isWelcome ? "flex min-h-full flex-1 flex-col" : "flex min-h-full flex-1 flex-col bg-[#F4F7FB]"}>
       {showHeader && (
         <WizardHeader
           currentBlock={state.currentBlock}
@@ -82,16 +88,49 @@ export default function WizardContainer({ segment }: WizardContainerProps) {
         />
       )}
 
-      <div className="flex-1 p-4 sm:p-6">
-        <WizardBody
-          segment={segment}
-          status={state.status}
-          sessionStatus={sessionStatus}
-          currentBlock={state.currentBlock}
-          currentQuestion={state.currentQuestion}
-          resume={resume}
-        />
-      </div>
+      {isWelcome ? (
+        <div className="flex min-h-0 flex-1 flex-col">
+          <WizardBody
+            segment={segment}
+            status={state.status}
+            sessionStatus={sessionStatus}
+            currentBlock={state.currentBlock}
+            currentQuestion={state.currentQuestion}
+            resume={resume}
+          />
+        </div>
+      ) : (
+        <div className="relative flex-1 bg-[#F4F7FB]">
+          <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+            <div className="absolute -left-24 top-0 h-64 w-64 rounded-full bg-[#1A2B5B]/6 blur-3xl" />
+            <div className="absolute -right-16 top-24 h-72 w-72 rounded-full bg-[#C7D7F5]/40 blur-3xl" />
+          </div>
+          <div
+            className={
+              showHeader
+                ? "relative mx-auto grid w-full max-w-6xl gap-6 px-4 py-5 sm:px-6 lg:grid-cols-[300px_minmax(0,1fr)] lg:px-8 lg:py-8"
+                : "relative mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 lg:px-8 lg:py-8"
+            }
+          >
+            {showHeader && (
+              <WizardContextRail currentBlock={state.currentBlock} currentQuestion={state.currentQuestion} />
+            )}
+            <div className="min-w-0">
+              {showHeader && (
+                <WizardMobileContext currentBlock={state.currentBlock} currentQuestion={state.currentQuestion} />
+              )}
+              <WizardBody
+                segment={segment}
+                status={state.status}
+                sessionStatus={sessionStatus}
+                currentBlock={state.currentBlock}
+                currentQuestion={state.currentQuestion}
+                resume={resume}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       <ErrorHandler />
     </div>
@@ -159,5 +198,5 @@ function WizardBody({
     return <WizardBlock4 />;
   }
 
-  return <WizardBlock5 />;
+  return <WizardBlock5 sessionStatus={sessionStatus} />;
 }

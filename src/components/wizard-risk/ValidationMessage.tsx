@@ -14,17 +14,16 @@ export default function ValidationMessage({ message, fieldName, onDismiss }: Val
       role="alert"
       aria-live="polite"
       data-field={fieldName}
-      className="mt-2 flex animate-in fade-in slide-in-from-top-1 items-start gap-1.5 text-sm duration-150"
-      style={{ color: "#DC2626" }}
+      className="mt-4 flex items-start gap-2 rounded-2xl border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-red-700"
     >
       <Icon icon="tabler:alert-triangle" className="mt-0.5 shrink-0 text-base" aria-hidden="true" />
-      <span>{message}</span>
+      <span className="flex-1">{message}</span>
       {onDismiss && (
         <button
           type="button"
           onClick={onDismiss}
           aria-label="Descartar mensaje de validación"
-          className="ml-1 text-xs underline"
+          className="text-xs font-semibold underline"
         >
           Cerrar
         </button>

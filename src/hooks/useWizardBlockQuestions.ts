@@ -4,6 +4,7 @@ import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useWizardError } from "@/hooks/useWizardError";
 import { saveWizardAnswer } from "@/lib/wizardSession.api";
 import { getWizardBlockQuestionPath, WIZARD_COMPLETION_PATH } from "@/utils/wizardRoutes";
+import { withMinTransitionDelay } from "@/utils/wizardTransitionDelay";
 import { WIZARD_TOTAL_BLOCKS, WizardAnswers } from "@/types/wizardRisk.types";
 
 /** Lo mínimo que este hook necesita de cada "pregunta" — cumplido tanto
@@ -48,12 +49,9 @@ interface UseWizardBlockQuestionsParams<T extends WizardBlockStep> {
  * por eso navegar siempre indexa sobre `visibleQuestions` (ya filtrada),
  * en vez de intentar "saltar" preguntas ocultas sobre el arreglo crudo.
  *
- * "Anterior" se oculta en la primera pregunta VISIBLE de cada bloque (no
- * solo en la primera de todo el wizard) — cruzar hacia atrás al bloque
- * anterior no está soportado todavía (ningún batch lo pidió y el bloque
- * previo podría tener su propio conteo de visibles que este hook no
- * conoce); cada WizardBlockN decide ocultar su botón "Anterior" con
- * `isFirstQuestion`.
+ * "Anterior" en la primera pregunta visible del bloque vuelve al último
+ * slot del bloque previo. Solo se oculta en la primera pregunta de todo
+ * el wizard (`isFirstOfWizard`).
  */
 export function useWizardBlockQuestions<T extends WizardBlockStep>({
   blockNum,
@@ -70,10 +68,18 @@ export function useWizardBlockQuestions<T extends WizardBlockStep>({
   const localIndex = state.currentQuestion - blockStartQuestion;
   const question = visibleQuestions[localIndex];
   const isFirstQuestion = localIndex <= 0;
+  const isFirstOfWizard = blockNum <= 1 && localIndex <= 0;
 
   function goToLocalIndex(nextIndex: number) {
     if (nextIndex >= visibleQuestions.length) {
       if (onBlockComplete) {
+        // La URL debe reflejar el número de pregunta global del paso extra
+        // (tabla de sistemas / selector de DPO) — si no, el efecto de
+        // WizardRouter (que sincroniza el estado DESDE la URL en cada
+        // render) ve un `questionNum` desactualizado y revierte el
+        // `currentQuestion` que `onBlockComplete` acaba de avanzar,
+        // rompiendo el guard anti-bypass en la navegación siguiente.
+        router.push(getWizardBlockQuestionPath(blockNum, blockStartQuestion + visibleQuestions.length));
         onBlockComplete(visibleQuestions.length);
         return;
       }
@@ -95,13 +101,11 @@ export function useWizardBlockQuestions<T extends WizardBlockStep>({
 
   async function handleNext() {
     if (!question || !companyId || !state.sessionId) return;
+    const sessionId = state.sessionId;
 
     setLoading(true);
-    const res = await saveWizardAnswer(
-      companyId,
-      state.sessionId,
-      question.questionKey,
-      state.answers[question.questionKey] ?? []
+    const res = await withMinTransitionDelay(() =>
+      saveWizardAnswer(companyId, sessionId, question.questionKey, state.answers[question.questionKey] ?? [])
     );
     setLoading(false);
 
@@ -114,6 +118,11 @@ export function useWizardBlockQuestions<T extends WizardBlockStep>({
   }
 
   function handlePrevious() {
+    if (localIndex <= 0) {
+      if (blockNum <= 1) return;
+      router.push(getWizardBlockQuestionPath(blockNum - 1, Math.max(blockStartQuestion - 1, 1)));
+      return;
+    }
     goToLocalIndex(localIndex - 1);
   }
 
@@ -136,6 +145,7 @@ export function useWizardBlockQuestions<T extends WizardBlockStep>({
   return {
     question,
     isFirstQuestion,
+    isFirstOfWizard,
     localIndex,
     visibleCount: visibleQuestions.length,
     isLoading: state.isLoading,
