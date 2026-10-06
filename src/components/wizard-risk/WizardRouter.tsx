@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useWizardContext } from "@/contexts/WizardContext";
 import { isValidWizardBlock, isValidWizardQuestion, getWizardBlockQuestionPath } from "@/utils/wizardRoutes";
-import { resolveWizardBlockForQuestion } from "@/constants/wizardBlocks";
+import { getWizardBlockStartQuestion, resolveWizardBlockForQuestion } from "@/constants/wizardBlocks";
 import WizardContainer from "./WizardContainer";
 
 type WizardRouteSegment = "bienvenida" | "block" | "finalizacion";
@@ -59,7 +59,17 @@ export default function WizardRouter({ segment, blockNum, questionNum }: WizardR
     // `visibleQuestions`, así que el único avance real por click de
     // "Siguiente" es siempre exactamente currentQuestion+1 (ver ese hook).
     // Cualquier salto mayor a ese +1 es, por definición, un bypass.
-    if (state.sessionId && questionNum > state.currentQuestion + 1) {
+    //
+    // Excepción Bloque 5: tiene 3 slots (validación de tratamientos, consentimiento
+    // biométrico C-01, formulario DPO). Una vez que la sesión llegó a Bloque 5,
+    // transicionar entre sus slots es el flujo normal y no un bypass.
+    const block5Start = getWizardBlockStartQuestion(5, state.answers);
+    const isWithinBlock5 =
+      correctBlock === 5 &&
+      state.currentQuestion >= block5Start &&
+      questionNum <= block5Start + 2;
+
+    if (state.sessionId && !isWithinBlock5 && questionNum > state.currentQuestion + 1) {
       router.replace(getWizardBlockQuestionPath(state.currentBlock, state.currentQuestion));
       return;
     }
