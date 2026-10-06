@@ -75,8 +75,12 @@ export function useWizardSession(): UseWizardSessionResult {
           // (la respuesta recién llegada), no `state.answers`: todavía no
           // se hidrató en el contexto en este punto del efecto, así que
           // leerlo acá daría un objeto vacío/desactualizado.
-          setCurrentBlock(resolveWizardBlockForQuestion(currentQuestion, answersSoFar ?? {}));
-          setCurrentQuestion(currentQuestion);
+          const effectiveQuestion =
+            state.sessionId === sessionId
+              ? Math.max(state.currentQuestion, currentQuestion)
+              : currentQuestion;
+          setCurrentBlock(resolveWizardBlockForQuestion(effectiveQuestion, answersSoFar ?? {}));
+          setCurrentQuestion(effectiveQuestion);
           if (answersSoFar) {
             hydrateAnswers(answersSoFar, updateAnswer);
           }
