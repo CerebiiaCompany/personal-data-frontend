@@ -30,6 +30,8 @@ export const VERIFICATION_STATUS_LABELS: Record<VerificationStatus, string> = {
   PENDING_DEACTIVATION: "Desactivación pendiente",
 };
 
+export type TreatmentSource = "WIZARD" | "MANUAL";
+
 // Corregido (auditoría CHK-009/016/062/063/064, 2026-08-27): las 6 bases
 // reales del Art. 13 Ley 21.719 para CL. VITAL_INTEREST,
 // PUBLIC_INTEREST_OR_AUTHORITY y PUBLIC_SOURCE se eliminaron (no tienen
@@ -155,8 +157,12 @@ export interface Treatment {
   /** Item C-04/N-15 — ver VerificationStatus. `pendingNotes` solo viene poblado en el detalle (GET /:treatmentId), con la nota abierta más reciente (si existe). */
   verificationStatus: VerificationStatus;
   pendingNotes?: TreatmentPendingNote[];
+  source?: TreatmentSource | null;
+  manuallyEdited?: boolean;
+  wizardTreatmentKey?: string | null;
 
   purposeId: string | null;
+  purposeNivel2?: string | null;
   purposeDetail: string | null;
   legalBasis: LegalBasis | null;
   legalBasisJustification: string | null;
