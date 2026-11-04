@@ -228,9 +228,48 @@ export interface ConsentAuditEntry {
   actor?: {
     userId?: string;
     username?: string;
+    name?: string;
+    lastName?: string;
     role?: string;
   };
   meta?: Record<string, any>;
+}
+
+/** Body del switch manual Aceptó/Rechazó (PATCH .../responses/:id/consent). */
+export interface SetCollectFormResponseConsentInput {
+  accepted: boolean;
+  /** Obligatorio, mínimo 10 caracteres: cómo/cuándo el titular aceptó o rechazó. */
+  reason: string;
+}
+
+/** Respuesta de "Aceptar a todos" con dryRun: true (solo conteos). */
+export interface BulkAcceptConsentPreview {
+  total: number;
+  eligible: number;
+  alreadyAccepted: number;
+  revokedExcluded: number;
+  lockedExcluded: number;
+  maxPerRequest: number;
+}
+
+export interface BulkAcceptConsentResult {
+  batchId: string;
+  processed: number;
+  updated: number;
+  skipped: number;
+  failed: number;
+  failures: { responseId: string; message: string }[];
+  /** Elegibles que quedaron sin procesar (superó el máximo por solicitud). */
+  remaining: number;
+}
+
+export interface SetCollectFormResponseConsentResult {
+  id: string;
+  consentStatus?: ConsentStatus | string;
+  dataProcessing?: boolean;
+  consentAcceptedAt?: string | null;
+  consentRevokedAt?: string | null;
+  lastAuditEntry?: ConsentAuditEntry;
 }
 
 export interface ConsentInfo {

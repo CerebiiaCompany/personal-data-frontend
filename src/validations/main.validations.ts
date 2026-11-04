@@ -354,6 +354,8 @@ export const createScheduledCampaignValidationSchema = z.object({
   goal: z.string<CampaignGoal>("Selecciona un objetivo"),
   active: z.boolean(),
   scheduling: z.object({
+    /** true = la campaña se activa y empieza a enviar apenas se crea (sin programar). */
+    sendNow: z.boolean().optional(),
     scheduledDateTime: dateTimeLocalValidation, // "YYYY-MM-DDTHH:mm" - fecha y hora específica
   }),
   sourceFormIds: z
@@ -426,7 +428,8 @@ export const createScheduledCampaignValidationSchema = z.object({
   const minScheduleMinutes = getMinScheduleMinutes(data.deliveryChannel);
   const selectedDate = new Date(data.scheduling.scheduledDateTime);
   const minDateTime = new Date(Date.now() + minScheduleMinutes * 60 * 1000);
-  if (selectedDate < minDateTime) {
+  // "Enviar ahora" no usa la fecha elegida (se calcula al crear).
+  if (!data.scheduling.sendNow && selectedDate < minDateTime) {
     ctx.addIssue({
       code: "custom",
       message: `La campaña debe programarse al menos ${minScheduleMinutes} minutos en el futuro`,

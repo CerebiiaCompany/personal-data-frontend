@@ -3,7 +3,11 @@ import {
   CollectFormResponseUserPayload,
   CreateAdminCollectFormResponsesBody,
   CreateAdminCollectFormResponsesResult,
+  BulkAcceptConsentPreview,
+  BulkAcceptConsentResult,
   CreateCollectFormResponse,
+  SetCollectFormResponseConsentInput,
+  SetCollectFormResponseConsentResult,
   UpdateCollectFormResponseInput,
   UpdateCollectFormResponseResult,
 } from "@/types/collectFormResponse.types";
@@ -175,6 +179,50 @@ export async function revokeCollectFormResponseConsent(
       method: "PATCH",
       body: reason ? JSON.stringify({ reason }) : undefined,
     }
+  );
+}
+
+/**
+ * Switch manual: la empresa registra que el titular ACEPTÓ o RECHAZÓ la
+ * política (p.ej. empleados que la firmaron en su contrato). El backend
+ * exige motivo y deja traza en consentAudit + auditoría (CONSENT).
+ */
+export async function setCollectFormResponseConsent(
+  companyId: string,
+  collectFormId: string,
+  responseId: string,
+  body: SetCollectFormResponseConsentInput
+): Promise<APIResponse<SetCollectFormResponseConsentResult>> {
+  return customFetch<SetCollectFormResponseConsentResult>(
+    `/companies/${companyId}/collectForms/${collectFormId}/responses/${responseId}/consent`,
+    { method: "PATCH", body: JSON.stringify(body) }
+  );
+}
+
+/** "Aceptar a todos" — conteo previo (no modifica nada). */
+export async function previewBulkAcceptConsent(
+  companyId: string,
+  collectFormId: string
+): Promise<APIResponse<BulkAcceptConsentPreview>> {
+  return customFetch<BulkAcceptConsentPreview>(
+    `/companies/${companyId}/collectForms/${collectFormId}/responses/consent/bulk-accept`,
+    { method: "POST", body: JSON.stringify({ dryRun: true }) }
+  );
+}
+
+/**
+ * "Aceptar a todos" — marca ACEPTÓ a todos los registros del formulario que
+ * nunca han decidido, con un motivo común. Excluye rechazados/revocados y
+ * trámites ARCO. Cada registro queda auditado individualmente (mismo lote).
+ */
+export async function bulkAcceptConsent(
+  companyId: string,
+  collectFormId: string,
+  reason: string
+): Promise<APIResponse<BulkAcceptConsentResult>> {
+  return customFetch<BulkAcceptConsentResult>(
+    `/companies/${companyId}/collectForms/${collectFormId}/responses/consent/bulk-accept`,
+    { method: "POST", body: JSON.stringify({ reason }) }
   );
 }
 

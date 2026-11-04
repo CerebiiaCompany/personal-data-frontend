@@ -6,6 +6,10 @@ import LoadingCover from "@/components/layout/LoadingCover";
 import { fetchCampaignDeliveries } from "@/lib/campaignDelivery.api";
 import { CampaignDelivery } from "@/types/campaignDelivery.types";
 import {
+  PROVIDER_STATUS_COLORS,
+  PROVIDER_STATUS_LABELS,
+  deliveryChannelIcon,
+  describeProviderError,
   formatDeliveryChannel,
   formatDeliveryDateTime,
   formatDeliveryDocument,
@@ -128,16 +132,46 @@ export default function CampaignDeliveryDetailDialog({
           <div className="flex flex-wrap items-center gap-2">
             <CampaignDeliveryStatusBadge status={item.status} />
             <span className="inline-flex items-center gap-1 rounded-full border border-[#E4EAF6] bg-[#F8FAFC] px-2.5 py-0.5 text-xs font-medium text-[#334155]">
-              <Icon
-                icon={
-                  item.deliveryChannel === "SMS"
-                    ? "tabler:device-mobile-message"
-                    : "tabler:mail"
-                }
-              />
+              <Icon icon={deliveryChannelIcon(item.deliveryChannel)} />
               {formatDeliveryChannel(item.deliveryChannel)}
             </span>
           </div>
+
+          {item.providerStatus && (
+            <div className="rounded-xl border border-[#E8EDF7] bg-[#F8FAFC] px-3 py-3 space-y-2">
+              <DetailRow
+                label="Estado en WhatsApp"
+                value={
+                  <span
+                    className={`font-semibold ${PROVIDER_STATUS_COLORS[item.providerStatus] ?? "text-[#334155]"}`}
+                  >
+                    {PROVIDER_STATUS_LABELS[item.providerStatus] ?? item.providerStatus}
+                  </span>
+                }
+              />
+              {item.deliveredAt && (
+                <DetailRow label="Entregado" value={formatDeliveryDateTime(item.deliveredAt)} />
+              )}
+              {item.readAt && <DetailRow label="Leído" value={formatDeliveryDateTime(item.readAt)} />}
+              {(item.providerErrorCode || item.providerErrorMessage) && (
+                <DetailRow
+                  label="Motivo"
+                  value={
+                    <span className="text-red-700">
+                      {describeProviderError(item.providerErrorCode, item.providerErrorMessage)}
+                      {item.providerErrorCode ? ` (código ${item.providerErrorCode})` : ""}
+                    </span>
+                  }
+                />
+              )}
+              {item.providerStatusAt && (
+                <DetailRow
+                  label="Último estado"
+                  value={formatDeliveryDateTime(item.providerStatusAt)}
+                />
+              )}
+            </div>
+          )}
 
           <DetailRow label="Nombre" value={formatDeliveryUserName(user)} />
           <DetailRow label="Documento" value={formatDeliveryDocument(user)} />

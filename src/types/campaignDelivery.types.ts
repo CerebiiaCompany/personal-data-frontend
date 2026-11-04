@@ -25,6 +25,13 @@ export interface CampaignDelivery {
   createdAt: string;
   updatedAt: string;
   user: CampaignDeliveryUser | null;
+  /** Estado real en WhatsApp (YCloud): ACCEPTED, SENT, DELIVERED, READ o FAILED. */
+  providerStatus?: string | null;
+  providerErrorCode?: string | null;
+  providerErrorMessage?: string | null;
+  providerStatusAt?: string | null;
+  deliveredAt?: string | null;
+  readAt?: string | null;
 }
 
 export interface CampaignDeliveriesQuery {

@@ -18,6 +18,10 @@ import { usePermissionCheck } from "@/hooks/usePermissionCheck";
 import { ConsentStatus } from "@/types/collectFormResponse.types";
 import { Icon } from "@iconify/react";
 import clsx from "clsx";
+import { toast } from "sonner";
+import { useConfirm } from "@/components/dialogs/ConfirmProvider";
+import { bulkAcceptConsent, previewBulkAcceptConsent } from "@/lib/collectFormResponse.api";
+import { parseApiError } from "@/utils/parseApiError";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -78,8 +82,10 @@ function KpiCard({
 }
 
 export default function FormClassificationPage() {
-  const { isCompanyAdmin } = usePermissionCheck();
+  const { isCompanyAdmin, can } = usePermissionCheck();
   const canExportExcel = isCompanyAdmin;
+  const confirm = useConfirm();
+  const [bulkAccepting, setBulkAccepting] = useState(false);
   const formId = useParams().formId?.toString();
   const { debouncedValue, search, setSearch } = useDebouncedSearch();
   const [currentPage, setCurrentPage] = useState(1);
@@ -112,6 +118,101 @@ export default function FormClassificationPage() {
   });
 
   const typedSummary = (summary || {}) as FormResponseSummary;
+
+  // "Aceptar a todos": marca que ACEPTARON la política todos los registros
+  // que nunca han decidido, con un motivo común. Nunca incluye a quienes
+  // rechazaron/revocaron ni trámites ARCO. Cada persona queda auditada.
+  async function acceptAllConsents() {
+    if (!companyId || !formId || bulkAccepting) return;
+    setBulkAccepting(true);
+    try {
+      const preview = await previewBulkAcceptConsent(companyId, formId);
+      if (preview.error) {
+        toast.error(parseApiError(preview.error));
+        return;
+      }
+      if (!preview.data) {
+        toast.error("Respuesta inesperada del servidor. Intenta de nuevo.");
+        return;
+      }
+      const p = preview.data;
+      if (p.eligible === 0) {
+        toast.info("No hay registros pendientes por aceptar en este formulario.");
+        return;
+      }
+
+      let reason = "";
+      const confirmed = await confirm({
+        title: `¿Marcar que ${formatInt(p.eligible)} persona(s) ACEPTARON la política?`,
+        description: (
+          <div className="space-y-2">
+            <p>
+              Se marcarán como <strong>aceptado</strong> los {formatInt(p.eligible)} registros que
+              aún no han aceptado ni rechazado. Úsalo solo si todas esas personas ya aceptaron la
+              política por otro medio (contrato laboral, formato firmado, etc.).
+            </p>
+            <ul className="list-disc pl-5 text-[12px] text-stone-600">
+              <li>{formatInt(p.alreadyAccepted)} ya habían aceptado (no cambian).</li>
+              <li>
+                {formatInt(p.revokedExcluded)} rechazaron o revocaron: <strong>no se incluyen</strong>{" "}
+                (deben cambiarse una por una).
+              </li>
+              {p.lockedExcluded > 0 && (
+                <li>{formatInt(p.lockedExcluded)} tienen una solicitud ARCO o disputa en trámite (no se incluyen).</li>
+              )}
+              {p.eligible > p.maxPerRequest && (
+                <li>
+                  Se procesarán {formatInt(p.maxPerRequest)} por vez; vuelve a pulsar el botón para
+                  continuar con el resto.
+                </li>
+              )}
+            </ul>
+            <p className="text-[12px] text-stone-600">
+              Cada persona quedará registrada en la auditoría con este motivo, quién lo hizo,
+              cuándo y desde qué IP.
+            </p>
+          </div>
+        ),
+        withReasonField: true,
+        reasonLabel: "Motivo común y soporte (obligatorio, mínimo 10 caracteres)",
+        reasonPlaceholder: "Ej. Todos firmaron la política en su contrato laboral al ingresar a la empresa",
+        onReasonChange: (value) => {
+          reason = value;
+        },
+        confirmText: `Sí, aceptar ${formatInt(Math.min(p.eligible, p.maxPerRequest))}`,
+        cancelText: "Cancelar",
+      });
+      if (!confirmed) return;
+
+      if (reason.trim().length < 10) {
+        toast.error("Debes indicar el motivo (mínimo 10 caracteres).");
+        return;
+      }
+
+      const res = await bulkAcceptConsent(companyId, formId, reason.trim());
+      if (res.error) {
+        toast.error(parseApiError(res.error));
+        return;
+      }
+      if (!res.data) {
+        toast.error("Respuesta inesperada del servidor. Intenta de nuevo.");
+        return;
+      }
+      const r = res.data;
+      toast.success(`${formatInt(r.updated)} persona(s) marcadas como que aceptaron la política.`);
+      if (r.failed > 0 || r.skipped > 0) {
+        toast.warning(
+          `${formatInt(r.failed + r.skipped)} registro(s) no se pudieron actualizar (cambiaron mientras tanto o hubo un error). Revisa y vuelve a intentar.`
+        );
+      }
+      if (r.remaining > 0) {
+        toast.info(`Quedan ${formatInt(r.remaining)} por aceptar: vuelve a pulsar "Aceptar a todos".`);
+      }
+      refresh();
+    } finally {
+      setBulkAccepting(false);
+    }
+  }
 
   useEffect(() => {
     setCurrentPage(1);
@@ -274,6 +375,22 @@ export default function FormClassificationPage() {
                       Registrar persona
                     </Button>
                   </CheckPermission>
+                  {can("classification.edit") && (
+                    <Button
+                      hierarchy="secondary"
+                      className="rounded-xl! border-[#16A34A]! bg-white! px-4! py-2.5! text-[13px]! font-semibold! text-[#15803D]! hover:bg-[#F0FDF4]!"
+                      onClick={acceptAllConsents}
+                      disabled={bulkAccepting}
+                      loading={bulkAccepting}
+                      startContent={
+                        !bulkAccepting ? (
+                          <Icon icon="tabler:checks" className="text-base" />
+                        ) : undefined
+                      }
+                    >
+                      Aceptar a todos
+                    </Button>
+                  )}
                   <Button
                     href="/admin/clasificacion"
                     hierarchy="secondary"

@@ -72,8 +72,11 @@ function normalizeOptionalUrl(value?: string): boolean {
 
 function isScheduledDateTimeValid(
   value?: string,
-  deliveryChannel?: CampaignDeliveryChannel
+  deliveryChannel?: CampaignDeliveryChannel,
+  sendNow?: boolean
 ): string | null {
+  // "Enviar ahora": la fecha se calcula al crear la campaña.
+  if (sendNow) return null;
   if (!value?.trim()) return "Fecha y hora de envío obligatorias";
   if (
     !/^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}$/.test(value.trim())
@@ -201,7 +204,8 @@ export function evaluateScheduledCampaignStep(
 
     const schedulingError = isScheduledDateTimeValid(
       values.scheduling?.scheduledDateTime,
-      values.deliveryChannel
+      values.deliveryChannel,
+      values.scheduling?.sendNow
     );
     if (schedulingError) messages.push(schedulingError);
 

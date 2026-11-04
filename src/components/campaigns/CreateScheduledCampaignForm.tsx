@@ -19,7 +19,7 @@ import {
   WHATSAPP_NOTIFICATION_TEMPLATE_LANGUAGE,
   WHATSAPP_NOTIFICATION_TEMPLATE_NAME,
 } from "@/types/campaign.types";
-import { createCampaign } from "@/lib/campaign.api";
+import { createCampaign, updateCampaign } from "@/lib/campaign.api";
 import { useCollectForms } from "@/hooks/useCollectForms";
 import { useCampaignAudience } from "@/hooks/useCampaignAudience";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
@@ -115,6 +115,7 @@ const CreateScheduledCampaignForm = () => {
       audienceSelectionMode: "FILTERS" as const,
       targetedResponseIds: [] as string[],
       scheduling: {
+        sendNow: true,
         scheduledDateTime: getCurrentDateTimeLocal(),
       },
       deliveryChannel: "SMS" as CampaignDeliveryChannel,
@@ -129,6 +130,7 @@ const CreateScheduledCampaignForm = () => {
     },
   });
 
+  const sendNowValue = watch("scheduling.sendNow");
   const minAgeValue = watch("audience.minAge");
   const maxAgeValue = watch("audience.maxAge");
   const parsedMinAge = Number(minAgeValue);
@@ -441,9 +443,17 @@ const CreateScheduledCampaignForm = () => {
     setLoading(true);
 
     try {
-      const scheduledDateTime = new Date(
-        data.scheduling.scheduledDateTime
-      ).toISOString();
+      const sendNow = data.scheduling.sendNow === true;
+      // "Enviar ahora": fecha = ahora. SMS exige un mínimo de minutos en el
+      // futuro (requisito del proveedor), así que sale apenas se cumple.
+      const scheduledDateTime = sendNow
+        ? new Date(
+            Date.now() +
+              (data.deliveryChannel === "SMS"
+                ? (getMinScheduleMinutes("SMS") * 60 + 30) * 1000
+                : 0)
+          ).toISOString()
+        : new Date(data.scheduling.scheduledDateTime).toISOString();
 
       const contentName = data.content?.name?.trim() || "";
       const contentBody = data.content?.bodyText?.trim() || "";
@@ -488,7 +498,28 @@ const CreateScheduledCampaignForm = () => {
         return;
       }
 
-      toast.success("Campaña programada creada");
+      if (sendNow) {
+        // Activar de inmediato: el backend encola el envío con la fecha = ahora.
+        const createdId = (res.data as { id?: string } | undefined)?.id;
+        const activation = createdId
+          ? await updateCampaign(companyId, createdId, { active: true })
+          : null;
+        if (!activation || activation.error) {
+          toast.error(
+            `La campaña se creó, pero no se pudo iniciar el envío${
+              activation?.error ? `: ${parseApiError(activation.error)}` : ""
+            }. Puedes activarla desde la lista de campañas.`
+          );
+        } else {
+          toast.success(
+            data.deliveryChannel === "SMS"
+              ? `Campaña creada: los SMS salen en ~${getMinScheduleMinutes("SMS")} minutos (requisito del proveedor).`
+              : "Campaña creada: el envío ya comenzó."
+          );
+        }
+      } else {
+        toast.success("Campaña programada creada");
+      }
       router.refresh();
       router.push("/admin/campanas");
     } finally {
@@ -634,28 +665,93 @@ const CreateScheduledCampaignForm = () => {
                     )}
                   >
                     <h2 className="text-[15px] font-bold tracking-tight text-[#1A2B5B]">
-                      Programación
+                      ¿Cuándo enviar?
                     </h2>
-                    <CustomInput
-                      type="datetime-local"
-                      label="Fecha y hora de envío"
-                      {...register("scheduling.scheduledDateTime")}
-                      error={
-                        errors.scheduling?.scheduledDateTime as FieldError
-                      }
-                      min={minScheduledDateTimeLocalString(
-                        getMinScheduleMinutes(selectedDeliveryChannel)
-                      )}
-                    />
-                    <p className="flex gap-2 text-xs text-[#64748B]">
-                      <Icon
-                        icon="tabler:info-circle"
-                        className="text-base shrink-0"
-                      />
-                      La campaña debe programarse al menos{" "}
-                      {getMinScheduleMinutes(selectedDeliveryChannel)} minutos
-                      en el futuro.
-                    </p>
+                    <div
+                      role="radiogroup"
+                      aria-label="Momento del envío"
+                      className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+                    >
+                      {[
+                        {
+                          value: true,
+                          icon: "tabler:send",
+                          title: "Enviar ahora",
+                          text:
+                            selectedDeliveryChannel === "SMS"
+                              ? `Se activa al crearla; los SMS salen en ~${getMinScheduleMinutes("SMS")} min (requisito del proveedor).`
+                              : "Se activa y empieza a enviar apenas se crea.",
+                        },
+                        {
+                          value: false,
+                          icon: "tabler:calendar-time",
+                          title: "Programar",
+                          text: "Elige la fecha y hora del envío.",
+                        },
+                      ].map((opt) => {
+                        const selected = (sendNowValue === true) === opt.value;
+                        return (
+                          <button
+                            key={opt.title}
+                            type="button"
+                            role="radio"
+                            aria-checked={selected}
+                            onClick={() =>
+                              setValue("scheduling.sendNow", opt.value, {
+                                shouldDirty: true,
+                                shouldValidate: true,
+                              })
+                            }
+                            className={clsx(
+                              "flex items-start gap-3 rounded-xl border p-4 text-left transition-colors",
+                              selected
+                                ? "border-[#1A2B5B] bg-[#EEF2FF]"
+                                : "border-[#E2E8F0] bg-white hover:bg-[#F8FAFC]"
+                            )}
+                          >
+                            <Icon
+                              icon={opt.icon}
+                              className={clsx(
+                                "mt-0.5 text-lg shrink-0",
+                                selected ? "text-[#1A2B5B]" : "text-[#94A3B8]"
+                              )}
+                            />
+                            <span>
+                              <span className="block text-[13px] font-semibold text-[#0B1737]">
+                                {opt.title}
+                              </span>
+                              <span className="block text-xs text-[#64748B]">
+                                {opt.text}
+                              </span>
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {sendNowValue !== true && (
+                      <>
+                        <CustomInput
+                          type="datetime-local"
+                          label="Fecha y hora de envío"
+                          {...register("scheduling.scheduledDateTime")}
+                          error={
+                            errors.scheduling?.scheduledDateTime as FieldError
+                          }
+                          min={minScheduledDateTimeLocalString(
+                            getMinScheduleMinutes(selectedDeliveryChannel)
+                          )}
+                        />
+                        <p className="flex gap-2 text-xs text-[#64748B]">
+                          <Icon
+                            icon="tabler:info-circle"
+                            className="text-base shrink-0"
+                          />
+                          La campaña debe programarse al menos{" "}
+                          {getMinScheduleMinutes(selectedDeliveryChannel)} minutos
+                          en el futuro.
+                        </p>
+                      </>
+                    )}
                   </section>
                 </div>
               )}
@@ -699,6 +795,15 @@ const CreateScheduledCampaignForm = () => {
                     audienceSelectionMode: audienceSelectionMode as
                       | "FILTERS"
                       | "MANUAL",
+                    envioLabel:
+                      sendNowValue === true
+                        ? "Inmediato (al crear la campaña)"
+                        : (() => {
+                            const d = new Date(String(watch("scheduling.scheduledDateTime") ?? ""));
+                            return Number.isNaN(d.getTime())
+                              ? "—"
+                              : d.toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" });
+                          })(),
                   }}
                 />
               )}
@@ -745,7 +850,7 @@ const CreateScheduledCampaignForm = () => {
                       <Icon icon="tabler:check" className="text-lg" />
                     }
                   >
-                    Crear y programar campaña
+                    {sendNowValue === true ? "Crear y enviar ahora" : "Crear y programar campaña"}
                   </Button>
                 )}
               </div>

@@ -4,6 +4,10 @@ import CampaignDeliveryStatusBadge from "@/components/campaigns/CampaignDelivery
 import LoadingCover from "@/components/layout/LoadingCover";
 import { CampaignDelivery } from "@/types/campaignDelivery.types";
 import {
+  PROVIDER_STATUS_COLORS,
+  PROVIDER_STATUS_LABELS,
+  deliveryChannelIcon,
+  describeProviderError,
   formatDeliveryChannel,
   formatDeliveryDateTime,
   formatDeliveryDocument,
@@ -11,6 +15,7 @@ import {
   getDeliveryRowKey,
 } from "@/utils/campaignDelivery.utils";
 import { Icon } from "@iconify/react/dist/iconify.js";
+import clsx from "clsx";
 
 interface Props {
   items: CampaignDelivery[] | null;
@@ -93,11 +98,7 @@ export default function CampaignDeliveriesTable({
                 <td className="px-3 py-3 text-[#334155]">
                   <span className="inline-flex items-center gap-1">
                     <Icon
-                      icon={
-                        item.deliveryChannel === "SMS"
-                          ? "tabler:device-mobile-message"
-                          : "tabler:mail"
-                      }
+                      icon={deliveryChannelIcon(item.deliveryChannel)}
                       className="text-base text-[#64748B]"
                     />
                     {formatDeliveryChannel(item.deliveryChannel)}
@@ -105,6 +106,21 @@ export default function CampaignDeliveriesTable({
                 </td>
                 <td className="px-3 py-3">
                   <CampaignDeliveryStatusBadge status={item.status} />
+                  {item.providerStatus && (
+                    <p
+                      className={clsx(
+                        "mt-1 text-[11px] font-semibold",
+                        PROVIDER_STATUS_COLORS[item.providerStatus] ?? "text-[#64748B]"
+                      )}
+                      title={
+                        describeProviderError(item.providerErrorCode, item.providerErrorMessage) ??
+                        undefined
+                      }
+                    >
+                      WhatsApp: {PROVIDER_STATUS_LABELS[item.providerStatus] ?? item.providerStatus}
+                      {item.providerErrorCode ? ` (${item.providerErrorCode})` : ""}
+                    </p>
+                  )}
                 </td>
                 <td className="px-3 py-3 text-[#64748B]">
                   {formatDeliveryDateTime(item.createdAt)}
