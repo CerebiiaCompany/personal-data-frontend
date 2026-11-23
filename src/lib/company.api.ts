@@ -284,7 +284,11 @@ export async function updateCompanySpecialObservations(
 
 export async function updateCompanyEmailBranding(
   companyId: string,
-  data: { primary_color: string | null }
+  data: {
+    primary_color?: string | null;
+    header_style?: "LIGHT" | "SOLID" | null;
+    title_color?: string | null;
+  }
 ): Promise<APIResponse> {
   return customFetch(`/companies/${companyId}/profile/email-branding`, {
     method: "PATCH",

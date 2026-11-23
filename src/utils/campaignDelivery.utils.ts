@@ -57,7 +57,7 @@ const WHATSAPP_ERROR_HINTS: Record<string, string> = {
 
 export function describeProviderError(code?: string | null, message?: string | null): string | null {
   if (!code && !message) return null;
-  return (code && WHATSAPP_ERROR_HINTS[code]) || message || code || null;
+  return (code && (WHATSAPP_ERROR_HINTS[code] ?? emailErrorHint(code))) || message || code || null;
 }
 
 const GENDER_LABELS: Record<string, string> = {
@@ -103,4 +103,58 @@ export function getDeliveryRowKey(item: CampaignDelivery, index: number): string
     return `${item.formResponseId}-${item.recipient}-${item.createdAt}`;
   }
   return String(index);
+}
+
+// ─── Email: estados y motivos en lenguaje claro ─────────────────────────────
+
+/** Estados que el backend registra para cada correo de campaña. */
+export const EMAIL_PROVIDER_STATUS_LABELS: Record<string, string> = {
+  ACCEPTED: "Aceptado por el servidor de correo",
+  FAILED: "Rechazado",
+  DEFERRED: "Reprogramado",
+  RETRY_QUEUED: "Reintento en cola",
+};
+
+const EXTRA_STATUS_COLORS: Record<string, string> = {
+  DEFERRED: "text-[#B45309]",
+  RETRY_QUEUED: "text-[#1D4ED8]",
+};
+
+/** Etiqueta del estado del proveedor según el canal (WhatsApp y Email usan códigos distintos). */
+export function providerStatusLabel(channel: string | undefined, status: string): string {
+  if (channel === "EMAIL") return EMAIL_PROVIDER_STATUS_LABELS[status] ?? status;
+  return PROVIDER_STATUS_LABELS[status] ?? EMAIL_PROVIDER_STATUS_LABELS[status] ?? status;
+}
+
+export function providerStatusColor(status: string): string {
+  return PROVIDER_STATUS_COLORS[status] ?? EXTRA_STATUS_COLORS[status] ?? "text-[#64748B]";
+}
+
+export function providerChannelName(channel: string | undefined): string {
+  if (channel === "EMAIL") return "Correo";
+  if (channel === "SMS") return "SMS";
+  return "WhatsApp";
+}
+
+/** Motivos de fallo / reprogramación de correos, en lenguaje claro. */
+export function emailErrorHint(code: string): string | null {
+  const exact: Record<string, string> = {
+    DAILY_QUOTA: "Se alcanzó el cupo diario de correos de campaña. Sale automáticamente cuando se reinicie el cupo.",
+    PROVIDER_QUOTA:
+      "El proveedor de correo (Brevo) rechazó por cupo agotado — puede que aún no haya reiniciado su contador. Se reintenta automáticamente cada hora.",
+    RATE_LIMIT: "El proveedor pidió bajar la velocidad de envío. Se reintenta en unos minutos.",
+    PROVIDER_ERROR: "El proveedor falló varias veces seguidas; el envío se pausó y se reintenta en 30 minutos.",
+    NETWORK: "No hubo conexión con el proveedor de correo (red o servicio caído).",
+    UNKNOWN: "Error desconocido del proveedor.",
+  };
+  if (exact[code]) return exact[code];
+  const http = code.match(/^HTTP_(\d{3})/);
+  if (http) {
+    const s = Number(http[1]);
+    if (s === 400) return "El proveedor rechazó el correo (dirección inválida o datos del mensaje incorrectos).";
+    if (s === 401 || s === 403) return "El proveedor rechazó la autenticación (revisa la API key o las IPs autorizadas en Brevo).";
+    if (s === 402) return "Sin créditos o cupo en el proveedor de correo.";
+    if (s >= 500) return "Error interno del proveedor de correo.";
+  }
+  return null;
 }

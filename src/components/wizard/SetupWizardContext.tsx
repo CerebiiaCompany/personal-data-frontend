@@ -13,6 +13,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useSessionStore } from "@/store/useSessionStore";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useWizardRiskStatus } from "@/hooks/useWizardRiskStatus";
+import { useIsWizardRiskEnabled } from "@/hooks/useIsWizardRiskEnabled";
 import { fetchWizardStatus } from "@/lib/wizard.api";
 import { WizardStatus } from "@/types/wizard.types";
 import {
@@ -82,8 +83,13 @@ export function SetupWizardProvider({ children }: { children: React.ReactNode })
   // más abajo. El asistente viejo sigue existiendo y sigue siendo abrible
   // voluntariamente (OpenSetupWizardButton, /onboarding/wizard-legacy); lo
   // único que cambia es que ya no se auto-abre como bloqueante.
+  //
+  // Solo empresas chilenas (countryCode "CL"): el wizard de riesgo se basa en
+  // la Ley 21.719 y no debe aparecer nunca a empresas de otros países (p. ej.
+  // Colombia). Para ellas ni siquiera se consulta/crea la sesión.
+  const { enabled: wizardRiskEnabled } = useIsWizardRiskEnabled();
   const { status: wizardRiskStatus, loading: wizardRiskLoading } = useWizardRiskStatus(
-    canOpen ? companyId : undefined
+    canOpen && wizardRiskEnabled ? companyId : undefined
   );
   const wizardRiskCompleted = wizardRiskStatus === "COMPLETED";
 
@@ -178,7 +184,13 @@ export function SetupWizardProvider({ children }: { children: React.ReactNode })
     // estado todavía no se conoce (wizardRiskLoading), ni dentro del
     // archivo del asistente viejo (si no, nunca se podría llegar a verlo).
     const onLegacyArchive = pathname?.startsWith("/onboarding/wizard-legacy") ?? false;
-    if (canOpen && !wizardRiskLoading && !wizardRiskCompleted && !onLegacyArchive) {
+    if (
+      canOpen &&
+      wizardRiskEnabled &&
+      !wizardRiskLoading &&
+      !wizardRiskCompleted &&
+      !onLegacyArchive
+    ) {
       setFlowOpen(false);
       router.replace("/wizard/bienvenida");
       return;
@@ -197,6 +209,7 @@ export function SetupWizardProvider({ children }: { children: React.ReactNode })
     if (!manualOpen) setFlowOpen(false);
   }, [
     canOpen,
+    wizardRiskEnabled,
     wizardRiskLoading,
     wizardRiskCompleted,
     pathname,

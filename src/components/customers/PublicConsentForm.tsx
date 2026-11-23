@@ -119,15 +119,15 @@ const PublicConsentForm = ({ data }: Props) => {
       setCompanyCountryCode(formData.company.countryCode);
     }
 
-    // Obtener URL de la política
-    if (data._id) {
+    // Obtener URL de la política (si el formulario tiene una asociada)
+    if (data._id && data.policyTemplateId) {
       getPublicCollectFormPolicyUrl(data._id).then((res) => {
         if (!res.error && res.data?.url) {
           setPolicyUrl(res.data.url);
         }
       });
     }
-  }, [data._id, data.company]);
+  }, [data._id, data.company, data.policyTemplateId]);
 
   async function onSearchSubmit(formData: SearchFormValues) {
     const hasSession = await ensureActiveSession();

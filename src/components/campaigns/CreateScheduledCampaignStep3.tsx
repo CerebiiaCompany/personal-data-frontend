@@ -1,5 +1,7 @@
+import CampaignEmailImagesField from "./CampaignEmailImagesField";
 import {
   CampaignDeliveryChannel,
+  EMAIL_BODY_MAX_LENGTH,
   WHATSAPP_NOTIFICATION_TEMPLATE_LANGUAGE,
   WHATSAPP_NOTIFICATION_TEMPLATE_NAME,
   WHATSAPP_TEMPLATE_LANGUAGE,
@@ -7,7 +9,7 @@ import {
 } from "@/types/campaign.types";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import clsx from "clsx";
-import { FieldError, UseFormRegister, UseFormWatch } from "react-hook-form";
+import { FieldError, UseFormRegister, UseFormSetValue, UseFormWatch } from "react-hook-form";
 import { inputErrorClass } from "@/utils/createScheduledCampaignWizard.utils";
 import {
   validateWhatsappFreeTextParam,
@@ -36,6 +38,9 @@ interface Props {
   highlightErrors?: boolean;
   /** Objetivo "Consentimiento": crea una campaña CONSENT_REQUEST real. */
   isConsentGoal?: boolean;
+  /** Necesarios para las imágenes del correo (canal EMAIL). */
+  setValue?: UseFormSetValue<any>;
+  companyId?: string;
 }
 
 export default function CreateScheduledCampaignStep3({
@@ -45,15 +50,24 @@ export default function CreateScheduledCampaignStep3({
   deliveryChannel,
   highlightErrors = false,
   isConsentGoal = false,
+  setValue,
+  companyId,
 }: Props) {
   const contentErrors = errors.content as unknown as ContentErrors | undefined;
   const isNotificationWhatsapp = deliveryChannel === "WHATSAPP" && !isConsentGoal;
+  const isEmail = deliveryChannel === "EMAIL";
+  // Las imágenes solo van en correos de marketing: los de consentimiento usan
+  // la plantilla legal fija.
+  const showEmailImages = isEmail && !isConsentGoal && Boolean(setValue);
+  const imageUrls = (watch("content.imageUrls") ?? []) as string[];
   const maxChars =
     deliveryChannel === "SMS"
       ? 160
       : isNotificationWhatsapp
         ? WHATSAPP_FREE_TEXT_MAX_LENGTH
-        : 1000;
+        : isEmail
+          ? EMAIL_BODY_MAX_LENGTH
+          : 1000;
   const bodyText = watch("content.bodyText") ?? "";
   const bodyLen = typeof bodyText === "string" ? bodyText.length : 0;
   const bodyOverLimit = bodyLen > maxChars;
@@ -116,12 +130,14 @@ export default function CreateScheduledCampaignStep3({
           className="text-sm font-bold"
           style={{ color: NAVY }}
         >
-          Nombre
+          {isEmail ? "Asunto del correo" : "Nombre"}
         </label>
         <input
           id="campaign-content-name"
           type="text"
-          placeholder="Nombre del anuncio"
+          placeholder={
+            isEmail ? "Ej: ¡Nuevos productos esta semana! 🎉" : "Nombre del anuncio"
+          }
           className={inputErrorClass(
             Boolean(contentErrors?.name),
             INPUT_CLASS
@@ -141,15 +157,17 @@ export default function CreateScheduledCampaignStep3({
           className="text-sm font-bold"
           style={{ color: NAVY }}
         >
-          Texto principal
+          {isEmail ? "Cuerpo del correo" : "Texto principal"}
         </label>
         <textarea
           id="campaign-content-body"
-          rows={6}
+          rows={isEmail ? 10 : 6}
           placeholder={
             isNotificationWhatsapp
               ? "Texto libre que completa la plantilla, ej: No olvides confirmar tu cita esta semana."
-              : "Texto principal de la campaña"
+              : isEmail
+                ? "Escribe el mensaje del correo. Los saltos de línea se respetan."
+                : "Texto principal de la campaña"
           }
           maxLength={isNotificationWhatsapp ? undefined : maxChars}
           className={inputErrorClass(
@@ -205,6 +223,16 @@ export default function CreateScheduledCampaignStep3({
         </div>
       )}
 
+      {showEmailImages && setValue && (
+        <CampaignEmailImagesField
+          companyId={companyId}
+          value={imageUrls}
+          onChange={(urls) =>
+            setValue("content.imageUrls", urls, { shouldDirty: true, shouldValidate: true })
+          }
+        />
+      )}
+
       {deliveryChannel !== "WHATSAPP" && (
         <div className="flex flex-col gap-2">
           <label
@@ -212,7 +240,14 @@ export default function CreateScheduledCampaignStep3({
             className="text-sm font-bold"
             style={{ color: NAVY }}
           >
-            Añade link
+            {isEmail ? (
+              <>
+                Botón con enlace{" "}
+                <span className="font-normal text-[#94A3B8]">(opcional)</span>
+              </>
+            ) : (
+              "Añade link"
+            )}
           </label>
           <input
             id="campaign-content-link"

@@ -53,6 +53,11 @@ export type CampaignDeliveryChannel = "SMS" | "EMAIL" | "WHATSAPP";
 export const MIN_SCHEDULE_MINUTES_SMS = 5;
 export const MIN_SCHEDULE_MINUTES_DEFAULT = 3;
 
+/** Campañas por EMAIL: largo máximo del cuerpo e imágenes por correo (el backend valida igual). */
+export const EMAIL_BODY_MAX_LENGTH = 5000;
+export const EMAIL_MAX_IMAGES = 5;
+export const EMAIL_IMAGE_MAX_MB = 3;
+
 export function getMinScheduleMinutes(
   deliveryChannel?: CampaignDeliveryChannel
 ): number {
@@ -108,6 +113,8 @@ export interface CreateCampaign {
     bodyText: string;
     link?: string;
     imageUrl?: string;
+    /** Imágenes del cuerpo del correo (solo EMAIL), en orden. */
+    imageUrls?: string[];
   } & CampaignWhatsappContent;
   targetedResponseIds?: string[];
 }
@@ -133,6 +140,8 @@ export interface CreateScheduledCampaign {
     bodyText: string;
     link?: string;
     imageUrl?: string;
+    /** Imágenes del cuerpo del correo (solo EMAIL), en orden. */
+    imageUrls?: string[];
   } & CampaignWhatsappContent;
   targetedResponseIds?: string[];
 }
@@ -181,6 +190,8 @@ export interface Campaign {
     bodyText: string;
     link?: string;
     imageUrl?: string;
+    /** Imágenes del cuerpo del correo (solo EMAIL), en orden. */
+    imageUrls?: string[];
   } & CampaignWhatsappContent;
   targetedResponseIds?: string[];
   createdAt: Date | string;

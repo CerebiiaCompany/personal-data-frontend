@@ -123,6 +123,7 @@ const CreateScheduledCampaignForm = () => {
         name: "",
         bodyText: "",
         link: "",
+        imageUrls: [],
         whatsappTemplateName: WHATSAPP_NOTIFICATION_TEMPLATE_NAME,
         whatsappTemplateLanguage: WHATSAPP_NOTIFICATION_TEMPLATE_LANGUAGE,
         whatsappHeaderParam: true,
@@ -457,15 +458,25 @@ const CreateScheduledCampaignForm = () => {
 
       const contentName = data.content?.name?.trim() || "";
       const contentBody = data.content?.bodyText?.trim() || "";
-      const contentLink = data.content?.link?.trim() || "";
-      // WhatsApp usa bodyText solo como parámetro {{3}} (sin saltos). SMS/Email
-      // sí concatenan título + mensaje + link en un solo cuerpo.
+      const rawLink = data.content?.link?.trim() || "";
+      // El esquema acepta "dominio.com" sin protocolo; en el botón del correo
+      // (href) eso quedaría como enlace relativo roto.
+      const contentLink =
+        rawLink && !/^https?:\/\//i.test(rawLink) ? `https://${rawLink}` : rawLink;
+      // WhatsApp usa bodyText solo como parámetro {{3}} (sin saltos).
+      // Email de marketing: el nombre es el ASUNTO y el link es un botón, así
+      // que el cuerpo va solo (sin repetir asunto ni link dentro del texto).
+      // SMS (y email de consentimiento) concatenan título + mensaje + link.
+      const isMarketingEmail = data.deliveryChannel === "EMAIL" && !isConsentGoal;
       const bodyTextForPayload =
         data.deliveryChannel === "WHATSAPP"
           ? contentBody.replace(/[\n\r\t]+/g, " ").replace(/ {2,}/g, " ").trim()
-          : [contentName, contentBody, contentLink]
-              .filter((p) => p && p.length > 0)
-              .join("\n\n");
+          : isMarketingEmail
+            ? contentBody
+            : [contentName, contentBody, contentLink]
+                .filter((p) => p && p.length > 0)
+                .join("\n\n");
+      const imageUrls = isMarketingEmail ? (data.content?.imageUrls ?? []) : [];
 
       const payload = {
         ...data,
@@ -475,6 +486,7 @@ const CreateScheduledCampaignForm = () => {
           name: contentName,
           bodyText: bodyTextForPayload,
           ...(contentLink ? { link: contentLink } : {}),
+          imageUrls,
         },
         scheduling: {
           scheduledDateTime,
@@ -642,6 +654,8 @@ const CreateScheduledCampaignForm = () => {
                     deliveryChannel={selectedDeliveryChannel}
                     highlightErrors={showStepValidation}
                     isConsentGoal={isConsentGoal}
+                    setValue={setValue}
+                    companyId={companyId}
                   />
                   <section
                     className={clsx(

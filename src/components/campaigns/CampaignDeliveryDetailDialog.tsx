@@ -6,8 +6,9 @@ import LoadingCover from "@/components/layout/LoadingCover";
 import { fetchCampaignDeliveries } from "@/lib/campaignDelivery.api";
 import { CampaignDelivery } from "@/types/campaignDelivery.types";
 import {
-  PROVIDER_STATUS_COLORS,
-  PROVIDER_STATUS_LABELS,
+  providerChannelName,
+  providerStatusColor,
+  providerStatusLabel,
   deliveryChannelIcon,
   describeProviderError,
   formatDeliveryChannel,
@@ -140,12 +141,10 @@ export default function CampaignDeliveryDetailDialog({
           {item.providerStatus && (
             <div className="rounded-xl border border-[#E8EDF7] bg-[#F8FAFC] px-3 py-3 space-y-2">
               <DetailRow
-                label="Estado en WhatsApp"
+                label={`Estado en ${providerChannelName(item.deliveryChannel)}`}
                 value={
-                  <span
-                    className={`font-semibold ${PROVIDER_STATUS_COLORS[item.providerStatus] ?? "text-[#334155]"}`}
-                  >
-                    {PROVIDER_STATUS_LABELS[item.providerStatus] ?? item.providerStatus}
+                  <span className={`font-semibold ${providerStatusColor(item.providerStatus)}`}>
+                    {providerStatusLabel(item.deliveryChannel, item.providerStatus)}
                   </span>
                 }
               />
@@ -157,11 +156,25 @@ export default function CampaignDeliveryDetailDialog({
                 <DetailRow
                   label="Motivo"
                   value={
-                    <span className="text-red-700">
+                    <span className={item.status === "FAILED" ? "text-red-700" : "text-amber-800"}>
                       {describeProviderError(item.providerErrorCode, item.providerErrorMessage)}
                       {item.providerErrorCode ? ` (código ${item.providerErrorCode})` : ""}
                     </span>
                   }
+                />
+              )}
+              {item.providerErrorMessage &&
+                item.providerErrorMessage !==
+                  describeProviderError(item.providerErrorCode, item.providerErrorMessage) && (
+                  <DetailRow
+                    label="Respuesta del proveedor"
+                    value={<span className="break-words text-[#64748B]">{item.providerErrorMessage}</span>}
+                  />
+                )}
+              {item.providerMessageId && (
+                <DetailRow
+                  label="Id del mensaje"
+                  value={<span className="break-all font-mono text-xs">{item.providerMessageId}</span>}
                 />
               )}
               {item.providerStatusAt && (
@@ -169,6 +182,15 @@ export default function CampaignDeliveryDetailDialog({
                   label="Último estado"
                   value={formatDeliveryDateTime(item.providerStatusAt)}
                 />
+              )}
+              {(item.attempts ?? 0) > 0 && (
+                <DetailRow
+                  label="Intentos"
+                  value={`${item.attempts}${item.lastAttemptAt ? ` · último ${formatDeliveryDateTime(item.lastAttemptAt)}` : ""}`}
+                />
+              )}
+              {item.status === "PENDING" && item.nextAttemptAt && (
+                <DetailRow label="Próximo intento" value={formatDeliveryDateTime(item.nextAttemptAt)} />
               )}
             </div>
           )}
@@ -186,7 +208,7 @@ export default function CampaignDeliveryDetailDialog({
             </>
           )}
           <DetailRow label="Destinatario" value={item.recipient} />
-          <DetailRow label="Enviado" value={formatDeliveryDateTime(item.createdAt)} />
+          <DetailRow label="Puesto en cola" value={formatDeliveryDateTime(item.createdAt)} />
           <DetailRow
             label="Programado"
             value={formatDeliveryDateTime(item.scheduledFor)}

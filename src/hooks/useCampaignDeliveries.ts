@@ -18,6 +18,7 @@ export function useCampaignDeliveries(params: Params) {
     companyId,
     campaignId,
     status,
+    reason,
     page = 1,
     pageSize = 20,
     from,
@@ -39,6 +40,7 @@ export function useCampaignDeliveries(params: Params) {
       companyId,
       campaignId,
       status,
+      reason,
       page,
       pageSize,
       from,
@@ -57,7 +59,7 @@ export function useCampaignDeliveries(params: Params) {
 
     setData(Array.isArray(res.data) ? res.data : []);
     setMeta(res.meta ?? null);
-  }, [companyId, campaignId, status, page, pageSize, from, to]);
+  }, [companyId, campaignId, status, reason, page, pageSize, from, to]);
 
   useEffect(() => {
     if (!enabled || !companyId) return;

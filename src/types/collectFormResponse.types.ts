@@ -329,16 +329,38 @@ export interface AdminCollectFormRecordInput {
   email?: string;
   phone?: string;
   razonSocial?: string;
+  age?: number;
+  gender?: UserGender | string;
 }
 
 export type CreateAdminCollectFormResponsesBody =
   | AdminCollectFormRecordInput
-  | { records: AdminCollectFormRecordInput[] };
+  | {
+      records: AdminCollectFormRecordInput[];
+      /**
+       * "excel_import": carga masiva desde la plantilla dentro del formulario.
+       * El backend omite (en vez de rechazar el lote) filas con RUT inválido y
+       * deduplica las filas sin documento por correo/teléfono en el formulario.
+       */
+      source?: "excel_import";
+    };
 
 export interface CreateAdminCollectFormResponsesResult {
   created: number;
+  /** Registros sin documento (ID temporal) que se completaron con el documento recibido. */
+  completed?: number;
   skipped: number;
-  skippedRecords?: AdminCollectFormRecordInput[];
+  skippedRecords?: {
+    docType?: string | null;
+    docNumber?: string | number | null;
+    email?: string | null;
+    phone?: string | null;
+    name?: string | null;
+    lastName?: string | null;
+  }[];
+  /** Solo con source "excel_import". */
+  invalid?: number;
+  invalidRecords?: { docType: string; docNumber: string; email: string | null; reason: string }[];
 }
 
 /** Body parcial para PATCH de datos recolectados (solo campos a modificar). */

@@ -8,6 +8,8 @@ import FormResponsesFilters, {
 } from "@/components/clasification/FormResponsesFilters";
 import CheckPermission from "@/components/checkers/CheckPermission";
 import RegisterCollectFormPersonDialog from "@/components/dialogs/RegisterCollectFormPersonDialog";
+import ImportExcelToCollectFormDialog from "@/components/dialogs/ImportExcelToCollectFormDialog";
+import { useCompanyCountryCode } from "@/hooks/useCompanyCountryCode";
 import { HTML_IDS_DATA } from "@/constants/htmlIdsData";
 import { showDialog } from "@/utils/dialogs.utils";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
@@ -92,6 +94,7 @@ export default function FormClassificationPage() {
   const [pageSize, setPageSize] = useState(20);
   const [consentFilter, setConsentFilter] = useState<ConsentStatusFilter>("ALL");
   const companyId = useActiveCompanyId();
+  const countryCode = useCompanyCountryCode();
   const {
     startExport,
     exporting: exportingExcel,
@@ -374,6 +377,18 @@ export default function FormClassificationPage() {
                     >
                       Registrar persona
                     </Button>
+                    <Button
+                      hierarchy="secondary"
+                      className="rounded-xl! border-[#0D9488]! bg-white! px-4! py-2.5! text-[13px]! font-semibold! text-[#0D9488]! hover:bg-[#F0FDFA]!"
+                      onClick={() =>
+                        showDialog(HTML_IDS_DATA.importExcelToCollectFormDialog)
+                      }
+                      startContent={
+                        <Icon icon="tabler:file-spreadsheet" className="text-base" />
+                      }
+                    >
+                      Importar Excel
+                    </Button>
                   </CheckPermission>
                   {can("classification.edit") && (
                     <Button
@@ -490,6 +505,16 @@ export default function FormClassificationPage() {
           collectFormId={formId}
           formName={data?.name}
           onRegistered={refresh}
+        />
+      ) : null}
+
+      {companyId && formId ? (
+        <ImportExcelToCollectFormDialog
+          companyId={companyId}
+          collectFormId={formId}
+          formName={data?.name}
+          countryCode={countryCode}
+          onImported={refresh}
         />
       ) : null}
     </div>

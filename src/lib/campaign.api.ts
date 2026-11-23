@@ -2,6 +2,7 @@ import { APIResponse, QueryParams } from "@/types/api.types";
 import { CreateCampaign, CreateConsentCampaign } from "@/types/campaign.types";
 import { UpdatePartial } from "@/types/utils.types";
 import { customFetch } from "@/utils/customFetch";
+import { API_BASE_URL } from "@/utils/env.utils";
 
 export async function fetchCampaigns(
   params: QueryParams
@@ -96,4 +97,43 @@ export async function createScheduledCampaign(
   });
 
   return res;
+}
+export interface CampaignEmailImageUploadResult {
+  /** URL pública (proxiada por el backend) para usar dentro del correo. */
+  url: string;
+  fileName: string;
+  size: number;
+}
+
+/**
+ * Sube una imagen para el cuerpo de una campaña de EMAIL.
+ * multipart/form-data con el campo "file" (PNG, JPG, GIF o WEBP).
+ */
+export async function uploadCampaignEmailImage(
+  companyId: string,
+  file: File
+): Promise<APIResponse<CampaignEmailImageUploadResult>> {
+  const formData = new FormData();
+  formData.append("file", file);
+  try {
+    const response = await fetch(`${API_BASE_URL}/companies/${companyId}/campaigns/email-images`, {
+      method: "POST",
+      body: formData,
+      credentials: "include",
+    });
+    const json = await response.json().catch(() => null);
+    if (!response.ok || !json?.data) {
+      return {
+        error: json?.error ?? {
+          code: "http/unknown-error",
+          message: `No se pudo subir la imagen (${response.status})`,
+        },
+      };
+    }
+    return { data: json.data as CampaignEmailImageUploadResult };
+  } catch {
+    return {
+      error: { code: "http/unknown-error", message: "No se pudo conectar con el servidor para subir la imagen" },
+    };
+  }
 }

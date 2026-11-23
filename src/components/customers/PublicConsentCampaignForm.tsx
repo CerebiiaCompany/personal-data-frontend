@@ -424,6 +424,12 @@ export default function PublicConsentCampaignForm({ data, cct, qct }: Props) {
   React.useEffect(() => {
     if (!data?._id || cctFlowStep !== "full_form") return;
 
+    if (!data.policyTemplateId) {
+      setPolicyUrl(null);
+      setPolicyLoading(false);
+      return;
+    }
+
     let cancelled = false;
     setPolicyLoading(true);
 
@@ -1331,16 +1337,18 @@ export default function PublicConsentCampaignForm({ data, cct, qct }: Props) {
           />
         ) : (
           <>
-            <div className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3">
-              No hay enlace disponible a la política en este momento. Si necesitas
-              leerla antes de aceptar, contacta a la empresa.
-            </div>
+            {data.policyTemplateId && (
+              <div className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                No hay enlace disponible a la política en este momento. Si necesitas
+                leerla antes de aceptar, contacta a la empresa.
+              </div>
+            )}
             <CustomCheckbox
               {...register("dataProcessing")}
               label={
                 companyName
-                  ? `Acepto la política de tratamiento de datos personales de ${companyName}.`
-                  : "Acepto la política de tratamiento de datos personales de la empresa responsable."
+                  ? `Acepto el tratamiento de mis datos personales por parte de ${companyName}.`
+                  : "Acepto el tratamiento de mis datos personales."
               }
               error={errors.dataProcessing as FieldError}
             />

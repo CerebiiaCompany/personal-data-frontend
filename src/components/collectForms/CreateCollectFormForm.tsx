@@ -56,7 +56,7 @@ function toFormDefaults(
   return {
     name: initial.name,
     description: initial.description,
-    policyTemplateId: initial.policyTemplateId,
+    policyTemplateId: initial.policyTemplateId ?? "",
     treatmentId: initial.treatmentId ?? "",
     marketingChannels: {
       SMS: initial.marketingChannels.SMS,
@@ -75,6 +75,7 @@ function toFormDefaults(
 function toApiPayload(data: CreateCollectForm): CreateCollectForm {
   return {
     ...data,
+    policyTemplateId: data.policyTemplateId || null,
     treatmentId: data.treatmentId || null,
     marketingChannels: {
       ...data.marketingChannels,
@@ -458,7 +459,7 @@ const CreateCollectFormForm = ({ initialValues }: Props) => {
                     Política de tratamiento de datos personales
                   </h2>
                   <p className="text-[13px] text-[#64748B] mt-1">
-                    Adjunta la política que tus titulares deben aceptar
+                    Opcional. Adjunta la política que tus titulares deben aceptar.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2 shrink-0">
@@ -501,7 +502,12 @@ const CreateCollectFormForm = ({ initialValues }: Props) => {
                 {policyTemplateId ? (
                   <button
                     type="button"
-                    onClick={() => setValue("policyTemplateId", "")}
+                    onClick={() =>
+                      setValue("policyTemplateId", "", {
+                        shouldValidate: true,
+                        shouldDirty: true,
+                      })
+                    }
                     className="ml-auto inline-flex items-center justify-center rounded-md p-1.5 text-[#64748B] hover:bg-white hover:text-[#0F172A] transition-colors"
                     aria-label="Quitar política de tratamiento"
                   >
@@ -519,7 +525,7 @@ const CreateCollectFormForm = ({ initialValues }: Props) => {
             {policyTemplates.data && (
               <SelectTemplateDialog
                 items={policyTemplates.data}
-                value={policyTemplateId}
+                value={policyTemplateId ?? ""}
                 onSelect={(id) =>
                   setValue("policyTemplateId", id, {
                     shouldValidate: true,

@@ -97,6 +97,9 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
   const [policyUrl, setPolicyUrl] = useState<string | null>(null);
   // Item 7: solo se llena cuando la política del formulario es RAT_GENERATED.
   const [policyPdfUrl, setPolicyPdfUrl] = useState<string | null>(null);
+  const [policyLoading, setPolicyLoading] = useState<boolean>(
+    Boolean(data.policyTemplateId)
+  );
   const [formKey, setFormKey] = useState<number>(0); // Para forzar el reseteo del formulario
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false); // Estado de loading para el botón
   const [isSendingOtp, setIsSendingOtp] = useState<boolean>(false); // Estado de loading para envío de OTP
@@ -620,8 +623,14 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
 
   useEffect(() => {
     const fetchPolicyUrl = async () => {
-      if (!data?._id) return;
+      if (!data?._id || !data.policyTemplateId) {
+        setPolicyUrl(null);
+        setPolicyPdfUrl(null);
+        setPolicyLoading(false);
+        return;
+      }
 
+      setPolicyLoading(true);
       try {
         const res = await getPublicCollectFormPolicyUrl(data._id);
 
@@ -642,6 +651,8 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
       } catch (error) {
         console.error("Error al obtener URL de la política:", error);
         toast.error("Error al obtener la URL del archivo");
+      } finally {
+        setPolicyLoading(false);
       }
     };
 
@@ -1040,10 +1051,16 @@ const PublicCollectForm = ({ data, initialValues }: Props) => {
               </a>
             )}
           </>
-        ) : data.policyTemplateFile ? (
+        ) : policyLoading ? (
           <div className="w-10 h-10 relative">
             <LoadingCover size="sm" />
           </div>
+        ) : !data.policyTemplateId ? (
+          <CustomCheckbox
+            {...register("dataProcessing")}
+            label={<p>Acepto el tratamiento de mis datos personales.</p>}
+            error={errors.dataProcessing as FieldError}
+          />
         ) : (
           <div className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-md p-3">
             <p className="font-medium">

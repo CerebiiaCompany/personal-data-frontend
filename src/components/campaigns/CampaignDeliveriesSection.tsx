@@ -4,24 +4,35 @@ import Button from "@/components/base/Button";
 import Pagination from "@/components/base/Pagination";
 import CampaignDeliveriesTable from "@/components/campaigns/CampaignDeliveriesTable";
 import CampaignDeliveryDetailDialog from "@/components/campaigns/CampaignDeliveryDetailDialog";
+import CampaignDeliveryAuditSummary from "@/components/campaigns/CampaignDeliveryAuditSummary";
 import { useCampaignDeliveries } from "@/hooks/useCampaignDeliveries";
+import { usePermissionCheck } from "@/hooks/usePermissionCheck";
+import { fetchCampaignDeliverySummary } from "@/lib/campaignDelivery.api";
 import {
   CampaignDelivery,
   CampaignDeliveryStatus,
+  CampaignDeliverySummary,
 } from "@/types/campaignDelivery.types";
-import { CAMPAIGN_DELIVERY_STATUS_LABELS } from "@/utils/campaignDelivery.utils";
+import {
+  CAMPAIGN_DELIVERY_STATUS_LABELS,
+  describeProviderError,
+} from "@/utils/campaignDelivery.utils";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import clsx from "clsx";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-type StatusFilter = CampaignDeliveryStatus | "";
+type StatusFilter = CampaignDeliveryStatus | "DEFERRED" | "";
 
 const STATUS_TABS: { id: StatusFilter; label: string }[] = [
   { id: "", label: "Todos" },
   { id: "SUCCESS", label: CAMPAIGN_DELIVERY_STATUS_LABELS.SUCCESS },
-  { id: "FAILED", label: CAMPAIGN_DELIVERY_STATUS_LABELS.FAILED },
   { id: "PENDING", label: CAMPAIGN_DELIVERY_STATUS_LABELS.PENDING },
+  { id: "DEFERRED", label: "Reprogramados" },
+  { id: "FAILED", label: CAMPAIGN_DELIVERY_STATUS_LABELS.FAILED },
 ];
+
+/** Mientras haya pendientes, la auditoría se refresca sola cada 30 s. */
+const AUTO_REFRESH_MS = 30_000;
 
 interface Props {
   companyId: string;
@@ -39,9 +50,13 @@ export default function CampaignDeliveriesSection({
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("");
+  const [reasonFilter, setReasonFilter] = useState<string>("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [selectedDelivery, setSelectedDelivery] = useState<CampaignDelivery | null>(null);
+  const [summary, setSummary] = useState<CampaignDeliverySummary | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const { can } = usePermissionCheck();
 
   const fromIso = fromDate ? new Date(`${fromDate}T00:00:00`).toISOString() : undefined;
   const toIso = toDate
@@ -54,16 +69,43 @@ export default function CampaignDeliveriesSection({
     page,
     pageSize,
     status: statusFilter || undefined,
+    reason: reasonFilter || undefined,
     from: fromIso,
     to: toIso,
   });
 
+  const loadSummary = useCallback(async () => {
+    setSummaryLoading(true);
+    const res = await fetchCampaignDeliverySummary(companyId, campaignId);
+    setSummaryLoading(false);
+    if (res.data) setSummary(res.data);
+  }, [companyId, campaignId]);
+
+  const refreshAll = useCallback(() => {
+    void refresh();
+    void loadSummary();
+  }, [refresh, loadSummary]);
+
+  useEffect(() => {
+    void loadSummary();
+  }, [loadSummary]);
+
+  // Auto-refresco mientras queden correos por salir (en cola / reprogramados).
+  const hasPending = (summary?.pending ?? 0) > 0;
+  useEffect(() => {
+    if (!hasPending) return;
+    const t = setInterval(refreshAll, AUTO_REFRESH_MS);
+    return () => clearInterval(t);
+  }, [hasPending, refreshAll]);
+
   useEffect(() => {
     setPage(1);
-  }, [statusFilter, fromDate, toDate, pageSize]);
+  }, [statusFilter, reasonFilter, fromDate, toDate, pageSize]);
 
   const hasDateFilters = Boolean(fromDate || toDate);
   const totalCount = meta?.totalCount ?? data?.length ?? 0;
+  void audienceTotal;
+  void audienceDelivered;
 
   const inputClass =
     "h-[42px] w-full px-3 border border-[#E4EAF6] rounded-xl text-sm bg-white text-[#0B1737] focus:outline-none focus:ring-2 focus:ring-primary-500";
@@ -78,44 +120,34 @@ export default function CampaignDeliveriesSection({
                 Auditoría de entregas
               </h2>
               <p className="mt-1 max-w-2xl text-sm text-[#64748B]">
-                Consulta a quién de la audiencia del formulario se envió el mensaje de la
-                campaña y el estado de cada entrega.
+                Estado de cada mensaje de la campaña: enviados, en cola, reprogramados por cupo y
+                fallidos con su motivo. {hasPending && "Se actualiza sola cada 30 s mientras haya pendientes."}
               </p>
             </div>
             <Button
               hierarchy="tertiary"
-              onClick={() => refresh()}
+              onClick={refreshAll}
               startContent={<Icon icon="tabler:refresh" />}
               className="shrink-0"
             >
               Actualizar
             </Button>
           </div>
+        </div>
 
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="rounded-xl border border-[#E8EDF7] bg-[#F8FAFC] px-4 py-3">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-[#94A3B8]">
-                Registros (filtro actual)
-              </p>
-              <p className="text-xl font-bold tabular-nums text-[#0B1737]">
-                {loading ? "…" : totalCount.toLocaleString("es-CO")}
-              </p>
-            </div>
-            {(audienceTotal != null || audienceDelivered != null) && (
-              <div className="rounded-xl border border-[#E8EDF7] bg-[#F8FAFC] px-4 py-3 sm:col-span-2">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-[#94A3B8]">
-                  Audiencia campaña
-                </p>
-                <p className="text-xl font-bold tabular-nums text-[#0B1737]">
-                  {audienceDelivered ?? 0}
-                  <span className="text-base font-normal text-[#64748B]">
-                    {" "}
-                    / {audienceTotal ?? audienceDelivered ?? 0} destinatarios
-                  </span>
-                </p>
-              </div>
-            )}
-          </div>
+        <div className="border-b border-[#EEF2F8]">
+          <CampaignDeliveryAuditSummary
+            companyId={companyId}
+            campaignId={campaignId}
+            summary={summary}
+            loading={summaryLoading}
+            canRetry={can("campaigns.create")}
+            onChanged={refreshAll}
+            onFilter={({ status, reason }) => {
+              setStatusFilter(status ?? "");
+              setReasonFilter(reason ?? "");
+            }}
+          />
         </div>
 
         <div className="border-b border-[#EEF2F8] px-4 py-4 sm:px-5">
@@ -125,7 +157,10 @@ export default function CampaignDeliveriesSection({
               <button
                 key={tab.id || "all"}
                 type="button"
-                onClick={() => setStatusFilter(tab.id)}
+                onClick={() => {
+                  setStatusFilter(tab.id);
+                  setReasonFilter("");
+                }}
                 className={clsx(
                   "rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
                   statusFilter === tab.id
@@ -136,7 +171,27 @@ export default function CampaignDeliveriesSection({
                 {tab.label}
               </button>
             ))}
+            <span className="ml-auto self-center text-xs text-[#64748B]">
+              {loading ? "…" : `${totalCount.toLocaleString("es-CO")} registro(s)`}
+            </span>
           </div>
+
+          {reasonFilter && (
+            <div className="mt-3 inline-flex max-w-full items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-900">
+              <Icon icon="tabler:filter" className="shrink-0" />
+              <span className="truncate">
+                Motivo: {describeProviderError(reasonFilter, null) ?? reasonFilter}
+              </span>
+              <button
+                type="button"
+                onClick={() => setReasonFilter("")}
+                aria-label="Quitar filtro de motivo"
+                className="shrink-0 rounded p-0.5 hover:bg-amber-100"
+              >
+                <Icon icon="tabler:x" />
+              </button>
+            </div>
+          )}
 
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div className="flex flex-col gap-1.5">
