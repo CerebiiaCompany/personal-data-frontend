@@ -43,6 +43,8 @@ export interface CampaignReviewSummary {
   /** Texto completo de la fila TOTAL, ej. COP 571 (571 créditos) */
   totalLine: string;
   audienceSelectionMode?: "FILTERS" | "MANUAL";
+  /** Cuándo se envía: "Inmediato (al crear la campaña)" o la fecha programada. */
+  envioLabel?: string;
 }
 
 interface Props {
@@ -73,6 +75,7 @@ export default function CreateScheduledCampaignStep4({ summary }: Props) {
             value={summary.generoLabel}
           />
           <SummaryItem label="Nombre" value={nombreDisplay} />
+          {summary.envioLabel && <SummaryItem label="Envío" value={summary.envioLabel} />}
         </div>
         <div className="flex flex-col gap-6 sm:gap-7">
           <SummaryItem label="Canal" value={summary.canalLabel} />

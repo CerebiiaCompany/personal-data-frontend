@@ -6,6 +6,11 @@ import LoadingCover from "@/components/layout/LoadingCover";
 import { fetchCampaignDeliveries } from "@/lib/campaignDelivery.api";
 import { CampaignDelivery } from "@/types/campaignDelivery.types";
 import {
+  providerChannelName,
+  providerStatusColor,
+  providerStatusLabel,
+  deliveryChannelIcon,
+  describeProviderError,
   formatDeliveryChannel,
   formatDeliveryDateTime,
   formatDeliveryDocument,
@@ -128,16 +133,67 @@ export default function CampaignDeliveryDetailDialog({
           <div className="flex flex-wrap items-center gap-2">
             <CampaignDeliveryStatusBadge status={item.status} />
             <span className="inline-flex items-center gap-1 rounded-full border border-[#E4EAF6] bg-[#F8FAFC] px-2.5 py-0.5 text-xs font-medium text-[#334155]">
-              <Icon
-                icon={
-                  item.deliveryChannel === "SMS"
-                    ? "tabler:device-mobile-message"
-                    : "tabler:mail"
-                }
-              />
+              <Icon icon={deliveryChannelIcon(item.deliveryChannel)} />
               {formatDeliveryChannel(item.deliveryChannel)}
             </span>
           </div>
+
+          {item.providerStatus && (
+            <div className="rounded-xl border border-[#E8EDF7] bg-[#F8FAFC] px-3 py-3 space-y-2">
+              <DetailRow
+                label={`Estado en ${providerChannelName(item.deliveryChannel)}`}
+                value={
+                  <span className={`font-semibold ${providerStatusColor(item.providerStatus)}`}>
+                    {providerStatusLabel(item.deliveryChannel, item.providerStatus)}
+                  </span>
+                }
+              />
+              {item.deliveredAt && (
+                <DetailRow label="Entregado" value={formatDeliveryDateTime(item.deliveredAt)} />
+              )}
+              {item.readAt && <DetailRow label="Leído" value={formatDeliveryDateTime(item.readAt)} />}
+              {(item.providerErrorCode || item.providerErrorMessage) && (
+                <DetailRow
+                  label="Motivo"
+                  value={
+                    <span className={item.status === "FAILED" ? "text-red-700" : "text-amber-800"}>
+                      {describeProviderError(item.providerErrorCode, item.providerErrorMessage)}
+                      {item.providerErrorCode ? ` (código ${item.providerErrorCode})` : ""}
+                    </span>
+                  }
+                />
+              )}
+              {item.providerErrorMessage &&
+                item.providerErrorMessage !==
+                  describeProviderError(item.providerErrorCode, item.providerErrorMessage) && (
+                  <DetailRow
+                    label="Respuesta del proveedor"
+                    value={<span className="break-words text-[#64748B]">{item.providerErrorMessage}</span>}
+                  />
+                )}
+              {item.providerMessageId && (
+                <DetailRow
+                  label="Id del mensaje"
+                  value={<span className="break-all font-mono text-xs">{item.providerMessageId}</span>}
+                />
+              )}
+              {item.providerStatusAt && (
+                <DetailRow
+                  label="Último estado"
+                  value={formatDeliveryDateTime(item.providerStatusAt)}
+                />
+              )}
+              {(item.attempts ?? 0) > 0 && (
+                <DetailRow
+                  label="Intentos"
+                  value={`${item.attempts}${item.lastAttemptAt ? ` · último ${formatDeliveryDateTime(item.lastAttemptAt)}` : ""}`}
+                />
+              )}
+              {item.status === "PENDING" && item.nextAttemptAt && (
+                <DetailRow label="Próximo intento" value={formatDeliveryDateTime(item.nextAttemptAt)} />
+              )}
+            </div>
+          )}
 
           <DetailRow label="Nombre" value={formatDeliveryUserName(user)} />
           <DetailRow label="Documento" value={formatDeliveryDocument(user)} />
@@ -152,7 +208,7 @@ export default function CampaignDeliveryDetailDialog({
             </>
           )}
           <DetailRow label="Destinatario" value={item.recipient} />
-          <DetailRow label="Enviado" value={formatDeliveryDateTime(item.createdAt)} />
+          <DetailRow label="Puesto en cola" value={formatDeliveryDateTime(item.createdAt)} />
           <DetailRow
             label="Programado"
             value={formatDeliveryDateTime(item.scheduledFor)}

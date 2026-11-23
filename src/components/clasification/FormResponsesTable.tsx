@@ -13,6 +13,7 @@ import { parseApiError } from "@/utils/parseApiError";
 import {
   deleteCollectFormResponse,
   revokeCollectFormResponseConsent,
+  setCollectFormResponseConsent,
 } from "@/lib/collectFormResponse.api";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { usePermissionCheck } from "@/hooks/usePermissionCheck";
@@ -21,6 +22,7 @@ import { APIResponse } from "@/types/api.types";
 import ResponsePermissionsCell from "@/components/clasification/ResponsePermissionsCell";
 import {
   CollectFormResponse,
+  ConsentAuditEntry,
   getConsentStatusChipClass,
   getConsentStatusLabel,
   isJuridicaDocType,
@@ -96,7 +98,67 @@ function prettyObtainedVia(value?: string) {
   if (v === "CHATBOT") return "ChatBot";
   if (v === "MANUAL") return "Manual";
   if (v === "KIOSK") return "Kiosko";
+  if (v === "MANUAL_BY_COMPANY") return "Registro manual (empresa)";
+  if (v === "OTP_VIA_SMS") return "OTP por SMS";
+  if (v === "OTP_VIA_EMAIL") return "OTP por correo";
   return value || "—";
+}
+
+const MANUAL_CONSENT_REASON_MIN = 10;
+/** Estados con trámite ARCO o disputa abierta: el switch queda bloqueado. */
+const CONSENT_SWITCH_LOCKED = new Set(["CLAIM_IN_PROGRESS", "LEGAL_DISPUTE"]);
+
+const AUDIT_TYPE_LABELS: Record<string, string> = {
+  IMPORTED: "Importado desde Excel",
+  IMPORTED_TEMP_ID: "Importado sin documento",
+  DATA_UPDATED: "Datos actualizados",
+  CONSENT_REVOKED: "Consentimiento revocado",
+  CONSENT_MANUALLY_ACCEPTED: "Marcado manualmente: ACEPTÓ la política",
+  CONSENT_MANUALLY_REJECTED: "Marcado manualmente: RECHAZÓ la política",
+};
+
+function auditActorName(entry: ConsentAuditEntry): string {
+  const a = entry.actor;
+  if (!a) return "Sistema";
+  return [a.name, a.lastName].filter(Boolean).join(" ") || a.username || a.userId || "—";
+}
+
+function ConsentSwitch({
+  checked,
+  disabled,
+  busy,
+  title,
+  onToggle,
+}: {
+  checked: boolean;
+  disabled: boolean;
+  busy: boolean;
+  title: string;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={title}
+      title={title}
+      disabled={disabled || busy}
+      onClick={onToggle}
+      className={clsx(
+        "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4869A9] focus-visible:ring-offset-1",
+        checked ? "bg-[#16A34A]" : "bg-[#CBD5E1]",
+        (disabled || busy) && "opacity-50 cursor-not-allowed"
+      )}
+    >
+      <span
+        className={clsx(
+          "inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform",
+          checked ? "translate-x-[18px]" : "translate-x-[2px]"
+        )}
+      />
+    </button>
+  );
 }
 
 function truncateHash(hash: string): string {
@@ -222,6 +284,7 @@ const FormResponsesTable = ({
   const companyId = useActiveCompanyId();
   const { can } = usePermissionCheck();
   const confirm = useConfirm();
+  const [consentBusyId, setConsentBusyId] = React.useState<string | null>(null);
   const formId = useParams().formId!.toString();
   const [selectedResponse, setSelectedResponse] = React.useState<CollectFormResponse | null>(null);
   const [editingResponse, setEditingResponse] = React.useState<CollectFormResponse | null>(null);
@@ -267,6 +330,62 @@ const FormResponsesTable = ({
     }
 
     toast.success("Consentimiento revocado");
+    refresh();
+  }
+
+  // Switch manual Aceptó / Rechazó: para titulares (p.ej. empleados) que ya
+  // aceptaron o rechazaron la política por otro medio. El motivo es
+  // obligatorio y el backend deja la traza en la auditoría.
+  async function toggleConsent(item: CollectFormResponse, accepted: boolean) {
+    if (!companyId) return;
+
+    let reason = "";
+    const confirmed = await confirm({
+      title: accepted
+        ? "¿Marcar que el titular ACEPTÓ la política?"
+        : "¿Marcar que el titular RECHAZÓ la política?",
+      description: accepted ? (
+        <>
+          Úsalo solo si el titular ya aceptó la política de tratamiento de datos por otro medio
+          (contrato laboral, formato firmado, etc.). Quedará registrado quién lo marcó, cuándo,
+          desde qué IP y el motivo, y la empresa debe conservar ese soporte.
+        </>
+      ) : (
+        <>
+          El titular dejará de figurar como consentido para campañas. El registro y su historial
+          se conservan, y el cambio queda registrado en la auditoría.
+        </>
+      ),
+      withReasonField: true,
+      reasonLabel: `Motivo y soporte (obligatorio, mínimo ${MANUAL_CONSENT_REASON_MIN} caracteres)`,
+      reasonPlaceholder: accepted
+        ? "Ej. Firmó la política en el contrato laboral del 01/02/2026"
+        : "Ej. Manifestó por escrito el 03/11/2026 que no acepta",
+      onReasonChange: (value) => {
+        reason = value;
+      },
+      confirmText: accepted ? "Sí, aceptó" : "Sí, rechazó",
+      cancelText: "Cancelar",
+      danger: !accepted,
+    });
+    if (!confirmed) return;
+
+    if (reason.trim().length < MANUAL_CONSENT_REASON_MIN) {
+      toast.error(`Debes indicar el motivo (mínimo ${MANUAL_CONSENT_REASON_MIN} caracteres).`);
+      return;
+    }
+
+    setConsentBusyId(item._id);
+    const res = await setCollectFormResponseConsent(companyId, formId, item._id, {
+      accepted,
+      reason: reason.trim(),
+    });
+    setConsentBusyId(null);
+    if (res.error) {
+      toast.error(parseApiError(res.error));
+      return;
+    }
+    toast.success(accepted ? "Registrado: el titular aceptó la política" : "Registrado: el titular rechazó la política");
     refresh();
   }
 
@@ -317,7 +436,7 @@ const FormResponsesTable = ({
               !embedded && "min-h-0 flex-1 overflow-y-auto rounded-t-2xl"
             )}
           >
-            <table className="w-full min-w-[2040px] border-separate border-spacing-0">
+            <table className="w-full min-w-[2160px] border-separate border-spacing-0">
               <thead className="sticky top-0 bg-[#F4F6FA] z-10">
                 <tr>
                   {[
@@ -342,6 +461,7 @@ const FormResponsesTable = ({
                     "Fallos",
                     "Obtenido vía",
                     "Consentimiento",
+                    "Acepta política",
                     "Camp. marketing",
                     "Camp. consentimiento",
                     "Compartir terceros",
@@ -517,6 +637,40 @@ const FormResponsesTable = ({
                         >
                           {getConsentStatusLabel(String(consentStatus))}
                         </span>
+                      </td>
+                      <td className="py-3 px-3 text-[11px]">
+                        {(() => {
+                          const accepted = consentStatus === "ACTIVE";
+                          const locked = CONSENT_SWITCH_LOCKED.has(String(consentStatus));
+                          const allowed = can("classification.edit");
+                          return (
+                            <span className="inline-flex items-center gap-2">
+                              <ConsentSwitch
+                                checked={accepted}
+                                busy={consentBusyId === item._id}
+                                disabled={!allowed || locked}
+                                title={
+                                  locked
+                                    ? "Bloqueado: hay una solicitud ARCO o disputa en trámite"
+                                    : !allowed
+                                      ? "No tienes permiso para cambiar el consentimiento"
+                                      : accepted
+                                        ? "Marcar que RECHAZÓ la política"
+                                        : "Marcar que ACEPTÓ la política"
+                                }
+                                onToggle={() => toggleConsent(item, !accepted)}
+                              />
+                              <span
+                                className={clsx(
+                                  "font-semibold whitespace-nowrap",
+                                  accepted ? "text-[#17914D]" : "text-[#7B8BA9]"
+                                )}
+                              >
+                                {accepted ? "Aceptó" : consentStatus === "REVOKED" ? "Rechazó" : "No"}
+                              </span>
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="py-3 px-3 text-[11px] align-top">
                         <ResponsePermissionsCell
@@ -806,6 +960,36 @@ const FormResponsesTable = ({
                               <p className="text-[#1E2D4E] break-all">
                                 {consentIp} · {consentUserAgent}
                               </p>
+                            </div>
+                            <div className="md:col-span-2 xl:col-span-4 rounded-lg border border-[#E3E9F5] bg-white p-3">
+                              <p className="text-[#7A869D] font-semibold mb-2">
+                                Historial de consentimiento (auditoría)
+                              </p>
+                              {item.consent?.audit?.length ? (
+                                <ol className="space-y-2">
+                                  {[...item.consent.audit].reverse().map((entry, idx) => (
+                                    <li
+                                      key={`${entry.type}-${entry.at}-${idx}`}
+                                      className="border-l-2 border-[#DDE6F5] pl-3"
+                                    >
+                                      <p className="text-[#1E2D4E] font-semibold">
+                                        {AUDIT_TYPE_LABELS[entry.type ?? ""] ?? entry.type ?? "Evento"}
+                                      </p>
+                                      <p className="text-[#7B8BA9]">
+                                        {formatDateTime(entry.at)} · {auditActorName(entry)}
+                                        {entry.meta?.ipAddress ? ` · IP ${entry.meta.ipAddress}` : ""}
+                                      </p>
+                                      {entry.meta?.reason && (
+                                        <p className="text-[#3A4B70] break-words">
+                                          Motivo: {String(entry.meta.reason)}
+                                        </p>
+                                      )}
+                                    </li>
+                                  ))}
+                                </ol>
+                              ) : (
+                                <p className="text-[#94A3B8]">Sin eventos registrados.</p>
+                              )}
                             </div>
                           </div>
                         </td>

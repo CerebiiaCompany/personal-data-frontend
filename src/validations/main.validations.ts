@@ -6,6 +6,8 @@ import {
   CampaignDeliveryChannel,
   CampaignAudienceGender,
   getMinScheduleMinutes,
+  EMAIL_BODY_MAX_LENGTH,
+  EMAIL_MAX_IMAGES,
 } from "@/types/campaign.types";
 import { CountryIsoCode } from "@/types/companyArea.types";
 import { validateWhatsappFreeTextParam } from "@/utils/whatsappTemplateValidation.utils";
@@ -14,9 +16,7 @@ import { isValidRut } from "@/utils/rutValidator";
 export const createCollectFormValidationSchema = z.object({
   name: z.string().min(1, "Dale un nombre a tu formulario"),
   description: z.string().min(1, "Añade una descripción"),
-  policyTemplateId: z
-    .string()
-    .min(1, "Selecciona una política de tratamiento de datos personales"),
+  policyTemplateId: z.string().optional().nullable(),
   marketingChannels: z
     .object({
       SMS: z.boolean(),
@@ -354,6 +354,8 @@ export const createScheduledCampaignValidationSchema = z.object({
   goal: z.string<CampaignGoal>("Selecciona un objetivo"),
   active: z.boolean(),
   scheduling: z.object({
+    /** true = la campaña se activa y empieza a enviar apenas se crea (sin programar). */
+    sendNow: z.boolean().optional(),
     scheduledDateTime: dateTimeLocalValidation, // "YYYY-MM-DDTHH:mm" - fecha y hora específica
   }),
   sourceFormIds: z
@@ -404,7 +406,8 @@ export const createScheduledCampaignValidationSchema = z.object({
     bodyText: z
       .string({ error: "Texto obligatorio" })
       .min(1, "Texto obligatorio")
-      .max(1000, "Máximo 1000 caracteres"),
+      // Email admite cuerpos más largos; el resto de canales se limita abajo.
+      .max(EMAIL_BODY_MAX_LENGTH, `Máximo ${EMAIL_BODY_MAX_LENGTH} caracteres`),
     link: z
       .string()
       .optional()
@@ -418,15 +421,29 @@ export const createScheduledCampaignValidationSchema = z.object({
         { message: "URL del enlace inválida" }
       ),
     imageUrl: z.url({ error: "URL de imagen inválida" }).optional(),
+    /** Imágenes del cuerpo del correo (solo EMAIL), ya subidas al backend. */
+    imageUrls: z
+      .array(z.string())
+      .max(EMAIL_MAX_IMAGES, `Máximo ${EMAIL_MAX_IMAGES} imágenes`)
+      .optional(),
     whatsappTemplateName: z.string().optional(),
     whatsappTemplateLanguage: z.string().optional(),
     whatsappHeaderParam: z.boolean().optional(),
   }),
 }).superRefine((data, ctx) => {
+  if (data.deliveryChannel !== "EMAIL" && data.content.bodyText.length > 1000) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Máximo 1000 caracteres",
+      path: ["content", "bodyText"],
+    });
+  }
+
   const minScheduleMinutes = getMinScheduleMinutes(data.deliveryChannel);
   const selectedDate = new Date(data.scheduling.scheduledDateTime);
   const minDateTime = new Date(Date.now() + minScheduleMinutes * 60 * 1000);
-  if (selectedDate < minDateTime) {
+  // "Enviar ahora" no usa la fecha elegida (se calcula al crear).
+  if (!data.scheduling.sendNow && selectedDate < minDateTime) {
     ctx.addIssue({
       code: "custom",
       message: `La campaña debe programarse al menos ${minScheduleMinutes} minutos en el futuro`,

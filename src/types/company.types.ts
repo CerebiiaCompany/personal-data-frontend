@@ -200,6 +200,10 @@ export interface CompanyProfile {
   specialObservations?: SpecialObservations;
   brandPrimaryColor?: string | null;
   brandLogoUrl?: string | null;
+  /** Estilo del encabezado de los correos: "LIGHT" (moderno, default) o "SOLID". */
+  brandEmailHeaderStyle?: "LIGHT" | "SOLID" | null;
+  /** Color del título de los correos (hex). null = automático. */
+  brandEmailTitleColor?: string | null;
   // Item CHK-055/056 (auditoría 2026-08-26/27): switches de jerarquía.
   usesAreaHierarchy?: boolean;
   usesSiteHierarchy?: boolean;

@@ -23,7 +23,7 @@ export interface CollectFormQuestion {
 export interface CreateCollectForm {
   name: string;
   description: string;
-  policyTemplateId: string;
+  policyTemplateId?: string | null;
   /** Item E (RF-73) — opcional: vincula el formulario a un Treatment del RAT. */
   treatmentId?: string | null;
   marketingChannels: MarketingChannels;
@@ -66,10 +66,10 @@ export interface CollectForm extends CreateCollectForm {
   totalResponses: number;
   updated: Date;
   questions: CollectFormQuestion[];
-  policyTemplateFile: Pick<
+  policyTemplateFile?: Pick<
     CustomFile,
     "_id" | "originalName" | "key" | "contentType"
-  >;
+  > | null;
   /** Solo presente en la respuesta del endpoint público (PUBLIC_COLLECT_FORM_get). */
   geolocationNotice?: GeolocationNotice;
 }

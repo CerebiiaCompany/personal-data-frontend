@@ -12,6 +12,7 @@ export const HTML_IDS_DATA = {
   sendConsentInvitationDialog: "sendConsentInvitationDialog",
   consentCampaignDialog: "consentCampaignDialog",
   registerCollectFormPersonDialog: "registerCollectFormPersonDialog",
+  importExcelToCollectFormDialog: "importExcelToCollectFormDialog",
   editCollectFormResponseDialog: "editCollectFormResponseDialog",
   editCompanyCountryDialog: "editCompanyCountryDialog",
   renameTemplateDialog: "renameTemplateDialog",

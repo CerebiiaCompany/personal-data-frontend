@@ -14,25 +14,28 @@ interface UseWizardRiskStatusResult {
  * Reutiliza el mismo endpoint create-or-resume (idempotente) — se llama
  * una sola vez por montaje de SetupWizardProvider (persiste durante toda
  * la sesión de navegación bajo el layout con navbar), no en cada página.
+ *
+ * Pasar companyId undefined desactiva la consulta (p. ej. empresas no
+ * chilenas, ver useIsWizardRiskEnabled): no se crea ninguna sesión.
  */
 export function useWizardRiskStatus(companyId: string | undefined): UseWizardRiskStatusResult {
   const [status, setStatus] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  // companyId para el que ya se tiene respuesta. Si companyId pasa de
+  // undefined a un valor (p. ej. cuando se conoce el país de la empresa),
+  // `loading` es true desde ese mismo render — antes de que corra el
+  // efecto — para que nadie actúe sobre un status null todavía no pedido.
+  const [loadedFor, setLoadedFor] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    if (!companyId) {
-      setLoading(false);
-      return;
-    }
+    if (!companyId) return;
 
     let cancelled = false;
-    setLoading(true);
 
     (async () => {
       const res = await createOrResumeWizardSession(companyId);
       if (cancelled) return;
       setStatus(res.data?.status ?? null);
-      setLoading(false);
+      setLoadedFor(companyId);
     })();
 
     return () => {
@@ -40,5 +43,6 @@ export function useWizardRiskStatus(companyId: string | undefined): UseWizardRis
     };
   }, [companyId]);
 
-  return { status, loading };
+  const loading = Boolean(companyId) && loadedFor !== companyId;
+  return { status: companyId && !loading ? status : null, loading };
 }

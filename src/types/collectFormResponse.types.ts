@@ -228,9 +228,48 @@ export interface ConsentAuditEntry {
   actor?: {
     userId?: string;
     username?: string;
+    name?: string;
+    lastName?: string;
     role?: string;
   };
   meta?: Record<string, any>;
+}
+
+/** Body del switch manual Aceptó/Rechazó (PATCH .../responses/:id/consent). */
+export interface SetCollectFormResponseConsentInput {
+  accepted: boolean;
+  /** Obligatorio, mínimo 10 caracteres: cómo/cuándo el titular aceptó o rechazó. */
+  reason: string;
+}
+
+/** Respuesta de "Aceptar a todos" con dryRun: true (solo conteos). */
+export interface BulkAcceptConsentPreview {
+  total: number;
+  eligible: number;
+  alreadyAccepted: number;
+  revokedExcluded: number;
+  lockedExcluded: number;
+  maxPerRequest: number;
+}
+
+export interface BulkAcceptConsentResult {
+  batchId: string;
+  processed: number;
+  updated: number;
+  skipped: number;
+  failed: number;
+  failures: { responseId: string; message: string }[];
+  /** Elegibles que quedaron sin procesar (superó el máximo por solicitud). */
+  remaining: number;
+}
+
+export interface SetCollectFormResponseConsentResult {
+  id: string;
+  consentStatus?: ConsentStatus | string;
+  dataProcessing?: boolean;
+  consentAcceptedAt?: string | null;
+  consentRevokedAt?: string | null;
+  lastAuditEntry?: ConsentAuditEntry;
 }
 
 export interface ConsentInfo {
@@ -290,16 +329,38 @@ export interface AdminCollectFormRecordInput {
   email?: string;
   phone?: string;
   razonSocial?: string;
+  age?: number;
+  gender?: UserGender | string;
 }
 
 export type CreateAdminCollectFormResponsesBody =
   | AdminCollectFormRecordInput
-  | { records: AdminCollectFormRecordInput[] };
+  | {
+      records: AdminCollectFormRecordInput[];
+      /**
+       * "excel_import": carga masiva desde la plantilla dentro del formulario.
+       * El backend omite (en vez de rechazar el lote) filas con RUT inválido y
+       * deduplica las filas sin documento por correo/teléfono en el formulario.
+       */
+      source?: "excel_import";
+    };
 
 export interface CreateAdminCollectFormResponsesResult {
   created: number;
+  /** Registros sin documento (ID temporal) que se completaron con el documento recibido. */
+  completed?: number;
   skipped: number;
-  skippedRecords?: AdminCollectFormRecordInput[];
+  skippedRecords?: {
+    docType?: string | null;
+    docNumber?: string | number | null;
+    email?: string | null;
+    phone?: string | null;
+    name?: string | null;
+    lastName?: string | null;
+  }[];
+  /** Solo con source "excel_import". */
+  invalid?: number;
+  invalidRecords?: { docType: string; docNumber: string; email: string | null; reason: string }[];
 }
 
 /** Body parcial para PATCH de datos recolectados (solo campos a modificar). */

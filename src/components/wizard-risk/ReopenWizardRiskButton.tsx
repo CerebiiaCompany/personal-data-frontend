@@ -7,6 +7,7 @@ import Button from "@/components/base/Button";
 import { useActiveCompanyId } from "@/hooks/useActiveCompanyId";
 import { useSessionStore } from "@/store/useSessionStore";
 import { useWizardRiskStatus } from "@/hooks/useWizardRiskStatus";
+import { useIsWizardRiskEnabled } from "@/hooks/useIsWizardRiskEnabled";
 import { createOrResumeWizardSession, reopenWizardSession } from "@/lib/wizardSession.api";
 
 interface Props {
@@ -30,9 +31,12 @@ export default function ReopenWizardRiskButton({ className, hierarchy = "primary
   const router = useRouter();
   const role = useSessionStore((store) => store.user?.role);
   const companyId = useActiveCompanyId();
-  const { status, loading } = useWizardRiskStatus(companyId);
+  // Solo empresas chilenas: para el resto ni siquiera se consulta la sesión.
+  const { enabled: wizardRiskEnabled } = useIsWizardRiskEnabled();
+  const { status, loading } = useWizardRiskStatus(wizardRiskEnabled ? companyId : undefined);
   const [isOpening, setIsOpening] = useState(false);
 
+  if (!wizardRiskEnabled) return null;
   if (role !== "COMPANY_ADMIN") return null;
   if (loading || !companyId) return null;
   if (status !== "COMPLETED" && status !== "EDITING") return null;
