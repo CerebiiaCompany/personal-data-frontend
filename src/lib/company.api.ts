@@ -296,6 +296,16 @@ export async function updateCompanyEmailBranding(
   });
 }
 
+/**
+ * Quita el logo de los correos de la empresa: salen sin logo hasta que se
+ * suba uno nuevo.
+ */
+export async function deleteCompanyEmailBrandingLogo(companyId: string): Promise<APIResponse> {
+  return customFetch(`/companies/${companyId}/profile/email-branding/logo`, {
+    method: "DELETE",
+  });
+}
+
 // Item CHK-055/056 (auditoría 2026-08-26/27): switches de jerarquía Área/Sede.
 export async function updateCompanySettings(
   companyId: string,

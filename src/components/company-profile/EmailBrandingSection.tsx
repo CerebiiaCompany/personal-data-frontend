@@ -11,7 +11,7 @@ import CustomInput from "@/components/forms/CustomInput";
 import Button from "@/components/base/Button";
 import ProfileSectionCard from "./ProfileSectionCard";
 import EmailBrandingPreview from "./EmailBrandingPreview";
-import { updateCompanyEmailBranding } from "@/lib/company.api";
+import { deleteCompanyEmailBrandingLogo, updateCompanyEmailBranding } from "@/lib/company.api";
 import { uploadCompanyEmailBrandingLogo } from "@/lib/upload.api";
 import { CompanyProfile } from "@/types/company.types";
 import { parseApiError } from "@/utils/parseApiError";
@@ -67,6 +67,7 @@ interface Props {
 const EmailBrandingSection = ({ companyId, profile }: Props) => {
   const [loading, setLoading] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
+  const [logoDeleting, setLogoDeleting] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string | null | undefined>(
     profile?.brandLogoUrl
   );
@@ -149,6 +150,16 @@ const EmailBrandingSection = ({ companyId, profile }: Props) => {
     toast.success("Logo actualizado");
   }
 
+  async function handleLogoDelete() {
+    setLogoDeleting(true);
+    const res = await deleteCompanyEmailBrandingLogo(companyId);
+    setLogoDeleting(false);
+
+    if (res.error) return toast.error(parseApiError(res.error));
+    setLogoUrl(null);
+    toast.success("Logo eliminado. Los correos se enviarán sin logo.");
+  }
+
   return (
     <ProfileSectionCard
       icon="tabler:palette"
@@ -175,14 +186,28 @@ const EmailBrandingSection = ({ companyId, profile }: Props) => {
             )}
           </div>
           <div className="flex flex-col gap-1">
-            <Button
-              hierarchy="secondary"
-              type="button"
-              loading={logoUploading}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              {logoUrl ? "Cambiar logo" : "Subir logo"}
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                hierarchy="secondary"
+                type="button"
+                loading={logoUploading}
+                disabled={logoDeleting}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {logoUrl ? "Cambiar logo" : "Subir logo"}
+              </Button>
+              {logoUrl && (
+                <Button
+                  hierarchy="secondary"
+                  type="button"
+                  loading={logoDeleting}
+                  disabled={logoUploading}
+                  onClick={handleLogoDelete}
+                >
+                  Eliminar logo
+                </Button>
+              )}
+            </div>
             <p className="text-xs text-[#64748B]">
               PNG, JPEG o SVG. Máximo {MAX_LOGO_SIZE_MB}MB.
             </p>
